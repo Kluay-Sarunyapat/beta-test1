@@ -13,34 +13,181 @@ if 'inputs' not in st.session_state:
         'Nano': 0
     }
 
-# ---------- SIDEBAR NAVIGATION ----------
-st.sidebar.title("📂 Navigation")
-page = st.sidebar.radio("Go to", ["Input Data", "Scenario Budget", "Summary Budget"])
+if 'page' not in st.session_state:
+    st.session_state.page = 'Input Data'  # Default page
+
+# ---------- FUNCTION TO CHANGE PAGE ----------
+def change_page(page_name):
+    st.session_state.page = page_name
+
+# ---------- TOP NAVIGATION BUTTONS ----------
+st.markdown("### 📁 Welcome To MBCS Optimize Tool")
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    if st.button("📂 Input Data"):
+        change_page("Input Data")
+
+with col2:
+    if st.button("💰 Scenario Budget"):
+        change_page("Scenario Budget")
+
+with col3:
+    if st.button("📋 Summary Budget"):
+        change_page("Summary Budget")
+
+# ---------- PAGE 1:
+# Initialize session state
+# Initialize session state
+if 'page' not in st.session_state:
+    st.session_state.page = "Input Data"
+if 'inputs' not in st.session_state:
+    st.session_state.inputs = {'VIP': 0, 'Top': 0, 'Mid': 0, 'Macro': 0, 'Nano': 0}
+if 'category' not in st.session_state:
+    st.session_state.category = "F&B"
 
 # ---------- PAGE 1: INPUT DATA ----------
-if page == "Input Data":
+if st.session_state.page == "Input Data":
     st.title("📊 Input Data")
+    
+    # Category selection dropdown
+    category = st.selectbox("Select Category:", ["F&B", "Cosmetic"], index=(0 if st.session_state.category == "F&B" else 1))
+    st.session_state.category = category
+    
+    # Get input values
+    vip = st.session_state.inputs['VIP']
+    top = st.session_state.inputs['Top']
+    mid = st.session_state.inputs['Mid']
+    macro = st.session_state.inputs['Macro']
+    nano = st.session_state.inputs['Nano']
+    
+    # Define weights based on category
+    if category == "F&B":
+        impression_weights = {'VIP': 5, 'Top': 3, 'Mid': 2, 'Macro': 1, 'Nano': 0.5}
+        view_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
+        engagement_weights = {'VIP': 1, 'Top': 0.5, 'Mid': 0.25, 'Macro': 0.1, 'Nano': 0.005}
+    else:  # Cosmetic
+        impression_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
+        view_weights = {'VIP': 1, 'Top': 0.75, 'Mid': 0.5, 'Macro': 0.25, 'Nano': 0.1}
+        engagement_weights = {'VIP': 0.5, 'Top': 0.25, 'Mid': 0.1, 'Macro': 0.005, 'Nano': 0.001}
+    
+    # Calculate summary metrics
+    total_sum = vip + top + mid + macro + nano
+    total_impressions = sum(st.session_state.inputs[k] * v for k, v in impression_weights.items())
+    total_views = sum(st.session_state.inputs[k] * v for k, v in view_weights.items())
+    total_engagement = sum(st.session_state.inputs[k] * v for k, v in engagement_weights.items())
+    
+    # Summary metrics display
+    st.markdown(
+        f"""
+        <div style="display: flex; justify-content: space-around; padding: 15px; background-color: #f0f2f6; 
+                    color: black; border-radius: 10px; box-shadow: 0px 2px 5px rgba(0,0,0,0.1); text-align: center;">
+            <div>
+                <h4>📢 Total Impressions</h4>
+                <h2 style="color:#2196F3;">{total_impressions:,.0f}</h2>
+            </div>
+            <div>
+                <h4>👀 Total Views</h4>
+                <h2 style="color:#FF9800;">{total_views:,.0f}</h2>
+            </div>
+            <div>
+                <h4>💬 Total Engagement</h4>
+                <h2 style="color:#E91E63;">{total_engagement:,.0f}</h2>
+            </div>
+        </div>
+        """, unsafe_allow_html=True
+    )
 
-    # Input Fields
-    vip = st.number_input("1.1 VIP", min_value=0, value=0)
-    top = st.number_input("1.2 Top", min_value=0, value=0)
-    mid = st.number_input("1.3 Mid", min_value=0, value=0)
-    macro = st.number_input("1.4 Macro", min_value=0, value=0)
-    nano = st.number_input("1.5 Nano", min_value=0, value=0)
+    # Spacer
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Layout with input fields
+    col1, col2 = st.columns([2, 1])
 
-    # Submit Button
-    if st.button("Submit"):
-        st.session_state.inputs = {
-            'VIP': vip,
-            'Top': top,
-            'Mid': mid,
-            'Macro': macro,
-            'Nano': nano
-        }
-        st.success("✅ Data Submitted Successfully!")
+    with col1:
+        st.subheader("🎯 Enter Data")
+        new_values = {}
+        for category in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
+            cols = st.columns([3, 1])  # Adjusted column ratio for better alignment
+            new_values[category] = cols[0].number_input(f"{category}", min_value=0, value=st.session_state.inputs[category], key=category)
+            percentage = (new_values[category] / total_sum * 100) if total_sum > 0 else 0
+            
+            # HTML structure with label on top of the percentage box
+            cols[1].markdown(f"""
+                <div style='text-align:center; margin-bottom:5px; font-size:14px; color:#555;'>
+                    %
+                </div>
+                <div style='display:flex; align-items:center; justify-content:center; height:40px; 
+                            width:100%; border-radius:5px; border:1px solid #ddd; padding:5px; text-align:center; line-height: 35px;'>
+                    {percentage:.2f}%
+                </div>
+            """, unsafe_allow_html=True)
+        
+        # Update session state on change
+        if new_values != st.session_state.inputs:
+            st.session_state.inputs = new_values
+            st.rerun()
+
+    # Right side: Total Budget Card
+    with col2:
+        st.subheader("💰 Total Budget")
+        st.markdown(
+            f"""
+            <div style="background-color:#f0f2f6;padding:20px;border-radius:10px;text-align:center;
+                        box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                <h3>💰 Budget</h3>
+                <h1 style="color:#4CAF50;">{total_sum}</h1>
+            </div>
+            """, unsafe_allow_html=True
+        )
+
+
+
+
+# # ---------- PAGE 1: INPUT DATA ----------
+# if st.session_state.page == "Input Data":
+#     st.title("📊 Input Data")
+
+#     # Layout with two columns
+#     col1, col2 = st.columns([2, 1])  # Left column wider than the right
+
+#     # ---------- LEFT SIDE: INPUT FIELDS ----------
+#     with col1:
+#         st.subheader("🎯 Enter Data")
+#         vip = st.number_input("1.1 VIP", min_value=0, value=st.session_state.inputs['VIP'], key='vip')
+#         top = st.number_input("1.2 Top", min_value=0, value=st.session_state.inputs['Top'], key='top')
+#         mid = st.number_input("1.3 Mid", min_value=0, value=st.session_state.inputs['Mid'], key='mid')
+#         macro = st.number_input("1.4 Macro", min_value=0, value=st.session_state.inputs['Macro'], key='macro')
+#         nano = st.number_input("1.5 Nano", min_value=0, value=st.session_state.inputs['Nano'], key='nano')
+
+#         # Submit Button
+#         if st.button("Submit"):
+#             st.session_state.inputs = {
+#                 'VIP': vip,
+#                 'Top': top,
+#                 'Mid': mid,
+#                 'Macro': macro,
+#                 'Nano': nano
+#             }
+#             st.success("✅ Data Submitted Successfully!")
+
+#     # ---------- RIGHT SIDE: SUMMARY CARD ----------
+#     with col2:
+#         st.subheader("📋 Summary")
+#         total_sum = vip + top + mid + macro + nano
+
+#         # Card-style display using markdown
+#         st.markdown(
+#             f"""
+#             <div style="background-color:#f0f2f6;padding:20px;border-radius:10px;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+#                 <h3>Total Budget</h3>
+#                 <h1 style="color:#4CAF50;">{total_sum}</h1>
+#             </div>
+#             """, unsafe_allow_html=True
+#         )
 
 # ---------- PAGE 2: SCENARIO BUDGET ----------
-elif page == "Scenario Budget":
+elif st.session_state.page == "Scenario Budget":
     st.title("💰 Scenario Budget")
 
     # Prepare Data
@@ -71,7 +218,7 @@ elif page == "Scenario Budget":
     st.plotly_chart(line_fig, use_container_width=True)
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
-elif page == "Summary Budget":
+elif st.session_state.page == "Summary Budget":
     st.title("📋 Summary Budget")
 
     # Random Data for Charts
@@ -95,4 +242,6 @@ elif page == "Summary Budget":
     area_fig = px.area(area_df, x='Month', y='Budget', title="Random Area Chart")
     st.plotly_chart(area_fig, use_container_width=True)
 
-# ---------- END OF CODE ----------
+# ---------- FOOTER (OPTIONAL) ----------
+st.markdown("---")
+# st.write("Developed by [Your Name] 🚀")

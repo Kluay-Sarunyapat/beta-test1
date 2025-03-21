@@ -2,6 +2,52 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import base64
+
+# Function to encode image to base64
+def get_base64(file_path):
+    with open(file_path, "rb") as file:
+        return base64.b64encode(file.read()).decode()
+
+# Function to set background image
+def set_background(image_path):
+    base64_img = get_base64(image_path)
+    bg_style = f"""
+    <style>
+    .stApp {{
+        background-image: url("data:image/jpeg;base64,{base64_img}");
+        background-size: cover;
+        background-position: center;
+    }}
+    </style>
+    """
+    st.markdown(bg_style, unsafe_allow_html=True)
+
+# If user is NOT logged in, show login page with background image
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    set_background("C:/Streamlit/Beta-test1/beta-test1/Nest.jpeg")  # Use base64 background
+    
+    # Title with larger and bold text
+    st.markdown("<h1 style='text-align: center; color: white;'>🔒 Welcome to MBCS</h1>", unsafe_allow_html=True)
+
+    # Bold and white color for the input labels
+    st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
+    st.text_input("", key="username")
+    
+    st.markdown("<h3 style='color: white; font-weight: bold;'>Password</h3>", unsafe_allow_html=True)
+    st.text_input("", type="password", key="password")
+
+    # Login button
+    if st.button("Login"):
+        if st.session_state.username == "mbcs" and st.session_state.password == "1234":
+            st.session_state.authenticated = True
+        else:
+            st.error("❌ Incorrect username or password. Please try again.")
+    
+    st.stop()  # Stop execution if not logged in
 
 # ---------- SESSION STATE FOR DATA SHARING ----------
 if 'inputs' not in st.session_state:
@@ -241,7 +287,3 @@ elif st.session_state.page == "Summary Budget":
 
     area_fig = px.area(area_df, x='Month', y='Budget', title="Random Area Chart")
     st.plotly_chart(area_fig, use_container_width=True)
-
-# ---------- FOOTER (OPTIONAL) ----------
-st.markdown("---")
-# st.write("Developed by [Your Name] 🚀")

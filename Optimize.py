@@ -32,7 +32,7 @@ if not st.session_state.authenticated:
     set_black_background()  # Set black background
     
     # Title with larger and bold text
-    st.markdown("<h1 style='text-align: center; color: white;'>🔒 Welcome to MBCS</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: white;'>🔒 WElCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
 
     # Bold and white color for the input labels
     st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)

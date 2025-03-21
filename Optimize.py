@@ -4,31 +4,32 @@ import numpy as np
 import plotly.express as px
 import base64
 
-# Function to encode image to base64
-def get_base64(file_path):
-    with open(file_path, "rb") as file:
-        return base64.b64encode(file.read()).decode()
-
-# Function to set background image
-def set_background(image_path):
-    base64_img = get_base64(image_path)
-    bg_style = f"""
+# Function to set black background with black font for login inputs
+def set_black_background():
+    # Set a solid black background and make the input text black
+    bg_style = """
     <style>
-    .stApp {{
-        background-image: url("data:image/jpeg;base64,{base64_img}");
-        background-size: cover;
-        background-position: center;
-    }}
+    .stApp {
+        background-color: black;
+        color: white;
+    }
+    .stTextInput input, .stTextArea textarea {
+        color: black;
+        background-color: white;
+    }
+    .stButton>button {
+        color: black;
+    }
     </style>
     """
     st.markdown(bg_style, unsafe_allow_html=True)
 
-# If user is NOT logged in, show login page with background image
+# If user is NOT logged in, show login page with black background
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    set_background("C:/Streamlit/Beta-test1/beta-test1/Nest.jpeg")  # Use base64 background
+    set_black_background()  # Set black background
     
     # Title with larger and bold text
     st.markdown("<h1 style='text-align: center; color: white;'>🔒 Welcome to MBCS</h1>", unsafe_allow_html=True)

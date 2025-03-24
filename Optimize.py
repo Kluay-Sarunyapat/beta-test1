@@ -4,6 +4,25 @@ import numpy as np
 import plotly.express as px
 import base64
 
+# Set Streamlit to wide layout
+st.set_page_config(layout="wide")
+
+st.markdown(
+    """
+    <style>
+    .appview-container .main {
+        max-width: 1100px !important; /* Adjust width as needed */
+        margin: auto;
+    }
+    .block-container {
+        max-width: 1100px !important; /* Adjust width as needed */
+        margin: auto;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # Function to set black background with black font for login inputs
 def set_black_background():
     bg_style = """
@@ -65,7 +84,7 @@ if 'inputs' not in st.session_state:
     }
 
 if 'page' not in st.session_state:
-    st.session_state.page = 'Overall Performance'  # Default page
+    st.session_state.page = 'Simulation Budget'  # Default page
 
 # ---------- FUNCTION TO CHANGE PAGE ----------
 def change_page(page_name):
@@ -76,8 +95,8 @@ st.markdown("### 📁 Welcome To MBCS Optimize Tool")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("📂 Overall Performance"):
-        change_page("Overall Performance")
+    if st.button("📂 Simulation Budget"):
+        change_page("Simulation Budget")
 
 with col2:
     if st.button("💰 Influencer Performance"):
@@ -91,15 +110,15 @@ with col3:
 # Initialize session state
 # Initialize session state
 if 'page' not in st.session_state:
-    st.session_state.page = "Overall Performance"
+    st.session_state.page = "Simulation Budget"
 if 'inputs' not in st.session_state:
     st.session_state.inputs = {'VIP': 0, 'Top': 0, 'Mid': 0, 'Macro': 0, 'Nano': 0}
 if 'category' not in st.session_state:
     st.session_state.category = "F&B"
 
 # ---------- PAGE 1: INPUT DATA ----------
-if st.session_state.page == "Overall Performance":
-    st.title("📊 Overall Performance")
+if st.session_state.page == "Simulation Budget":
+    st.title("📊 Simulation Budget")
     
     # Category selection dropdown
     category = st.selectbox("Select Category:", ["F&B", "Cosmetic"], index=(0 if st.session_state.category == "F&B" else 1))
@@ -205,8 +224,7 @@ def load_google_sheets(url):
 # Load the data
 df = load_google_sheets(sheet_url)
 
-# ---------- PAGE 2: SCENARIO BUDGET ----------
-# Filter the data based on selected KOL Names
+# ---------- PAGE: INFLUENCER PERFORMANCE ----------
 if st.session_state.page == "Influencer Performance":
     st.title("💰 Influencer Performance")
 
@@ -214,29 +232,53 @@ if st.session_state.page == "Influencer Performance":
     st.subheader("📋 Influencer Performance from Google Sheets")
     st.dataframe(df)  # Display the Google Sheets data
 
-    # Create a drop-down list for multi-selecting KOL Names
-    kol_names = df['KOL Name'].unique()  # Get unique KOL names from the column
-    selected_kols = st.multiselect("Select KOL Names", options=kol_names)
+    # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
+    col1, col2 = st.columns(2)
 
-    # Filter the data based on selected KOL Names
+    with col1:
+        st.subheader("🌍 Select Platform")
+        platforms = df['Platform'].unique()  # Get unique platforms
+        selected_platform = st.selectbox("Select a Platform", options=platforms)
+
+    with col2:
+        st.subheader("🧑‍💼 Select KOL(s)")
+        # Filter KOLs based on selected platform
+        filtered_kols_df = df[df['Platform'] == selected_platform]
+        kol_names = filtered_kols_df['KOL Name'].unique()  # Get unique KOL names
+        selected_kols = st.multiselect("Select KOL Names", options=kol_names)
+
+    # Input boxes for cost per unit
+    cost_per_comment = st.number_input("💬 Enter Cost per Comment", min_value=0.0, value=0.1, step=0.01)
+    cost_per_share = st.number_input("🔄 Enter Cost per Share", min_value=0.0, value=0.2, step=0.01)
+    cost_per_reach = st.number_input("📢 Enter Cost per Reach", min_value=0.0, value=0.001, step=0.0001)
+
+    # --- 3️⃣ Filter the Data Based on Selection ---
     if selected_kols:
-        filtered_df = df[df['KOL Name'].isin(selected_kols)]
+        final_filtered_df = filtered_kols_df[filtered_kols_df['KOL Name'].isin(selected_kols)]
 
-        # Show the filtered data: KOL, Comment, Share, Reach
+        # Show the filtered data
         st.subheader("📊 KOL Data: Comment, Share, Reach")
-        selected_data = filtered_df[['KOL Name', 'Comment', 'Share', 'Reach']]  # Extract relevant columns
-        st.dataframe(selected_data)  # Display the filtered data
+        selected_data = final_filtered_df[['KOL Name', 'Comment', 'Share', 'Reach']]  
+        st.dataframe(selected_data)  
 
-        # Calculate the sum of 'Comment', 'Share', and 'Reach' for the selected KOLs
-        sum_comment = filtered_df['Comment'].sum()  # Sum of 'Comment' column
-        sum_share = filtered_df['Share'].sum()  # Sum of 'Share' column
-        sum_reach = filtered_df['Reach'].sum()  # Sum of 'Reach' column
+        # Calculate total sum values
+        sum_comment = final_filtered_df['Comment'].sum()
+        sum_share = final_filtered_df['Share'].sum()
+        sum_reach = final_filtered_df['Reach'].sum()
 
-        # Display the sums
-        st.subheader("📈 Total Values for Selected KOLs")
-        st.write(f"Total Comments: {sum_comment}")
-        st.write(f"Total Shares: {sum_share}")
-        st.write(f"Total Reach: {sum_reach}")
+        # Calculate total cost
+        total_comment_cost = sum_comment * cost_per_comment
+        total_share_cost = sum_share * cost_per_share
+        total_reach_cost = sum_reach * cost_per_reach
+        total_overall_cost = total_comment_cost + total_share_cost + total_reach_cost
+
+        # Display summary
+        st.subheader("📈 Total Summary for Selected KOLs")
+        st.write(f"**Total Comments:** {sum_comment} → 💰 **${total_comment_cost:,.2f}**")
+        st.write(f"**Total Shares:** {sum_share} → 💰 **${total_share_cost:,.2f}**")
+        st.write(f"**Total Reach:** {sum_reach} → 💰 **${total_reach_cost:,.2f}**")
+        st.markdown(f"## **💵 Total Cost: ${total_overall_cost:,.2f}**")
+
     else:
         st.warning("Please select at least one KOL.")
 

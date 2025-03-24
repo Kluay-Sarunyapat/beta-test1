@@ -80,8 +80,8 @@ with col1:
         change_page("Overall Performance")
 
 with col2:
-    if st.button("💰 Scenario Budget"):
-        change_page("Scenario Budget")
+    if st.button("💰 Influencer Performance"):
+        change_page("Influencer Performance")
 
 with col3:
     if st.button("📋 Summary Budget"):
@@ -194,7 +194,7 @@ if st.session_state.page == "Overall Performance":
 
 
 
-# ---------- PAGE 2: SCENARIO BUDGET ----------
+# ---------- PAGE 2: Influencer Performance ----------
 # Google Sheets CSV direct link
 sheet_url = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
 
@@ -206,54 +206,44 @@ def load_google_sheets(url):
 df = load_google_sheets(sheet_url)
 
 # ---------- PAGE 2: SCENARIO BUDGET ----------
-if st.session_state.page == "Scenario Budget":
-    st.title("💰 Scenario Budget")
+if st.session_state.page == "Influencer Performance":
+    st.title("💰 Influencer Performance")
 
     # Show Data
-    st.subheader("📋 Budget Data from Google Sheets")
+    st.subheader("📋 Influencer Performance from Google Sheets")
     st.dataframe(df)  # Display the Google Sheets data
 
-    # Donut Chart
-    st.subheader("🍩 Budget Distribution")
-    donut_fig = px.pie(df, names=df.columns[0], values=df.columns[1], hole=0.4, title="Budget Breakdown")
-    st.plotly_chart(donut_fig, use_container_width=True)
+        # Show the data (for reference)
+    st.subheader("📋 Budget Data from Google Sheets")
+    st.dataframe(df)  # Display the full Google Sheets data
 
-    # Line Chart
-    st.subheader("📈 Budget Over Time")
-    df_melted = df.melt(id_vars=df.columns[0], var_name="Category", value_name="Budget")
+    # Create a drop-down list for multi-selecting KOL Names
+    kol_names = df['KOL Name'].unique()  # Get unique KOL names from the column
+    selected_kols = st.multiselect("Select KOL Names", options=kol_names)
+
+    # Filter the data based on selected KOL Names
+    if selected_kols:
+        filtered_df = df[df['KOL Name'].isin(selected_kols)]
+
+        # Show the filtered data: KOL, Comment, Share, Reach
+        st.subheader("📊 KOL Data: Comment, Share, Reach")
+        selected_data = filtered_df[['KOL Name', 'Comment', 'Share', 'Reach']]  # Extract relevant columns
+        st.dataframe(selected_data)  # Display the filtered data
+    else:
+        st.warning("Please select at least one KOL.")
+
+    # # Donut Chart
+    # st.subheader("🍩 Budget Distribution")
+    # donut_fig = px.pie(df, names=df.columns[0], values=df.columns[1], hole=0.4, title="Budget Breakdown")
+    # st.plotly_chart(donut_fig, use_container_width=True)
+
+    # # Line Chart
+    # st.subheader("📈 Budget Over Time")
+    # df_melted = df.melt(id_vars=df.columns[0], var_name="Category", value_name="Budget")
     
-    line_fig = px.line(df_melted, x=df.columns[0], y="Budget", color="Category", markers=True, title="Monthly Budget Trend")
-    st.plotly_chart(line_fig, use_container_width=True)
+    # line_fig = px.line(df_melted, x=df.columns[0], y="Budget", color="Category", markers=True, title="Monthly Budget Trend")
+    # st.plotly_chart(line_fig, use_container_width=True)
 
-# elif st.session_state.page == "Scenario Budget":
-#     st.title("💰 Scenario Budget")
-
-#     # Prepare Data
-#     input_data = st.session_state.inputs
-#     df = pd.DataFrame({
-#         'Category': list(input_data.keys()),
-#         'Value': list(input_data.values())
-#     })
-
-#     # Donut Chart
-#     st.subheader("🍩 Budget Distribution")
-#     donut_fig = px.pie(df, names='Category', values='Value', hole=0.4, title="Budget Breakdown")
-#     st.plotly_chart(donut_fig, use_container_width=True)
-
-#     # Line Chart
-#     st.subheader("📈 Budget Over Time")
-#     time_df = pd.DataFrame({
-#         'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-#         'VIP': np.random.randint(50, 200, 5),
-#         'Top': np.random.randint(50, 200, 5),
-#         'Mid': np.random.randint(50, 200, 5),
-#         'Macro': np.random.randint(50, 200, 5),
-#         'Nano': np.random.randint(50, 200, 5)
-#     })
-#     time_df = time_df.melt(id_vars='Month', var_name='Category', value_name='Budget')
-
-#     line_fig = px.line(time_df, x='Month', y='Budget', color='Category', markers=True, title="Monthly Budget Trend")
-#     st.plotly_chart(line_fig, use_container_width=True)
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
 elif st.session_state.page == "Summary Budget":

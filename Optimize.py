@@ -206,16 +206,13 @@ def load_google_sheets(url):
 df = load_google_sheets(sheet_url)
 
 # ---------- PAGE 2: SCENARIO BUDGET ----------
+# Filter the data based on selected KOL Names
 if st.session_state.page == "Influencer Performance":
     st.title("💰 Influencer Performance")
 
     # Show Data
     st.subheader("📋 Influencer Performance from Google Sheets")
     st.dataframe(df)  # Display the Google Sheets data
-
-        # Show the data (for reference)
-    st.subheader("📋 Budget Data from Google Sheets")
-    st.dataframe(df)  # Display the full Google Sheets data
 
     # Create a drop-down list for multi-selecting KOL Names
     kol_names = df['KOL Name'].unique()  # Get unique KOL names from the column
@@ -229,6 +226,17 @@ if st.session_state.page == "Influencer Performance":
         st.subheader("📊 KOL Data: Comment, Share, Reach")
         selected_data = filtered_df[['KOL Name', 'Comment', 'Share', 'Reach']]  # Extract relevant columns
         st.dataframe(selected_data)  # Display the filtered data
+
+        # Calculate the sum of 'Comment', 'Share', and 'Reach' for the selected KOLs
+        sum_comment = filtered_df['Comment'].sum()  # Sum of 'Comment' column
+        sum_share = filtered_df['Share'].sum()  # Sum of 'Share' column
+        sum_reach = filtered_df['Reach'].sum()  # Sum of 'Reach' column
+
+        # Display the sums
+        st.subheader("📈 Total Values for Selected KOLs")
+        st.write(f"Total Comments: {sum_comment}")
+        st.write(f"Total Shares: {sum_share}")
+        st.write(f"Total Reach: {sum_reach}")
     else:
         st.warning("Please select at least one KOL.")
 

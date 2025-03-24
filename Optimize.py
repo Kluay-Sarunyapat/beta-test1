@@ -224,7 +224,7 @@ def load_google_sheets(url):
 # Load the data
 df = load_google_sheets(sheet_url)
 
-# ---------- PAGE: INFLUENCER PERFORMANCE ----------
+# # ---------- PAGE: INFLUENCER PERFORMANCE ----------
 if st.session_state.page == "Influencer Performance":
     st.title("💰 Influencer Performance")
 
@@ -247,10 +247,8 @@ if st.session_state.page == "Influencer Performance":
         kol_names = filtered_kols_df['KOL Name'].unique()  # Get unique KOL names
         selected_kols = st.multiselect("Select KOL Names", options=kol_names)
 
-    # Input boxes for cost per unit
-    cost_per_comment = st.number_input("💬 Enter Cost per Comment", min_value=0.0, value=0.1, step=0.01)
-    cost_per_share = st.number_input("🔄 Enter Cost per Share", min_value=0.0, value=0.2, step=0.01)
-    cost_per_reach = st.number_input("📢 Enter Cost per Reach", min_value=0.0, value=0.001, step=0.0001)
+    # Input box for cost per unit (to apply to all: Comment, Share, Reach)
+    cost_per_unit = st.number_input("💰 Enter Cost per Unit", min_value=0.0, value=0.1, step=0.01)
 
     # --- 3️⃣ Filter the Data Based on Selection ---
     if selected_kols:
@@ -266,10 +264,10 @@ if st.session_state.page == "Influencer Performance":
         sum_share = final_filtered_df['Share'].sum()
         sum_reach = final_filtered_df['Reach'].sum()
 
-        # Calculate total cost
-        total_comment_cost = sum_comment * cost_per_comment
-        total_share_cost = sum_share * cost_per_share
-        total_reach_cost = sum_reach * cost_per_reach
+        # Apply the cost to each metric
+        total_comment_cost = sum_comment * cost_per_unit
+        total_share_cost = sum_share * cost_per_unit
+        total_reach_cost = sum_reach * cost_per_unit
         total_overall_cost = total_comment_cost + total_share_cost + total_reach_cost
 
         # Display summary
@@ -281,18 +279,62 @@ if st.session_state.page == "Influencer Performance":
 
     else:
         st.warning("Please select at least one KOL.")
+# if st.session_state.page == "Influencer Performance":
+#     st.title("💰 Influencer Performance")
 
-    # # Donut Chart
-    # st.subheader("🍩 Budget Distribution")
-    # donut_fig = px.pie(df, names=df.columns[0], values=df.columns[1], hole=0.4, title="Budget Breakdown")
-    # st.plotly_chart(donut_fig, use_container_width=True)
+#     # Show Data
+#     st.subheader("📋 Influencer Performance from Google Sheets")
+#     st.dataframe(df)  # Display the Google Sheets data
 
-    # # Line Chart
-    # st.subheader("📈 Budget Over Time")
-    # df_melted = df.melt(id_vars=df.columns[0], var_name="Category", value_name="Budget")
-    
-    # line_fig = px.line(df_melted, x=df.columns[0], y="Budget", color="Category", markers=True, title="Monthly Budget Trend")
-    # st.plotly_chart(line_fig, use_container_width=True)
+#     # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
+#     col1, col2 = st.columns(2)
+
+#     with col1:
+#         st.subheader("🌍 Select Platform")
+#         platforms = df['Platform'].unique()  # Get unique platforms
+#         selected_platform = st.selectbox("Select a Platform", options=platforms)
+
+#     with col2:
+#         st.subheader("🧑‍💼 Select KOL(s)")
+#         # Filter KOLs based on selected platform
+#         filtered_kols_df = df[df['Platform'] == selected_platform]
+#         kol_names = filtered_kols_df['KOL Name'].unique()  # Get unique KOL names
+#         selected_kols = st.multiselect("Select KOL Names", options=kol_names)
+
+#     # Input boxes for cost per unit
+#     cost_per_comment = st.number_input("💬 Enter Cost per Comment", min_value=0.0, value=0.1, step=0.01)
+#     cost_per_share = st.number_input("🔄 Enter Cost per Share", min_value=0.0, value=0.2, step=0.01)
+#     cost_per_reach = st.number_input("📢 Enter Cost per Reach", min_value=0.0, value=0.001, step=0.0001)
+
+#     # --- 3️⃣ Filter the Data Based on Selection ---
+#     if selected_kols:
+#         final_filtered_df = filtered_kols_df[filtered_kols_df['KOL Name'].isin(selected_kols)]
+
+#         # Show the filtered data
+#         st.subheader("📊 KOL Data: Comment, Share, Reach")
+#         selected_data = final_filtered_df[['KOL Name', 'Comment', 'Share', 'Reach']]  
+#         st.dataframe(selected_data)  
+
+#         # Calculate total sum values
+#         sum_comment = final_filtered_df['Comment'].sum()
+#         sum_share = final_filtered_df['Share'].sum()
+#         sum_reach = final_filtered_df['Reach'].sum()
+
+#         # Calculate total cost
+#         total_comment_cost = sum_comment * cost_per_comment
+#         total_share_cost = sum_share * cost_per_share
+#         total_reach_cost = sum_reach * cost_per_reach
+#         total_overall_cost = total_comment_cost + total_share_cost + total_reach_cost
+
+#         # Display summary
+#         st.subheader("📈 Total Summary for Selected KOLs")
+#         st.write(f"**Total Comments:** {sum_comment} → 💰 **${total_comment_cost:,.2f}**")
+#         st.write(f"**Total Shares:** {sum_share} → 💰 **${total_share_cost:,.2f}**")
+#         st.write(f"**Total Reach:** {sum_reach} → 💰 **${total_reach_cost:,.2f}**")
+#         st.markdown(f"## **💵 Total Cost: ${total_overall_cost:,.2f}**")
+
+#     else:
+#         st.warning("Please select at least one KOL.")
 
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------

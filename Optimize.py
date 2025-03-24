@@ -194,79 +194,66 @@ if st.session_state.page == "Overall Performance":
 
 
 
+# ---------- PAGE 2: SCENARIO BUDGET ----------
+# Google Sheets CSV direct link
+sheet_url = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
 
-# # ---------- PAGE 1: INPUT DATA ----------
-# if st.session_state.page == "Input Data":
-#     st.title("📊 Input Data")
+@st.cache_data  # Cache to speed up loading
+def load_google_sheets(url):
+    return pd.read_csv(url)
 
-#     # Layout with two columns
-#     col1, col2 = st.columns([2, 1])  # Left column wider than the right
-
-#     # ---------- LEFT SIDE: INPUT FIELDS ----------
-#     with col1:
-#         st.subheader("🎯 Enter Data")
-#         vip = st.number_input("1.1 VIP", min_value=0, value=st.session_state.inputs['VIP'], key='vip')
-#         top = st.number_input("1.2 Top", min_value=0, value=st.session_state.inputs['Top'], key='top')
-#         mid = st.number_input("1.3 Mid", min_value=0, value=st.session_state.inputs['Mid'], key='mid')
-#         macro = st.number_input("1.4 Macro", min_value=0, value=st.session_state.inputs['Macro'], key='macro')
-#         nano = st.number_input("1.5 Nano", min_value=0, value=st.session_state.inputs['Nano'], key='nano')
-
-#         # Submit Button
-#         if st.button("Submit"):
-#             st.session_state.inputs = {
-#                 'VIP': vip,
-#                 'Top': top,
-#                 'Mid': mid,
-#                 'Macro': macro,
-#                 'Nano': nano
-#             }
-#             st.success("✅ Data Submitted Successfully!")
-
-#     # ---------- RIGHT SIDE: SUMMARY CARD ----------
-#     with col2:
-#         st.subheader("📋 Summary")
-#         total_sum = vip + top + mid + macro + nano
-
-#         # Card-style display using markdown
-#         st.markdown(
-#             f"""
-#             <div style="background-color:#f0f2f6;padding:20px;border-radius:10px;text-align:center;box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-#                 <h3>Total Budget</h3>
-#                 <h1 style="color:#4CAF50;">{total_sum}</h1>
-#             </div>
-#             """, unsafe_allow_html=True
-#         )
+# Load the data
+df = load_google_sheets(sheet_url)
 
 # ---------- PAGE 2: SCENARIO BUDGET ----------
-elif st.session_state.page == "Scenario Budget":
+if st.session_state.page == "Scenario Budget":
     st.title("💰 Scenario Budget")
 
-    # Prepare Data
-    input_data = st.session_state.inputs
-    df = pd.DataFrame({
-        'Category': list(input_data.keys()),
-        'Value': list(input_data.values())
-    })
+    # Show Data
+    st.subheader("📋 Budget Data from Google Sheets")
+    st.dataframe(df)  # Display the Google Sheets data
 
     # Donut Chart
     st.subheader("🍩 Budget Distribution")
-    donut_fig = px.pie(df, names='Category', values='Value', hole=0.4, title="Budget Breakdown")
+    donut_fig = px.pie(df, names=df.columns[0], values=df.columns[1], hole=0.4, title="Budget Breakdown")
     st.plotly_chart(donut_fig, use_container_width=True)
 
     # Line Chart
     st.subheader("📈 Budget Over Time")
-    time_df = pd.DataFrame({
-        'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-        'VIP': np.random.randint(50, 200, 5),
-        'Top': np.random.randint(50, 200, 5),
-        'Mid': np.random.randint(50, 200, 5),
-        'Macro': np.random.randint(50, 200, 5),
-        'Nano': np.random.randint(50, 200, 5)
-    })
-    time_df = time_df.melt(id_vars='Month', var_name='Category', value_name='Budget')
-
-    line_fig = px.line(time_df, x='Month', y='Budget', color='Category', markers=True, title="Monthly Budget Trend")
+    df_melted = df.melt(id_vars=df.columns[0], var_name="Category", value_name="Budget")
+    
+    line_fig = px.line(df_melted, x=df.columns[0], y="Budget", color="Category", markers=True, title="Monthly Budget Trend")
     st.plotly_chart(line_fig, use_container_width=True)
+
+# elif st.session_state.page == "Scenario Budget":
+#     st.title("💰 Scenario Budget")
+
+#     # Prepare Data
+#     input_data = st.session_state.inputs
+#     df = pd.DataFrame({
+#         'Category': list(input_data.keys()),
+#         'Value': list(input_data.values())
+#     })
+
+#     # Donut Chart
+#     st.subheader("🍩 Budget Distribution")
+#     donut_fig = px.pie(df, names='Category', values='Value', hole=0.4, title="Budget Breakdown")
+#     st.plotly_chart(donut_fig, use_container_width=True)
+
+#     # Line Chart
+#     st.subheader("📈 Budget Over Time")
+#     time_df = pd.DataFrame({
+#         'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+#         'VIP': np.random.randint(50, 200, 5),
+#         'Top': np.random.randint(50, 200, 5),
+#         'Mid': np.random.randint(50, 200, 5),
+#         'Macro': np.random.randint(50, 200, 5),
+#         'Nano': np.random.randint(50, 200, 5)
+#     })
+#     time_df = time_df.melt(id_vars='Month', var_name='Category', value_name='Budget')
+
+#     line_fig = px.line(time_df, x='Month', y='Budget', color='Category', markers=True, title="Monthly Budget Trend")
+#     st.plotly_chart(line_fig, use_container_width=True)
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
 elif st.session_state.page == "Summary Budget":

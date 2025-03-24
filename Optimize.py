@@ -6,7 +6,6 @@ import base64
 
 # Function to set black background with black font for login inputs
 def set_black_background():
-    # Set a solid black background and make the input text black
     bg_style = """
     <style>
     .stApp {
@@ -31,8 +30,13 @@ if 'authenticated' not in st.session_state:
 if not st.session_state.authenticated:
     set_black_background()  # Set black background
     
+    # Logo image (Google Drive direct link)
+    logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
+    st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
+
+
     # Title with larger and bold text
-    st.markdown("<h1 style='text-align: center; color: white;'>🔒 WElCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: white;'>🔒 WELCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
 
     # Bold and white color for the input labels
     st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
@@ -61,7 +65,7 @@ if 'inputs' not in st.session_state:
     }
 
 if 'page' not in st.session_state:
-    st.session_state.page = 'Input Data'  # Default page
+    st.session_state.page = 'Overall Performance'  # Default page
 
 # ---------- FUNCTION TO CHANGE PAGE ----------
 def change_page(page_name):
@@ -72,8 +76,8 @@ st.markdown("### 📁 Welcome To MBCS Optimize Tool")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    if st.button("📂 Input Data"):
-        change_page("Input Data")
+    if st.button("📂 Overall Performance"):
+        change_page("Overall Performance")
 
 with col2:
     if st.button("💰 Scenario Budget"):
@@ -87,15 +91,15 @@ with col3:
 # Initialize session state
 # Initialize session state
 if 'page' not in st.session_state:
-    st.session_state.page = "Input Data"
+    st.session_state.page = "Overall Performance"
 if 'inputs' not in st.session_state:
     st.session_state.inputs = {'VIP': 0, 'Top': 0, 'Mid': 0, 'Macro': 0, 'Nano': 0}
 if 'category' not in st.session_state:
     st.session_state.category = "F&B"
 
 # ---------- PAGE 1: INPUT DATA ----------
-if st.session_state.page == "Input Data":
-    st.title("📊 Input Data")
+if st.session_state.page == "Overall Performance":
+    st.title("📊 Overall Performance")
     
     # Category selection dropdown
     category = st.selectbox("Select Category:", ["F&B", "Cosmetic"], index=(0 if st.session_state.category == "F&B" else 1))

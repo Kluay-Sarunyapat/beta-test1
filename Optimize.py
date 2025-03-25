@@ -337,7 +337,7 @@ if st.session_state.page == "Influencer Performance":
 #         st.warning("Please select at least one KOL.")
 
 
-# ---------- PAGE 3: SUMMARY BUDGET ----------
+# ---------- PAGE 3:  ----------
 elif st.session_state.page == "Summary Budget":
     st.title("📋 Summary Budget")
 

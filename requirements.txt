@@ -2,3 +2,6 @@ streamlit
 pandas
 plotly
 numpy
+torch
+transformers
+pipeline

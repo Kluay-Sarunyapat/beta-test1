@@ -355,7 +355,7 @@ elif st.session_state.page == "Summary Budget":
     # Chart 2: Area Chart
     st.subheader("🌄 Random Budget Over Time")
     area_df = pd.DataFrame({
-        'Month': ['Jan', 'Feb', 'Mar1', 'Apr', 'May'],
+        'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
         'Budget': np.random.randint(200, 600, 5)
     })
 

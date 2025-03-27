@@ -3,6 +3,11 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import base64
+import requests
+import io
+import openai
+import time
+
 
 # Set Streamlit to wide layout
 st.set_page_config(layout="wide")
@@ -103,8 +108,8 @@ with col2:
         change_page("Influencer Performance")
 
 with col3:
-    if st.button("📋 Summary Budget"):
-        change_page("Summary Budget")
+    if st.button("📋 AI CHAT"):
+        change_page("AI CHAT")
 
 # ---------- PAGE 1:
 # Initialize session state
@@ -215,16 +220,45 @@ if st.session_state.page == "Simulation Budget":
 
 # ---------- PAGE 2: Influencer Performance ----------
 # Google Sheets CSV direct link
-sheet_url = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
+sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
+sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
 
 @st.cache_data  # Cache to speed up loading
 def load_google_sheets(url):
     return pd.read_csv(url)
 
 # Load the data
-df = load_google_sheets(sheet_url)
+df = load_google_sheets(sheet_url_raw)
+df_coff = load_google_sheets(sheet_url_off)
 
-# # ---------- PAGE: INFLUENCER PERFORMANCE ----------
+
+# ---------- PAGE 2: Influencer Performance ----------
+# Google Sheets CSV direct link
+sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
+sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
+
+@st.cache_data  # Cache to speed up loading
+def load_google_sheets(url):
+    return pd.read_csv(url)
+
+# Load the data
+df = load_google_sheets(sheet_url_raw)
+df_coff = load_google_sheets(sheet_url_off)
+
+# ---------- PAGE 2: Influencer Performance ----------
+# Google Sheets CSV direct link
+sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
+sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
+
+@st.cache_data  # Cache to speed up loading
+def load_google_sheets(url):
+    return pd.read_csv(url)
+
+# Load the data
+df = load_google_sheets(sheet_url_raw)
+df_coff = load_google_sheets(sheet_url_off)
+
+# ---------- PAGE: INFLUENCER PERFORMANCE ----------
 if st.session_state.page == "Influencer Performance":
     st.title("💰 Influencer Performance")
 
@@ -233,112 +267,71 @@ if st.session_state.page == "Influencer Performance":
     st.dataframe(df)  # Display the Google Sheets data
 
     # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         st.subheader("🌍 Select Platform")
-        platforms = df['Platform'].unique()  # Get unique platforms
+        platforms = df_coff['Platform'].unique()  # Get unique platforms
         selected_platform = st.selectbox("Select a Platform", options=platforms)
 
     with col2:
+        st.subheader("🌍 Select Platform")
+        cost_per = df_coff['CPX'].unique()  # Get unique platforms
+        selected_cost_per = st.selectbox("Select a Cost Per XXX", options=cost_per)
+        
+
+    with col3:
         st.subheader("🧑‍💼 Select KOL(s)")
-        # Filter KOLs based on selected platform
-        filtered_kols_df = df[df['Platform'] == selected_platform]
-        kol_names = filtered_kols_df['KOL Name'].unique()  # Get unique KOL names
+        # Filter KOLs based on selected platform and cost per (CPX)
+        filtered_kols_df_coff = df_coff[(df_coff['Platform'] == selected_platform) & 
+                                        (df_coff['CPX'] == selected_cost_per)]  # Filter by both platform and CPX
+        kol_names = filtered_kols_df_coff['KOL Name'].unique()  # Get unique KOL names
         selected_kols = st.multiselect("Select KOL Names", options=kol_names)
 
-    # Input box for cost per unit (to apply to all: Comment, Share, Reach)
-    cost_per_unit = st.number_input("💰 Enter Cost per Unit", min_value=0.0, value=0.1, step=0.01)
+        # Input box for cost
+        Budget = st.number_input("💰 Enter Budget", min_value=0.0, value=0.1, step=0.01)
 
-    # --- 3️⃣ Filter the Data Based on Selection ---
-    if selected_kols:
-        final_filtered_df = filtered_kols_df[filtered_kols_df['KOL Name'].isin(selected_kols)]
+    if selected_kols:  # Check if any KOLs are selected
+        st.subheader("📊 Results")
 
-        # Show the filtered data
-        st.subheader("📊 KOL Data: Comment, Share, Reach")
-        selected_data = final_filtered_df[['KOL Name', 'Comment', 'Share', 'Reach']]  
-        st.dataframe(selected_data)  
+        # Filter the data based on selected KOL names and platform
+        selected_kol_data = filtered_kols_df_coff[filtered_kols_df_coff['KOL Name'].isin(selected_kols)]
 
-        # Calculate total sum values
-        sum_comment = final_filtered_df['Comment'].sum()
-        sum_share = final_filtered_df['Share'].sum()
-        sum_reach = final_filtered_df['Reach'].sum()
+        if not selected_kol_data.empty:
+            # Ensure 'Value' is numeric and calculate the Budget / Value for each selected KOL using `.loc` to avoid SettingWithCopyWarning
+            selected_kol_data['Value'] = pd.to_numeric(selected_kol_data['Value'], errors='coerce')  # Convert to numeric
+            selected_kol_data['Budget / Value'] = Budget / selected_kol_data['Value']  # Calculate Budget / Value
 
-        # Apply the cost to each metric
-        total_comment_cost = sum_comment * cost_per_unit
-        total_share_cost = sum_share * cost_per_unit
-        total_reach_cost = sum_reach * cost_per_unit
-        total_overall_cost = total_comment_cost + total_share_cost + total_reach_cost
+            # Display results for each selected KOL
+            for index, row in selected_kol_data.iterrows():
+                st.write(f"KOL Name: {row['KOL Name']}")
+                st.write(f"Platform: {row['Platform']}")
+                st.write(f"CPX Type: {row['CPX']}")
+                st.write(f"Budget: {Budget}")
 
-        # Display summary
-        st.subheader("📈 Total Summary for Selected KOLs")
-        st.write(f"**Total Comments:** {sum_comment} → 💰 **${total_comment_cost:,.2f}**")
-        st.write(f"**Total Shares:** {sum_share} → 💰 **${total_share_cost:,.2f}**")
-        st.write(f"**Total Reach:** {sum_reach} → 💰 **${total_reach_cost:,.2f}**")
-        st.markdown(f"## **💵 Total Cost: ${total_overall_cost:,.2f}**")
+                # Determine which calculation to display based on CPX type
+                if row['CPX'] == 'CPR':
+                    st.write(f"Calculated Value (Reach): {row['Budget / Value']:.2f}")  # Format to 2 decimal places
+                elif row['CPX'] == 'CPI':
+                    st.write(f"Calculated Value (Impression): {row['Budget / Value']:.2f}")
+                elif row['CPX'] == 'CPE':
+                    st.write(f"Calculated Value (Engagement): {row['Budget / Value']:.2f}")
+                elif row['CPX'] == 'CPC':
+                    st.write(f"Calculated Value (Click): {row['Budget / Value']:.2f}")
+                elif row['CPX'] == 'CPV':
+                    st.write(f"Calculated Value (View): {row['Budget / Value']:.2f}")
+                else:
+                    st.write(f"Calculated Value: {row['Budget / Value']:.2f}")  # Default case
 
+                st.write("---")
+        else:
+            st.write("No data found for the selected KOL(s). Please check your selection.")
     else:
-        st.warning("Please select at least one KOL.")
-# if st.session_state.page == "Influencer Performance":
-#     st.title("💰 Influencer Performance")
-
-#     # Show Data
-#     st.subheader("📋 Influencer Performance from Google Sheets")
-#     st.dataframe(df)  # Display the Google Sheets data
-
-#     # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
-#     col1, col2 = st.columns(2)
-
-#     with col1:
-#         st.subheader("🌍 Select Platform")
-#         platforms = df['Platform'].unique()  # Get unique platforms
-#         selected_platform = st.selectbox("Select a Platform", options=platforms)
-
-#     with col2:
-#         st.subheader("🧑‍💼 Select KOL(s)")
-#         # Filter KOLs based on selected platform
-#         filtered_kols_df = df[df['Platform'] == selected_platform]
-#         kol_names = filtered_kols_df['KOL Name'].unique()  # Get unique KOL names
-#         selected_kols = st.multiselect("Select KOL Names", options=kol_names)
-
-#     # Input boxes for cost per unit
-#     cost_per_comment = st.number_input("💬 Enter Cost per Comment", min_value=0.0, value=0.1, step=0.01)
-#     cost_per_share = st.number_input("🔄 Enter Cost per Share", min_value=0.0, value=0.2, step=0.01)
-#     cost_per_reach = st.number_input("📢 Enter Cost per Reach", min_value=0.0, value=0.001, step=0.0001)
-
-#     # --- 3️⃣ Filter the Data Based on Selection ---
-#     if selected_kols:
-#         final_filtered_df = filtered_kols_df[filtered_kols_df['KOL Name'].isin(selected_kols)]
-
-#         # Show the filtered data
-#         st.subheader("📊 KOL Data: Comment, Share, Reach")
-#         selected_data = final_filtered_df[['KOL Name', 'Comment', 'Share', 'Reach']]  
-#         st.dataframe(selected_data)  
-
-#         # Calculate total sum values
-#         sum_comment = final_filtered_df['Comment'].sum()
-#         sum_share = final_filtered_df['Share'].sum()
-#         sum_reach = final_filtered_df['Reach'].sum()
-
-#         # Calculate total cost
-#         total_comment_cost = sum_comment * cost_per_comment
-#         total_share_cost = sum_share * cost_per_share
-#         total_reach_cost = sum_reach * cost_per_reach
-#         total_overall_cost = total_comment_cost + total_share_cost + total_reach_cost
-
-#         # Display summary
-#         st.subheader("📈 Total Summary for Selected KOLs")
-#         st.write(f"**Total Comments:** {sum_comment} → 💰 **${total_comment_cost:,.2f}**")
-#         st.write(f"**Total Shares:** {sum_share} → 💰 **${total_share_cost:,.2f}**")
-#         st.write(f"**Total Reach:** {sum_reach} → 💰 **${total_reach_cost:,.2f}**")
-#         st.markdown(f"## **💵 Total Cost: ${total_overall_cost:,.2f}**")
-
-#     else:
-#         st.warning("Please select at least one KOL.")
+        st.write("No KOLs selected. Please select at least one KOL.")
 
 
-# ---------- PAGE 3:  ----------
-elif st.session_state.page == "Summary Budget":
+# ---------- PAGE 3: SUMMARY BUDGET ----------
+elif st.session_state.page == "AI CHAT":
     st.title("📋 Summary Budget")
 
     # Random Data for Charts

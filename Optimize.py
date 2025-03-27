@@ -5,7 +5,6 @@ import plotly.express as px
 import base64
 import requests
 import io
-import openai
 import time
 
 

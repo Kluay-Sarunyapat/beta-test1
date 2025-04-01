@@ -364,15 +364,27 @@ elif st.session_state.page == "Optimized Budget":
 
     # area_fig = px.area(area_df, x='Month', y='Budget', title="Random Area Chart")
     # st.plotly_chart(area_fig, use_container_width=True)
-    impression_weights = {'VIP': 5, 'Top': 3, 'Mid': 2, 'Macro': 1, 'Nano': 0.5}
-    view_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
-    engagement_weights = {'VIP': 1, 'Top': 0.5, 'Mid': 0.25, 'Macro': 0.1, 'Nano': 0.005}
-
-    def optimize_budget(total_budget, min_alloc, max_alloc, priority='balanced'):
+    # Define KPI weights (different for F&B and Cosmetic)
+    def get_weights(category):
+        if category == "F&B":
+            impression_weights = {'VIP': 5, 'Top': 3, 'Mid': 2, 'Macro': 1, 'Nano': 0.5}
+            view_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
+            engagement_weights = {'VIP': 1, 'Top': 0.5, 'Mid': 0.25, 'Macro': 0.1, 'Nano': 0.005}
+        else:  # Cosmetic
+            impression_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
+            view_weights = {'VIP': 1, 'Top': 0.75, 'Mid': 0.5, 'Macro': 0.25, 'Nano': 0.1}
+            engagement_weights = {'VIP': 0.5, 'Top': 0.25, 'Mid': 0.1, 'Macro': 0.005, 'Nano': 0.001}
+        
+        return impression_weights, view_weights, engagement_weights
+    
+    def optimize_budget(total_budget, min_alloc, max_alloc, priority='balanced', category="F&B"):
         tiers = ['VIP', 'Top', 'Mid', 'Macro', 'Nano']
         num_tiers = len(tiers)
         
-        # Define KPI objective coefficients
+        # Get KPI weights based on selected category
+        impression_weights, view_weights, engagement_weights = get_weights(category)
+        
+        # Define KPI objective coefficients based on priority
         if priority == 'impressions':
             weights = [impression_weights[t] for t in tiers]
         elif priority == 'views':
@@ -403,28 +415,36 @@ elif st.session_state.page == "Optimized Budget":
             return allocation, impressions, views, engagement, total_kpi
         else:
             return None, None, None, None, None
-
+    
     # Streamlit UI
     st.title("📊 Budget Optimization Tool")
+    
+    # Category selection
+    category = st.selectbox("Select Category:", ["F&B", "Cosmetic"])
+    
+    # Total Budget input
     total_budget = st.number_input("Enter Total Budget:", min_value=0, value=10000, step=100)
-
+    
+    # Min/Max Allocation inputs
     min_alloc = {}
     max_alloc = {}
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Minimum Allocation")
-        for tier in impression_weights.keys():
+        for tier in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
             min_alloc[tier] = st.number_input(f"Min {tier}", min_value=0, value=0)
-
+    
     with col2:
         st.subheader("Maximum Allocation")
-        for tier in impression_weights.keys():
+        for tier in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
             max_alloc[tier] = st.number_input(f"Max {tier}", min_value=0, value=total_budget)
-
+    
+    # Priority selection for optimization
     priority = st.selectbox("Select Optimization Priority:", ["balanced", "impressions", "views", "engagement"])
-
+    
+    # Optimization button
     if st.button("Optimize Budget"):
-        allocation, impressions, views, engagement, total_kpi = optimize_budget(total_budget, min_alloc, max_alloc, priority)
+        allocation, impressions, views, engagement, total_kpi = optimize_budget(total_budget, min_alloc, max_alloc, priority, category)
         
         if allocation:
             st.success("✅ Optimization Successful!")

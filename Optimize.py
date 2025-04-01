@@ -6,6 +6,7 @@ import base64
 import requests
 import io
 import time
+from scipy.optimize import linprog
 
 
 # Set Streamlit to wide layout
@@ -343,23 +344,96 @@ if st.session_state.page == "Influencer Performance":
 elif st.session_state.page == "Optimized Budget":
     st.title("📋 Optimized Budget")
 
-    # Random Data for Charts
-    random_df = pd.DataFrame({
-        'Category': ['VIP', 'Top', 'Mid', 'Macro', 'Nano'],
-        'Budget': np.random.randint(100, 500, 5)
-    })
+    # # Random Data for Charts
+    # random_df = pd.DataFrame({
+    #     'Category': ['VIP', 'Top', 'Mid', 'Macro', 'Nano'],
+    #     'Budget': np.random.randint(100, 500, 5)
+    # })
 
-    # Chart 1: Bar Chart
-    st.subheader("📊 Random Budget Distribution")
-    bar_fig = px.bar(random_df, x='Category', y='Budget', color='Category', title="Random Bar Chart")
-    st.plotly_chart(bar_fig, use_container_width=True)
+    # # Chart 1: Bar Chart
+    # st.subheader("📊 Random Budget Distribution")
+    # bar_fig = px.bar(random_df, x='Category', y='Budget', color='Category', title="Random Bar Chart")
+    # st.plotly_chart(bar_fig, use_container_width=True)
 
-    # Chart 2: Area Chart
-    st.subheader("🌄 Random Budget Over Time")
-    area_df = pd.DataFrame({
-        'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-        'Budget': np.random.randint(200, 600, 5)
-    })
+    # # Chart 2: Area Chart
+    # st.subheader("🌄 Random Budget Over Time")
+    # area_df = pd.DataFrame({
+    #     'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+    #     'Budget': np.random.randint(200, 600, 5)
+    # })
 
-    area_fig = px.area(area_df, x='Month', y='Budget', title="Random Area Chart")
-    st.plotly_chart(area_fig, use_container_width=True)
+    # area_fig = px.area(area_df, x='Month', y='Budget', title="Random Area Chart")
+    # st.plotly_chart(area_fig, use_container_width=True)
+    impression_weights = {'VIP': 5, 'Top': 3, 'Mid': 2, 'Macro': 1, 'Nano': 0.5}
+    view_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
+    engagement_weights = {'VIP': 1, 'Top': 0.5, 'Mid': 0.25, 'Macro': 0.1, 'Nano': 0.005}
+
+    def optimize_budget(total_budget, min_alloc, max_alloc, priority='balanced'):
+        tiers = ['VIP', 'Top', 'Mid', 'Macro', 'Nano']
+        num_tiers = len(tiers)
+        
+        # Define KPI objective coefficients
+        if priority == 'impressions':
+            weights = [impression_weights[t] for t in tiers]
+        elif priority == 'views':
+            weights = [view_weights[t] for t in tiers]
+        elif priority == 'engagement':
+            weights = [engagement_weights[t] for t in tiers]
+        else:
+            weights = [(impression_weights[t] + view_weights[t] + engagement_weights[t]) / 3 for t in tiers]
+        
+        # Convert to negative for maximization
+        c = -np.array(weights)
+        
+        # Constraints: Budget and min/max allocations
+        A_eq = [np.ones(num_tiers)]
+        b_eq = [total_budget]
+        
+        bounds = [(min_alloc[t], max_alloc[t]) for t in tiers]
+        
+        # Solve optimization
+        res = linprog(c, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+        
+        if res.success:
+            allocation = {tiers[i]: res.x[i] for i in range(num_tiers)}
+            impressions = sum(res.x[i] * impression_weights[tiers[i]] for i in range(num_tiers))
+            views = sum(res.x[i] * view_weights[tiers[i]] for i in range(num_tiers))
+            engagement = sum(res.x[i] * engagement_weights[tiers[i]] for i in range(num_tiers))
+            total_kpi = impressions + views + engagement
+            return allocation, impressions, views, engagement, total_kpi
+        else:
+            return None, None, None, None, None
+
+    # Streamlit UI
+    st.title("📊 Budget Optimization Tool")
+    total_budget = st.number_input("Enter Total Budget:", min_value=0, value=10000, step=100)
+
+    min_alloc = {}
+    max_alloc = {}
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Minimum Allocation")
+        for tier in impression_weights.keys():
+            min_alloc[tier] = st.number_input(f"Min {tier}", min_value=0, value=0)
+
+    with col2:
+        st.subheader("Maximum Allocation")
+        for tier in impression_weights.keys():
+            max_alloc[tier] = st.number_input(f"Max {tier}", min_value=0, value=total_budget)
+
+    priority = st.selectbox("Select Optimization Priority:", ["balanced", "impressions", "views", "engagement"])
+
+    if st.button("Optimize Budget"):
+        allocation, impressions, views, engagement, total_kpi = optimize_budget(total_budget, min_alloc, max_alloc, priority)
+        
+        if allocation:
+            st.success("✅ Optimization Successful!")
+            st.json(allocation)
+            
+            st.subheader("📊 KPI Breakdown")
+            st.write(f"Impressions: {impressions:,.2f}")
+            st.write(f"Views: {views:,.2f}")
+            st.write(f"Engagement: {engagement:,.2f}")
+            st.write(f"💰 **Total KPI (Impressions + Views + Engagement)**: {total_kpi:,.2f}")
+        else:
+            st.error("❌ Optimization failed. Check constraints.")

@@ -117,8 +117,8 @@ with col2:
         change_page("Influencer Performance")
 
 with col3:
-    if st.button("📋 AI CHAT"):
-        change_page("AI CHAT")
+    if st.button("📋 Optimized Budget"):
+        change_page("Optimized Budget")
 
 # ---------- PAGE 1:
 # Initialize session state
@@ -284,7 +284,7 @@ if st.session_state.page == "Influencer Performance":
         selected_platform = st.selectbox("Select a Platform", options=platforms)
 
     with col2:
-        st.subheader("🌍 Select Platform")
+        st.subheader("🌍 Select KPIs")
         cost_per = df_coff['CPX'].unique()  # Get unique platforms
         selected_cost_per = st.selectbox("Select a Cost Per XXX", options=cost_per)
         
@@ -340,8 +340,8 @@ if st.session_state.page == "Influencer Performance":
 
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
-elif st.session_state.page == "AI CHAT":
-    st.title("📋 Summary Budget")
+elif st.session_state.page == "Optimized Budget":
+    st.title("📋 Optimized Budget")
 
     # Random Data for Charts
     random_df = pd.DataFrame({

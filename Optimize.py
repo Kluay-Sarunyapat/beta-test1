@@ -46,6 +46,13 @@ def set_black_background():
     """
     st.markdown(bg_style, unsafe_allow_html=True)
 
+# List of valid usernames and passwords
+valid_users = {
+    "mbcs": "1234",
+    "mbcs1": "5678",
+    "admin": "adminpass"  # Add more users if needed
+}
+
 # If user is NOT logged in, show login page with black background
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
@@ -57,25 +64,28 @@ if not st.session_state.authenticated:
     logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
     st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
 
-
     # Title with larger and bold text
     st.markdown("<h1 style='text-align: center; color: white;'>🔒 WELCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
 
     # Bold and white color for the input labels
     st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
-    st.text_input("", key="username")
+    username = st.text_input("", key="username")
     
     st.markdown("<h3 style='color: white; font-weight: bold;'>Password</h3>", unsafe_allow_html=True)
-    st.text_input("", type="password", key="password")
+    password = st.text_input("", type="password", key="password")
 
     # Login button
     if st.button("Login"):
-        if st.session_state.username == "mbcs" and st.session_state.password == "1234":
+        if username in valid_users and password == valid_users[username]:
             st.session_state.authenticated = True
+            st.success("✅ Login successful!")
         else:
             st.error("❌ Incorrect username or password. Please try again.")
     
     st.stop()  # Stop execution if not logged in
+
+# After login, show main content
+st.write("🎉 Welcome! You are now logged in.")
 
 # ---------- SESSION STATE FOR DATA SHARING ----------
 if 'inputs' not in st.session_state:

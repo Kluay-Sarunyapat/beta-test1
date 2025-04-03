@@ -107,7 +107,7 @@ def change_page(page_name):
 
 # ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     if st.button("📂 Simulation Budget"):
@@ -120,6 +120,10 @@ with col2:
 with col3:
     if st.button("📋 Optimized Budget"):
         change_page("Optimized Budget")
+
+with col4:
+    if st.button("🤖 GEN AI"):
+        change_page("GEN AI")
 
 # ---------- PAGE 1:
 # Initialize session state
@@ -457,3 +461,7 @@ elif st.session_state.page == "Optimized Budget":
             st.write(f"💰 **Total KPI (Impressions + Views + Engagement)**: {total_kpi:,.2f}")
         else:
             st.error("❌ Optimization failed. Check constraints.")
+
+#Page4
+if st.session_state.page == "GEN AI":
+    st.title(" COMMING SOON...")

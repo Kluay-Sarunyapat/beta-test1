@@ -253,18 +253,18 @@ df_coff = load_google_sheets(sheet_url_off)
 st.write(df)
 
 
-# ---------- PAGE 2: Influencer Performance ----------
-# Google Sheets CSV direct link
-sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
-sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
+# # ---------- PAGE 2: Influencer Performance ----------
+# # Google Sheets CSV direct link
+# sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
+# sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
 
-@st.cache_data
-def load_google_sheets(url):
-    return pd.read_csv(url)
+# @st.cache_data
+# def load_google_sheets(url):
+#     return pd.read_csv(url)
 
-# Load the data
-df = load_google_sheets(sheet_url_raw)
-df_coff = load_google_sheets(sheet_url_off)
+# # Load the data
+# df = load_google_sheets(sheet_url_raw)
+# df_coff = load_google_sheets(sheet_url_off)
 
 # ---------- PAGE 2: Influencer Performance ----------
 # Google Sheets CSV direct link

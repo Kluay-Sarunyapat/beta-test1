@@ -249,8 +249,8 @@ if st.button('Refresh Data'):
 df = load_google_sheets(sheet_url_raw)
 df_coff = load_google_sheets(sheet_url_off)
 
-# Display the data
-st.write(df)
+# # Display the data
+# st.write(df)
 
 
 # # ---------- PAGE 2: Influencer Performance ----------

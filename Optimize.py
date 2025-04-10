@@ -237,13 +237,28 @@ if st.session_state.page == "Simulation Budget":
 sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
 sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
 
+# @st.cache_data
+# def load_google_sheets(url):
+#     return pd.read_csv(url)
+
+# # Load the data
+# df = load_google_sheets(sheet_url_raw)
+# df_coff = load_google_sheets(sheet_url_off)
+
 @st.cache_data
 def load_google_sheets(url):
     return pd.read_csv(url)
 
+# Button to trigger refresh
+if st.button('Refresh Data'):
+    st.cache_data.clear()  # Clear cache when the button is pressed
+
 # Load the data
 df = load_google_sheets(sheet_url_raw)
 df_coff = load_google_sheets(sheet_url_off)
+
+# Display the data
+st.write(df)
 
 
 # ---------- PAGE 2: Influencer Performance ----------

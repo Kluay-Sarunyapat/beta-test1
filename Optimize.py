@@ -86,7 +86,16 @@ if not st.session_state.authenticated:
     
     st.stop()  # Stop execution if not logged in
 
+#function to add logo
+def show_logo(centered=True, width=200):
+    logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+    if centered:
+        st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='{width}'></div>", unsafe_allow_html=True)
+    else:
+        st.image(logo_url, width=width)
+
 # After login, show main content
+show_logo(centered=True, width=150)
 st.write("🎉 Welcome! You are now logged in.")
 
 # ---------- SESSION STATE FOR DATA SHARING ----------
@@ -356,27 +365,6 @@ if st.session_state.page == "Influencer Performance":
 elif st.session_state.page == "Optimized Budget":
     st.title("📋 Optimized Budget")
 
-    # # Random Data for Charts
-    # random_df = pd.DataFrame({
-    #     'Category': ['VIP', 'Top', 'Mid', 'Macro', 'Nano'],
-    #     'Budget': np.random.randint(100, 500, 5)
-    # })
-
-    # # Chart 1: Bar Chart
-    # st.subheader("📊 Random Budget Distribution")
-    # bar_fig = px.bar(random_df, x='Category', y='Budget', color='Category', title="Random Bar Chart")
-    # st.plotly_chart(bar_fig, use_container_width=True)
-
-    # # Chart 2: Area Chart
-    # st.subheader("🌄 Random Budget Over Time")
-    # area_df = pd.DataFrame({
-    #     'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-    #     'Budget': np.random.randint(200, 600, 5)
-    # })
-
-    # area_fig = px.area(area_df, x='Month', y='Budget', title="Random Area Chart")
-    # st.plotly_chart(area_fig, use_container_width=True)
-    # Define KPI weights (different for F&B and Cosmetic)
     def get_weights(category):
         if category == "F&B":
             impression_weights = {'VIP': 5, 'Top': 3, 'Mid': 2, 'Macro': 1, 'Nano': 0.5}

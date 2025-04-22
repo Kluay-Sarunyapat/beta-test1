@@ -137,45 +137,55 @@ with col4:
 
 # ---------- PAGE 1:
 # Initialize session state
-# Initialize session state
+# ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
+@st.cache_data
+def load_weights(csv_url):
+    df = pd.read_csv(csv_url)
+    return df
+
+# Load weights from the published Google Sheet
+csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
+weights_df = load_weights(csv_url)
+
+# ---------- PAGE 1: Initialize session state ----------
 if 'page' not in st.session_state:
     st.session_state.page = "Simulation Budget"
 if 'inputs' not in st.session_state:
     st.session_state.inputs = {'VIP': 0, 'Top': 0, 'Mid': 0, 'Macro': 0, 'Nano': 0}
 if 'category' not in st.session_state:
-    st.session_state.category = "F&B"
+    st.session_state.category = weights_df['Category'].unique()[0]  # default first category
 
 # ---------- PAGE 1: INPUT DATA ----------
 if st.session_state.page == "Simulation Budget":
     st.title("📊 Simulation Budget")
-    
-    # Category selection dropdown
-    category = st.selectbox("Select Category:", ["F&B", "Cosmetic"], index=(0 if st.session_state.category == "F&B" else 1))
+
+    # Dynamic category selection dropdown
+    categories = sorted(weights_df['Category'].unique())
+    category = st.selectbox("Select Category:", categories, index=categories.index(st.session_state.category))
     st.session_state.category = category
-    
+
     # Get input values
     vip = st.session_state.inputs['VIP']
     top = st.session_state.inputs['Top']
     mid = st.session_state.inputs['Mid']
     macro = st.session_state.inputs['Macro']
     nano = st.session_state.inputs['Nano']
-    
-    # Define weights based on category
-    if category == "F&B":
-        impression_weights = {'VIP': 5, 'Top': 3, 'Mid': 2, 'Macro': 1, 'Nano': 0.5}
-        view_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
-        engagement_weights = {'VIP': 1, 'Top': 0.5, 'Mid': 0.25, 'Macro': 0.1, 'Nano': 0.005}
-    else:  # Cosmetic
-        impression_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
-        view_weights = {'VIP': 1, 'Top': 0.75, 'Mid': 0.5, 'Macro': 0.25, 'Nano': 0.1}
-        engagement_weights = {'VIP': 0.5, 'Top': 0.25, 'Mid': 0.1, 'Macro': 0.005, 'Nano': 0.001}
-    
+
+    # Get weights dynamically from dataframe
+    def get_weights(kpi):
+        filtered = weights_df[(weights_df['Category'] == category) & (weights_df['KPI'] == kpi)]
+        return {row['Tier']: row['Weights'] for _, row in filtered.iterrows()}
+
+    impression_weights = get_weights("Impression")
+    view_weights = get_weights("View")
+    engagement_weights = get_weights("Engagement")
+
     # Calculate summary metrics
     total_sum = vip + top + mid + macro + nano
-    total_impressions = sum(st.session_state.inputs[k] * v for k, v in impression_weights.items())
-    total_views = sum(st.session_state.inputs[k] * v for k, v in view_weights.items())
-    total_engagement = sum(st.session_state.inputs[k] * v for k, v in engagement_weights.items())
-    
+    total_impressions = sum(st.session_state.inputs[k] * impression_weights.get(k, 0) for k in st.session_state.inputs)
+    total_views = sum(st.session_state.inputs[k] * view_weights.get(k, 0) for k in st.session_state.inputs)
+    total_engagement = sum(st.session_state.inputs[k] * engagement_weights.get(k, 0) for k in st.session_state.inputs)
+
     # Summary metrics display
     st.markdown(
         f"""
@@ -199,35 +209,30 @@ if st.session_state.page == "Simulation Budget":
 
     # Spacer
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
     # Layout with input fields
     col1, col2 = st.columns([2, 1])
 
     with col1:
         st.subheader("🎯 Enter Data")
         new_values = {}
-        for category in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
-            cols = st.columns([3, 1])  # Adjusted column ratio for better alignment
-            new_values[category] = cols[0].number_input(f"{category}", min_value=0, value=st.session_state.inputs[category], key=category)
-            percentage = (new_values[category] / total_sum * 100) if total_sum > 0 else 0
-            
-            # HTML structure with label on top of the percentage box
+        for category_tier in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
+            cols = st.columns([3, 1])
+            new_values[category_tier] = cols[0].number_input(f"{category_tier}", min_value=0, value=st.session_state.inputs[category_tier], key=category_tier)
+            percentage = (new_values[category_tier] / total_sum * 100) if total_sum > 0 else 0
             cols[1].markdown(f"""
-                <div style='text-align:center; margin-bottom:5px; font-size:14px; color:#555;'>
-                    %
-                </div>
+                <div style='text-align:center; margin-bottom:5px; font-size:14px; color:#555;'>%</div>
                 <div style='display:flex; align-items:center; justify-content:center; height:40px; 
                             width:100%; border-radius:5px; border:1px solid #ddd; padding:5px; text-align:center; line-height: 35px;'>
                     {percentage:.2f}%
                 </div>
             """, unsafe_allow_html=True)
-        
+
         # Update session state on change
         if new_values != st.session_state.inputs:
             st.session_state.inputs = new_values
             st.rerun()
 
-    # Right side: Total Budget Card
     with col2:
         st.subheader("💰 Total Budget")
         st.markdown(
@@ -239,7 +244,6 @@ if st.session_state.page == "Simulation Budget":
             </div>
             """, unsafe_allow_html=True
         )
-
 
 
 # ---------- PAGE 2: Influencer Performance ----------

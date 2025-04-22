@@ -370,24 +370,20 @@ elif st.session_state.page == "Optimized Budget":
     st.title("📋 Optimized Budget")
 
     def get_weights(category):
-        if category == "F&B":
-            impression_weights = {'VIP': 5, 'Top': 3, 'Mid': 2, 'Macro': 1, 'Nano': 0.5}
-            view_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
-            engagement_weights = {'VIP': 1, 'Top': 0.5, 'Mid': 0.25, 'Macro': 0.1, 'Nano': 0.005}
-        else:  # Cosmetic
-            impression_weights = {'VIP': 3, 'Top': 2, 'Mid': 1, 'Macro': 0.5, 'Nano': 0.25}
-            view_weights = {'VIP': 1, 'Top': 0.75, 'Mid': 0.5, 'Macro': 0.25, 'Nano': 0.1}
-            engagement_weights = {'VIP': 0.5, 'Top': 0.25, 'Mid': 0.1, 'Macro': 0.005, 'Nano': 0.001}
-        
+        """Extracts weights by KPI and Tier for the selected category from dataframe"""
+        cat_df = weights_df[weights_df['Category'] == category]
+        impression_weights = cat_df[cat_df['KPI'] == 'Impression'].set_index('Tier')['Weights'].to_dict()
+        view_weights = cat_df[cat_df['KPI'] == 'View'].set_index('Tier')['Weights'].to_dict()
+        engagement_weights = cat_df[cat_df['KPI'] == 'Engagement'].set_index('Tier')['Weights'].to_dict()
         return impression_weights, view_weights, engagement_weights
-    
+
     def optimize_budget(total_budget, min_alloc, max_alloc, priority='balanced', category="F&B"):
         tiers = ['VIP', 'Top', 'Mid', 'Macro', 'Nano']
         num_tiers = len(tiers)
-        
+
         # Get KPI weights based on selected category
         impression_weights, view_weights, engagement_weights = get_weights(category)
-        
+
         # Define KPI objective coefficients based on priority
         if priority == 'impressions':
             weights = [impression_weights[t] for t in tiers]
@@ -395,21 +391,21 @@ elif st.session_state.page == "Optimized Budget":
             weights = [view_weights[t] for t in tiers]
         elif priority == 'engagement':
             weights = [engagement_weights[t] for t in tiers]
-        else:
+        else:  # balanced
             weights = [(impression_weights[t] + view_weights[t] + engagement_weights[t]) / 3 for t in tiers]
-        
+
         # Convert to negative for maximization
         c = -np.array(weights)
-        
+
         # Constraints: Budget and min/max allocations
         A_eq = [np.ones(num_tiers)]
         b_eq = [total_budget]
-        
+
         bounds = [(min_alloc[t], max_alloc[t]) for t in tiers]
-        
+
         # Solve optimization
         res = linprog(c, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
-        
+
         if res.success:
             allocation = {tiers[i]: res.x[i] for i in range(num_tiers)}
             impressions = sum(res.x[i] * impression_weights[tiers[i]] for i in range(num_tiers))
@@ -419,16 +415,17 @@ elif st.session_state.page == "Optimized Budget":
             return allocation, impressions, views, engagement, total_kpi
         else:
             return None, None, None, None, None
-    
+
     # Streamlit UI
     st.title("📊 Budget Optimization Tool")
-    
+
     # Category selection
-    category = st.selectbox("Select Category:", ["F&B", "Cosmetic"])
-    
+    categories = weights_df['Category'].unique()
+    category = st.selectbox("Select Category:", categories)
+
     # Total Budget input
     total_budget = st.number_input("Enter Total Budget:", min_value=0, value=10000, step=100)
-    
+
     # Min/Max Allocation inputs
     min_alloc = {}
     max_alloc = {}
@@ -437,23 +434,23 @@ elif st.session_state.page == "Optimized Budget":
         st.subheader("Minimum Allocation")
         for tier in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
             min_alloc[tier] = st.number_input(f"Min {tier}", min_value=0, value=0)
-    
+
     with col2:
         st.subheader("Maximum Allocation")
         for tier in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
             max_alloc[tier] = st.number_input(f"Max {tier}", min_value=0, value=total_budget)
-    
+
     # Priority selection for optimization
     priority = st.selectbox("Select Optimization Priority:", ["balanced", "impressions", "views", "engagement"])
-    
+
     # Optimization button
     if st.button("Optimize Budget"):
         allocation, impressions, views, engagement, total_kpi = optimize_budget(total_budget, min_alloc, max_alloc, priority, category)
-        
+
         if allocation:
             st.success("✅ Optimization Successful!")
             st.json(allocation)
-            
+
             st.subheader("📊 KPI Breakdown")
             st.write(f"Impressions: {impressions:,.2f}")
             st.write(f"Views: {views:,.2f}")

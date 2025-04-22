@@ -62,7 +62,8 @@ if not st.session_state.authenticated:
     set_black_background()  # Set black background
     
     # Logo image (Google Drive direct link)
-    logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
+    # logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
+    logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
     st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
 
     # Title with larger and bold text

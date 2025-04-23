@@ -460,5 +460,40 @@ elif st.session_state.page == "Optimized Budget":
             st.error("❌ Optimization failed. Check constraints.")
 
 #Page4
+# if st.session_state.page == "GEN AI":
+#     st.title(" COMMING SOON...")
 if st.session_state.page == "GEN AI":
-    st.title(" COMMING SOON...")
+    import pandas as pd
+    import streamlit as st
+    from pandasai import SmartDataframe
+    from transformers import pipeline
+    from pandasai.llm.base import LLM
+
+    class LocalHuggingFaceLLM(LLM):
+        def __init__(self, model_name="google/flan-t5-small"):
+            self.model_name = model_name
+            self.generator = pipeline("text2text-generation", model=model_name)
+
+        def call(self, prompt, **kwargs):
+            result = self.generator(prompt, max_length=256, do_sample=True)[0]["generated_text"]
+            return result
+
+        @property
+        def type(self):
+            return "local-huggingface"
+
+    st.title("📊 GEN AI: Chat with your Data (Free)")
+
+    uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file)
+        st.write("✅ Data Preview:", df.head())
+
+        llm = LocalHuggingFaceLLM()
+        sdf = SmartDataframe(df, config={"llm": llm})
+
+        prompt = st.text_input("Ask a question about your data:")
+        if prompt:
+            with st.spinner("Generating answer..."):
+                response = sdf.chat(prompt)
+                st.write("💬 Response:", response)

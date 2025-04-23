@@ -135,6 +135,19 @@ def change_page(page_name):
 #     if st.button("🤖 GEN AI"):
 #         change_page("GEN AI")
 
+# Custom CSS to ensure buttons are evenly spaced
+st.markdown(
+    """
+    <style>
+    .stButton>button {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 8px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
 col1, col2, col3, col4, col5 = st.columns(5)

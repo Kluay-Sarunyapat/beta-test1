@@ -462,38 +462,76 @@ elif st.session_state.page == "Optimized Budget":
 #Page4
 # if st.session_state.page == "GEN AI":
 #     st.title(" COMMING SOON...")
+# Page 4: GEN AI with PandasAI (Free Hugging Face Model, No API Key + Clear Chat)
+
 if st.session_state.page == "GEN AI":
-    import pandas as pd
     import streamlit as st
+    import pandas as pd
     from pandasai import SmartDataframe
     from transformers import pipeline
     from pandasai.llm.base import LLM
 
+    # Local model wrapper
     class LocalHuggingFaceLLM(LLM):
-        def __init__(self, model_name="google/flan-t5-small"):
+        def __init__(self, model_name="google/flan-t5-base"):
             self.model_name = model_name
             self.generator = pipeline("text2text-generation", model=model_name)
-    
+
         def call(self, prompt: str, *args, **kwargs) -> str:
             result = self.generator(prompt, max_length=256, do_sample=True)[0]["generated_text"]
             return result
-    
+
         @property
         def type(self):
             return "local-huggingface"
 
-    st.title("📊 GEN AI: Chat with your Data (Free)")
+    st.title("📊 GEN AI: Chat with Your Data (No API Key)")
 
-    uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+    # Session state for chat
+    if "chat_prompt" not in st.session_state:
+        st.session_state.chat_prompt = ""
+    if "chat_response" not in st.session_state:
+        st.session_state.chat_response = ""
+
+    uploaded_file = st.file_uploader("📎 Upload a CSV file", type=["csv"])
     if uploaded_file:
         df = pd.read_csv(uploaded_file)
-        st.write("✅ Data Preview:", df.head())
+        st.write("🧾 Data Preview:", df.head())
 
         llm = LocalHuggingFaceLLM()
-        sdf = SmartDataframe(df, config={"llm": llm})
 
-        prompt = st.text_input("Ask a question about your data:")
-        if prompt:
-            with st.spinner("Generating answer..."):
-                response = sdf.chat(prompt)
-                st.write("💬 Response:", response)
+        sdf = SmartDataframe(
+            df,
+            config={
+                "llm": llm,
+                "enable_cache": False,
+                "enable_memory": True,
+                "verbose": True,
+            },
+        )
+
+        # Input + buttons
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.session_state.chat_prompt = st.text_input(
+                "💬 Ask a question about your data (e.g. 'Which category has the lowest CPM?')",
+                value=st.session_state.chat_prompt,
+                key="prompt_input"
+            )
+
+        with col2:
+            if st.button("🧹 Clear Chat"):
+                st.session_state.chat_prompt = ""
+                st.session_state.chat_response = ""
+
+        # Handle question
+        if st.session_state.chat_prompt:
+            with st.spinner("🤖 Thinking..."):
+                try:
+                    st.session_state.chat_response = sdf.chat(st.session_state.chat_prompt)
+                except Exception as e:
+                    st.session_state.chat_response = f"❌ Error: {e}"
+
+        # Show response
+        if st.session_state.chat_response:
+            st.write("✅ Response:", st.session_state.chat_response)

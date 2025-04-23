@@ -115,9 +115,29 @@ if 'page' not in st.session_state:
 def change_page(page_name):
     st.session_state.page = page_name
 
+# # ---------- TOP NAVIGATION BUTTONS ----------
+# st.markdown("### 📁 Welcome To MBCS Optimize Tool")
+# col1, col2, col3, col4 = st.columns(4)
+
+# with col1:
+#     if st.button("📂 Simulation Budget"):
+#         change_page("Simulation Budget")
+
+# with col2:
+#     if st.button("💰 Influencer Performance"):
+#         change_page("Influencer Performance")
+
+# with col3:
+#     if st.button("📋 Optimized Budget"):
+#         change_page("Optimized Budget")
+
+# with col4:
+#     if st.button("🤖 GEN AI"):
+#         change_page("GEN AI")
+
 # ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
     if st.button("📂 Simulation Budget"):
@@ -134,6 +154,10 @@ with col3:
 with col4:
     if st.button("🤖 GEN AI"):
         change_page("GEN AI")
+
+with col5:
+    if st.button("📊 Dashboard"):
+        change_page("Dashboard")  # New page name
 
 # ---------- PAGE 1:
 # Initialize session state
@@ -535,3 +559,16 @@ if st.session_state.page == "GEN AI":
         # Show response
         if st.session_state.chat_response:
             st.write("✅ Response:", st.session_state.chat_response)
+
+# ---------- Page 5: Embedded Looker Studio Dashboard ----------
+if st.session_state.page == "Dashboard":
+    st.title("📊 Live Dashboard")
+    st.markdown("Here is your embedded Looker Studio dashboard:")
+
+    # Embed the public dashboard using iframe
+    st.components.v1.iframe(
+        src="https://lookerstudio.google.com/embed/reporting/2612a10a-44a2-4b2d-866d-58b4cd13023e/page/bIqhE",
+        height=800,
+        width=1200,
+        scrolling=True,
+    )

@@ -563,12 +563,17 @@ if st.session_state.page == "GEN AI":
 # ---------- Page 5: Embedded Looker Studio Dashboard ----------
 if st.session_state.page == "Dashboard":
     st.title("📊 Live Dashboard")
-    st.markdown("Here is your embedded Looker Studio dashboard:")
+    st.markdown("Click below to view your dashboard in a new tab:")
 
-    # Embed the public dashboard using iframe
-    st.components.v1.iframe(
-        src="https://lookerstudio.google.com/embed/reporting/2612a10a-44a2-4b2d-866d-58b4cd13023e/page/bIqhE",
-        height=800,
-        width=1200,
-        scrolling=True,
-    )
+    # Display an image or icon (optional)
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Google_Data_Studio_Logo.svg/512px-Google_Data_Studio_Logo.svg.png", width=100)
+
+    # Add a button to open the Looker Studio link
+    dashboard_url = "https://lookerstudio.google.com/reporting/2612a10a-44a2-4b2d-866d-58b4cd13023e/page/bIqhE"
+    st.markdown(f"""
+        <a href="{dashboard_url}" target="_blank">
+            <button style="background-color:#4285F4;color:white;padding:10px 20px;border:none;border-radius:8px;font-size:16px;">
+                🔗 Open Dashboard
+            </button>
+        </a>
+    """, unsafe_allow_html=True)

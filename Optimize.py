@@ -473,11 +473,11 @@ if st.session_state.page == "GEN AI":
         def __init__(self, model_name="google/flan-t5-small"):
             self.model_name = model_name
             self.generator = pipeline("text2text-generation", model=model_name)
-
-        def call(self, prompt, **kwargs):
+    
+        def call(self, prompt: str, *args, **kwargs) -> str:
             result = self.generator(prompt, max_length=256, do_sample=True)[0]["generated_text"]
             return result
-
+    
         @property
         def type(self):
             return "local-huggingface"

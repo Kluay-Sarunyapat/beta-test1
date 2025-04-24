@@ -115,27 +115,7 @@ if 'page' not in st.session_state:
 def change_page(page_name):
     st.session_state.page = page_name
 
-# # ---------- TOP NAVIGATION BUTTONS ----------
-# st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-# col1, col2, col3, col4 = st.columns(4)
-
-# with col1:
-#     if st.button("📂 Simulation Budget"):
-#         change_page("Simulation Budget")
-
-# with col2:
-#     if st.button("💰 Influencer Performance"):
-#         change_page("Influencer Performance")
-
-# with col3:
-#     if st.button("📋 Optimized Budget"):
-#         change_page("Optimized Budget")
-
-# with col4:
-#     if st.button("🤖 GEN AI"):
-#         change_page("GEN AI")
-
-# Custom CSS to ensure buttons are evenly spaced
+# ---------- STYLE NAVIGATION BUTTONS ----------
 st.markdown(
     """
     <style>
@@ -144,9 +124,21 @@ st.markdown(
         padding: 10px;
         font-size: 16px;
         border-radius: 8px;
+        background-color: #000000;
+        color: white;
+        border: none;
+        transition: background-color 0.3s, color 0.3s;
+    }
+
+    .stButton>button:hover {
+        background-color: #333333;
+        color: #ffffff;
+        cursor: pointer;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
 # ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
@@ -170,7 +162,43 @@ with col4:
 
 with col5:
     if st.button("📊 Dashboard"):
-        change_page("Dashboard")  # New page name
+        change_page("Dashboard")
+
+# st.markdown(
+#     """
+#     <style>
+#     .stButton>button {
+#         width: 100%;
+#         padding: 10px;
+#         font-size: 16px;
+#         border-radius: 8px;
+#     }
+#     </style>
+#     """, unsafe_allow_html=True)
+
+# # ---------- TOP NAVIGATION BUTTONS ----------
+# st.markdown("### 📁 Welcome To MBCS Optimize Tool")
+# col1, col2, col3, col4, col5 = st.columns(5)
+
+# with col1:
+#     if st.button("📂 Simulation Budget"):
+#         change_page("Simulation Budget")
+
+# with col2:
+#     if st.button("💰 Influencer Performance"):
+#         change_page("Influencer Performance")
+
+# with col3:
+#     if st.button("📋 Optimized Budget"):
+#         change_page("Optimized Budget")
+
+# with col4:
+#     if st.button("🤖 GEN AI"):
+#         change_page("GEN AI")
+
+# with col5:
+#     if st.button("📊 Dashboard"):
+#         change_page("Dashboard")  # New page name
 
 # ---------- PAGE 1:
 # Initialize session state

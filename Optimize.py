@@ -497,89 +497,89 @@ elif st.session_state.page == "Optimized Budget":
             st.error("❌ Optimization failed. Check constraints.")
 
 #Page4
-# if st.session_state.page == "GEN AI":
-#     st.title(" COMMING SOON...")
-# Page 4: GEN AI with PandasAI (Free Hugging Face Model, No API Key + Clear Chat)
-
 if st.session_state.page == "GEN AI":
-    import streamlit as st
-    import pandas as pd
-    from pandasai import SmartDataframe
-    from transformers import pipeline
-    from pandasai.llm.base import LLM
+    st.title(" COMMING SOON...")
+# # Page 4: GEN AI with PandasAI (Free Hugging Face Model, No API Key + Clear Chat)
 
-    # Local model wrapper
-    class LocalHuggingFaceLLM(LLM):
-        def __init__(self, model_name="google/flan-t5-base"):
-            self.model_name = model_name
-            self.generator = pipeline("text2text-generation", model=model_name)
+# if st.session_state.page == "GEN AI":
+#     import streamlit as st
+#     import pandas as pd
+#     from pandasai import SmartDataframe
+#     from transformers import pipeline
+#     from pandasai.llm.base import LLM
 
-        def call(self, prompt: str, *args, **kwargs) -> str:
-            result = self.generator(prompt, max_length=256, do_sample=True)[0]["generated_text"]
-            return result
+#     # Local model wrapper
+#     class LocalHuggingFaceLLM(LLM):
+#         def __init__(self, model_name="google/flan-t5-base"):
+#             self.model_name = model_name
+#             self.generator = pipeline("text2text-generation", model=model_name)
 
-        @property
-        def type(self):
-            return "local-huggingface"
+#         def call(self, prompt: str, *args, **kwargs) -> str:
+#             result = self.generator(prompt, max_length=256, do_sample=True)[0]["generated_text"]
+#             return result
 
-    st.title("📊 GEN AI: Chat with Your Data (No API Key)")
+#         @property
+#         def type(self):
+#             return "local-huggingface"
 
-    # Session state for chat
-    if "chat_prompt" not in st.session_state:
-        st.session_state.chat_prompt = ""
-    if "chat_response" not in st.session_state:
-        st.session_state.chat_response = ""
+#     st.title("📊 GEN AI: Chat with Your Data (No API Key)")
 
-    uploaded_file = st.file_uploader("📎 Upload a CSV file", type=["csv"])
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file)
-        st.write("🧾 Data Preview:", df.head())
+#     # Session state for chat
+#     if "chat_prompt" not in st.session_state:
+#         st.session_state.chat_prompt = ""
+#     if "chat_response" not in st.session_state:
+#         st.session_state.chat_response = ""
 
-        llm = LocalHuggingFaceLLM()
+#     uploaded_file = st.file_uploader("📎 Upload a CSV file", type=["csv"])
+#     if uploaded_file:
+#         df = pd.read_csv(uploaded_file)
+#         st.write("🧾 Data Preview:", df.head())
 
-        sdf = SmartDataframe(
-            df,
-            config={
-                "llm": llm,
-                "enable_cache": False,
-                "enable_memory": True,
-                "verbose": True,
-            },
-        )
+#         llm = LocalHuggingFaceLLM()
 
-        # Input + buttons
-        col1, col2 = st.columns([3, 1])
-        with col1:
-            st.session_state.chat_prompt = st.text_input(
-                "💬 Ask a question about your data (e.g. 'Which category has the lowest CPM?')",
-                value=st.session_state.chat_prompt,
-                key="prompt_input"
-            )
+#         sdf = SmartDataframe(
+#             df,
+#             config={
+#                 "llm": llm,
+#                 "enable_cache": False,
+#                 "enable_memory": True,
+#                 "verbose": True,
+#             },
+#         )
 
-        with col2:
-            if st.button("🧹 Clear Chat"):
-                st.session_state.chat_prompt = ""
-                st.session_state.chat_response = ""
+#         # Input + buttons
+#         col1, col2 = st.columns([3, 1])
+#         with col1:
+#             st.session_state.chat_prompt = st.text_input(
+#                 "💬 Ask a question about your data (e.g. 'Which category has the lowest CPM?')",
+#                 value=st.session_state.chat_prompt,
+#                 key="prompt_input"
+#             )
 
-        # Handle question
-        if st.session_state.chat_prompt:
-            with st.spinner("🤖 Thinking..."):
-                try:
-                    st.session_state.chat_response = sdf.chat(st.session_state.chat_prompt)
-                except Exception as e:
-                    st.session_state.chat_response = f"❌ Error: {e}"
+#         with col2:
+#             if st.button("🧹 Clear Chat"):
+#                 st.session_state.chat_prompt = ""
+#                 st.session_state.chat_response = ""
 
-        # Show response
-        if st.session_state.chat_response:
-            st.write("✅ Response:", st.session_state.chat_response)
+#         # Handle question
+#         if st.session_state.chat_prompt:
+#             with st.spinner("🤖 Thinking..."):
+#                 try:
+#                     st.session_state.chat_response = sdf.chat(st.session_state.chat_prompt)
+#                 except Exception as e:
+#                     st.session_state.chat_response = f"❌ Error: {e}"
+
+#         # Show response
+#         if st.session_state.chat_response:
+#             st.write("✅ Response:", st.session_state.chat_response)
 
 # ---------- Page 5: Embedded Looker Studio Dashboard ----------
 if st.session_state.page == "Dashboard":
     st.title("📊 Live Dashboard")
     st.markdown("Click below to view your dashboard in a new tab:")
 
-    # Display an image or icon (optional)
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Google_Data_Studio_Logo.svg/512px-Google_Data_Studio_Logo.svg.png", width=100)
+    # # Display an image or icon (optional)
+    # st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Google_Data_Studio_Logo.svg/512px-Google_Data_Studio_Logo.svg.png", width=100)
 
     # Add a button to open the Looker Studio link
     dashboard_url = "https://lookerstudio.google.com/reporting/2612a10a-44a2-4b2d-866d-58b4cd13023e/page/bIqhE"

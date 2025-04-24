@@ -115,7 +115,6 @@ if 'page' not in st.session_state:
 def change_page(page_name):
     st.session_state.page = page_name
 
-# ---------- STYLE NAVIGATION BUTTONS ----------
 st.markdown(
     """
     <style>
@@ -128,6 +127,7 @@ st.markdown(
         color: white;
         border: none;
         transition: background-color 0.3s, color 0.3s;
+        white-space: nowrap;  /* Prevents wrapping */
     }
 
     .stButton>button:hover {
@@ -142,7 +142,7 @@ st.markdown(
 
 # ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
 
 with col1:
     if st.button("📂 Simulation Budget"):

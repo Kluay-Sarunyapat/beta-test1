@@ -102,9 +102,10 @@ st.write("🎉 Welcome! You are now logged in.")
 if 'inputs' not in st.session_state:
     st.session_state.inputs = {
         'VIP': 0,
-        'Top': 0,
-        'Mid': 0,
+        'Mega': 0,
         'Macro': 0,
+        'Mid': 0,
+        'Micro': 0,
         'Nano': 0
     }
 
@@ -216,7 +217,7 @@ weights_df = load_weights(csv_url)
 if 'page' not in st.session_state:
     st.session_state.page = "Simulation Budget"
 if 'inputs' not in st.session_state:
-    st.session_state.inputs = {'VIP': 0, 'Top': 0, 'Mid': 0, 'Macro': 0, 'Nano': 0}
+    st.session_state.inputs = {'VIP': 0, 'Mega': 0, 'Macro':0,'Mid': 0, 'Micro': 0, 'Nano': 0}
 if 'category' not in st.session_state:
     st.session_state.category = weights_df['Category'].unique()[0]  # default first category
 
@@ -231,9 +232,10 @@ if st.session_state.page == "Simulation Budget":
 
     # Get input values
     vip = st.session_state.inputs['VIP']
-    top = st.session_state.inputs['Top']
-    mid = st.session_state.inputs['Mid']
+    mega = st.session_state.inputs['Mega']
     macro = st.session_state.inputs['Macro']
+    mid = st.session_state.inputs['Mid']
+    micro = st.session_state.inputs['Micro']
     nano = st.session_state.inputs['Nano']
 
     # Get weights dynamically from dataframe
@@ -246,7 +248,7 @@ if st.session_state.page == "Simulation Budget":
     engagement_weights = get_weights("Engagement")
 
     # Calculate summary metrics
-    total_sum = vip + top + mid + macro + nano
+    total_sum = vip + mega + macro + mid + micro + nano
     total_impressions = sum(st.session_state.inputs[k] * impression_weights.get(k, 0) for k in st.session_state.inputs)
     total_views = sum(st.session_state.inputs[k] * view_weights.get(k, 0) for k in st.session_state.inputs)
     total_engagement = sum(st.session_state.inputs[k] * engagement_weights.get(k, 0) for k in st.session_state.inputs)
@@ -281,7 +283,7 @@ if st.session_state.page == "Simulation Budget":
     with col1:
         st.subheader("🎯 Enter Data")
         new_values = {}
-        for category_tier in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
+        for category_tier in ['VIP', 'Mega', 'Macro','Mid', 'Micro', 'Nano']:
             cols = st.columns([3, 1])
             new_values[category_tier] = cols[0].number_input(f"{category_tier}", min_value=0, value=st.session_state.inputs[category_tier], key=category_tier)
             percentage = (new_values[category_tier] / total_sum * 100) if total_sum > 0 else 0
@@ -443,7 +445,7 @@ elif st.session_state.page == "Optimized Budget":
         return impression_weights, view_weights, engagement_weights
 
     def optimize_budget(total_budget, min_alloc, max_alloc, priority='balanced', category="F&B"):
-        tiers = ['VIP', 'Top', 'Mid', 'Macro', 'Nano']
+        tiers = ['VIP', 'Mega', 'Macro','Mid', 'Micro', 'Nano']
         num_tiers = len(tiers)
 
         # Get KPI weights based on selected category
@@ -497,12 +499,12 @@ elif st.session_state.page == "Optimized Budget":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Minimum Allocation")
-        for tier in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
+        for tier in ['VIP', 'Mega','Macro', 'Mid', 'Micro', 'Nano']:
             min_alloc[tier] = st.number_input(f"Min {tier}", min_value=0, value=0)
 
     with col2:
         st.subheader("Maximum Allocation")
-        for tier in ['VIP', 'Top', 'Mid', 'Macro', 'Nano']:
+        for tier in ['VIP', 'Mega','Macro', 'Mid', 'Micro', 'Nano']:
             max_alloc[tier] = st.number_input(f"Max {tier}", min_value=0, value=total_budget)
 
     # Priority selection for optimization

@@ -309,6 +309,7 @@ if st.session_state.page == "Influencer Performance":
     # Show Data
     st.subheader("📋 Influencer Performance from Google Sheets")
     st.dataframe(df_full)  # Display the Google Sheets data
+    df_full = load_data()
     # ----------------- Selection Logic ------------------
     def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
         df = df.copy()
@@ -353,8 +354,6 @@ if st.session_state.page == "Influencer Performance":
     
     # ----------------- Streamlit App ------------------
     st.title("🎯 KOL Selection Optimizer")
-    
-    df_full = load_data()
     
     # Input Controls
     budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)

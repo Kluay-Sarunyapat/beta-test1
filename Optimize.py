@@ -299,21 +299,74 @@ if st.session_state.page == "Influencer Performance":
     if st.button('🔄 Refresh Data'):
         st.cache_data.clear()
 
+    df = load_google_sheets(sheet_url_raw)
+    df_coff = load_google_sheets(sheet_url_off)
     df_full = load_google_sheets(sheet_url_full)
 
     st.title("💰 Influencer Performance")
+
     st.write("🧾 Available columns:", df_full.columns.tolist())
+
+    st.subheader("📋 Influencer Data from Google Sheets")
     st.dataframe(df_full)
 
-    def select_kols(df, budget, num_kols, kpi='impression', allowed_tiers=None):
+    # --- Tier selection with exclusive 'All' ---
+    all_tiers = ['All', 'VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano']
+
+    if 'tier_selection' not in st.session_state:
+        st.session_state.tier_selection = ['All']
+
+    def update_tiers():
+        selected = st.session_state['tier_multiselect']
+        if 'All' in selected and len(selected) > 1:
+            st.session_state.tier_selection = ['All']
+        elif 'All' in selected and len(selected) == 1:
+            st.session_state.tier_selection = ['All']
+        else:
+            if 'All' in selected:
+                selected.remove('All')
+            st.session_state.tier_selection = selected
+
+    tier_selection = st.multiselect(
+        "🏷️ Tier Selection",
+        options=all_tiers,
+        default=st.session_state.tier_selection,
+        key='tier_multiselect',
+        on_change=update_tiers
+    )
+
+    # Filter tiers for selection function
+    if 'All' in st.session_state.tier_selection:
+        filtered_tiers = None  # means no filter on tiers
+    else:
+        filtered_tiers = [tier.lower() for tier in st.session_state.tier_selection]
+
+    def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
         df = df.copy()
-        df = df[df['cost'].notna() & (df['cost'] > 0)]
-        df = df[df[kpi].notna()]
 
-        if allowed_tiers and 'All' not in allowed_tiers:
-            df = df[df['tier'].isin(allowed_tiers)]
+        # Note: Your columns are 'cost', 'impression', 'engagement', 'view' — adjust accordingly
+        cost_col = 'cost'
+        kpi_col = kpi  # e.g., 'total_impression' doesn't exist, map to correct columns
+        # Map user KPI to actual column names
+        kpi_map = {
+            'total_impression': 'impression',
+            'total_engagement': 'engagement',
+            'total_view': 'view',
+        }
+        if kpi in kpi_map:
+            kpi_col = kpi_map[kpi]
 
-        df['score'] = df[kpi] / df['cost']
+        # Remove rows without valid cost or KPI
+        df = df[df[cost_col].notna() & (df[cost_col] > 0)]
+        df = df[df[kpi_col].notna()]
+
+        # Filter tiers if any specified
+        if allowed_tiers is not None:
+            df = df[df['tier'].str.lower().isin(allowed_tiers)]
+
+        # Calculate score = KPI per cost
+        df['score'] = df[kpi_col] / df[cost_col]
+
         df = df.sort_values(by='score', ascending=False)
 
         selected = []
@@ -322,9 +375,9 @@ if st.session_state.page == "Influencer Performance":
         for _, row in df.iterrows():
             if len(selected) >= num_kols:
                 break
-            if total_cost + row['cost'] <= budget:
+            if total_cost + row[cost_col] <= budget:
                 selected.append(row)
-                total_cost += row['cost']
+                total_cost += row[cost_col]
 
         selected_df = pd.DataFrame(selected)
 
@@ -332,7 +385,7 @@ if st.session_state.page == "Influencer Performance":
             summary = {
                 'kol_name': 'TOTAL',
                 'platform': '',
-                'cost': selected_df['cost'].sum(),
+                'cost': selected_df[cost_col].sum(),
                 'impression': selected_df['impression'].sum(),
                 'engagement': selected_df['engagement'].sum(),
                 'view': selected_df['view'].sum(),
@@ -348,12 +401,9 @@ if st.session_state.page == "Influencer Performance":
 
     budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
     num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
-    kpi_option = st.selectbox("📊 KPI Focus", options=['impression', 'engagement', 'view'])
-    all_tiers = ['VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano', 'All']
-    tier_selection = st.multiselect("🏷️ Tier Selection", options=all_tiers, default=['All'])
+    kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
 
     if st.button("🚀 Run Selection"):
-        filtered_tiers = None if 'All' in tier_selection else [tier.lower() for tier in tier_selection]
         result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
         st.success("✅ KOL selection complete!")
         st.dataframe(result_df)

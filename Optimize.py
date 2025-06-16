@@ -309,6 +309,70 @@ if st.session_state.page == "Influencer Performance":
     # Show Data
     st.subheader("📋 Influencer Performance from Google Sheets")
     st.dataframe(df_full)  # Display the Google Sheets data
+    # ----------------- Selection Logic ------------------
+    def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
+        df = df.copy()
+    
+        # Drop invalid rows
+        df = df[df['total_cost'].notna() & (df['total_cost'] > 0)]
+        df = df[df[kpi].notna()]
+    
+        if allowed_tiers and 'All' not in allowed_tiers:
+            df = df[df['Tier'].isin(allowed_tiers)]
+    
+        df['score'] = df[kpi] / df['total_cost']
+        df = df.sort_values(by='score', ascending=False)
+    
+        selected = []
+        total_cost = 0
+    
+        for _, row in df.iterrows():
+            if len(selected) >= num_kols:
+                break
+            if total_cost + row['total_cost'] <= budget:
+                selected.append(row)
+                total_cost += row['total_cost']
+    
+        selected_df = pd.DataFrame(selected)
+    
+        if not selected_df.empty:
+            summary = {
+                'kol_name': 'TOTAL',
+                'platform': '',
+                'total_cost': selected_df['total_cost'].sum(),
+                'total_impression': selected_df['total_impression'].sum(),
+                'total_engagement': selected_df['total_engagement'].sum(),
+                'total_view': selected_df['total_view'].sum(),
+                'followers': '',
+                'Tier': '',
+                'score': ''
+            }
+            selected_df = pd.concat([selected_df, pd.DataFrame([summary])], ignore_index=True)
+    
+        return selected_df
+    
+    # ----------------- Streamlit App ------------------
+    st.title("🎯 KOL Selection Optimizer")
+    
+    df_full = load_data()
+    
+    # Input Controls
+    budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
+    num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
+    kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
+    all_tiers = ['VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano', 'All']
+    tier_selection = st.multiselect("🏷️ Tier Selection", options=all_tiers, default=['All'])
+    
+    # Selection button
+    if st.button("Run Selection"):
+        filtered_tiers = None if 'All' in tier_selection else tier_selection
+        result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
+        st.success("✅ Selection complete!")
+        st.dataframe(result_df)
+    
+    # Optional: Show original data
+    with st.expander("Show Raw Data"):
+        st.dataframe(df_full)
 
     # # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
     # col1, col2, col3 = st.columns(3)

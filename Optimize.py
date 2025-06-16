@@ -283,59 +283,61 @@ if st.session_state.page == "Simulation Budget":
         )
 
 # ---------- PAGE 2: Influencer Performance ----------
-# Google Sheets CSV direct link
+# ---------- Google Sheets URLs ----------
 sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
 sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
 sheet_url_full = "https://docs.google.com/spreadsheets/d/1f7x4teD3iBeFfhmpObHqcj8wl_DkipLwa_JxAO5sYp8/gviz/tq?tqx=out:csv"
 
+# ---------- Caching the data load ----------
 @st.cache_data
 def load_google_sheets(url):
     return pd.read_csv(url)
 
-# Button to trigger refresh
-if st.button('Refresh Data'):
-    st.cache_data.clear()  # Clear cache when the button is pressed
+# ---------- Refresh Cache Button ----------
+if st.button('🔄 Refresh Data'):
+    st.cache_data.clear()
 
-# Load the data
+# ---------- Load all data once ----------
 df = load_google_sheets(sheet_url_raw)
 df_coff = load_google_sheets(sheet_url_off)
 df_full = load_google_sheets(sheet_url_full)
 
-
-# ---------- PAGE: INFLUENCER PERFORMANCE ----------
+# ---------- PAGE: Influencer Performance ----------
 if st.session_state.page == "Influencer Performance":
-    df_full = load_data()
     st.title("💰 Influencer Performance")
 
-    # Show Data
+    # Show full raw data from Google Sheets
     st.subheader("📋 Influencer Performance from Google Sheets")
-    st.dataframe(df_full)  # Display the Google Sheets data
-    # ----------------- Selection Logic ------------------
+    st.dataframe(df_full)
+
+    # ---------- KOL Selection Function ----------
     def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
         df = df.copy()
-    
+
         # Drop invalid rows
         df = df[df['total_cost'].notna() & (df['total_cost'] > 0)]
         df = df[df[kpi].notna()]
-    
+
+        # Tier filter
         if allowed_tiers and 'All' not in allowed_tiers:
             df = df[df['Tier'].isin(allowed_tiers)]
-    
+
+        # Score = KPI per cost
         df['score'] = df[kpi] / df['total_cost']
         df = df.sort_values(by='score', ascending=False)
-    
+
         selected = []
         total_cost = 0
-    
+
         for _, row in df.iterrows():
             if len(selected) >= num_kols:
                 break
             if total_cost + row['total_cost'] <= budget:
                 selected.append(row)
                 total_cost += row['total_cost']
-    
+
         selected_df = pd.DataFrame(selected)
-    
+
         if not selected_df.empty:
             summary = {
                 'kol_name': 'TOTAL',
@@ -349,28 +351,25 @@ if st.session_state.page == "Influencer Performance":
                 'score': ''
             }
             selected_df = pd.concat([selected_df, pd.DataFrame([summary])], ignore_index=True)
-    
+
         return selected_df
-    
-    # ----------------- Streamlit App ------------------
+
+    # ---------- KOL Selection UI ----------
     st.title("🎯 KOL Selection Optimizer")
-    
-    # Input Controls
+
     budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
     num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
     kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
     all_tiers = ['VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano', 'All']
     tier_selection = st.multiselect("🏷️ Tier Selection", options=all_tiers, default=['All'])
-    
-    # Selection button
-    if st.button("Run Selection"):
+
+    if st.button("🚀 Run Selection"):
         filtered_tiers = None if 'All' in tier_selection else tier_selection
         result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
         st.success("✅ Selection complete!")
         st.dataframe(result_df)
-    
-    # Optional: Show original data
-    with st.expander("Show Raw Data"):
+
+    with st.expander("📂 Show Raw Data Table"):
         st.dataframe(df_full)
 
     # # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---

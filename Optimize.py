@@ -448,7 +448,7 @@ with st.expander("🔍 Show Raw Data"):
 
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
-elif st.session_state.page == "Optimized Budget":
+if st.session_state.page == "Optimized Budget":
     st.title("📋 Optimized Budget")
 
     def get_weights(category):

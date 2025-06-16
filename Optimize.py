@@ -297,7 +297,7 @@ if st.session_state.page == "Influencer Performance":
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
         return df
     if st.button('🔄 Refresh Data'):
-    st.cache_data.clear()
+        st.cache_data.clear()
 
     df_full = load_google_sheets(sheet_url_full)
 

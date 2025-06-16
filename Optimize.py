@@ -283,106 +283,85 @@ if st.session_state.page == "Simulation Budget":
         )
 
 # ---------- PAGE 2: Influencer Performance ----------
-# ---------- GOOGLE SHEETS ----------
+# ---------- PAGE 2: Influencer Performance ----------
 if st.session_state.page == "Influencer Performance":
-sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
-sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
-sheet_url_full = "https://docs.google.com/spreadsheets/d/1f7x4teD3iBeFfhmpObHqcj8wl_DkipLwa_JxAO5sYp8/gviz/tq?tqx=out:csv"
 
-@st.cache_data
-def load_google_sheets(url):
-    df = pd.read_csv(url)
-    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-    return df
+    # ---------- GOOGLE SHEETS ----------
+    sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
+    sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
+    sheet_url_full = "https://docs.google.com/spreadsheets/d/1f7x4teD3iBeFfhmpObHqcj8wl_DkipLwa_JxAO5sYp8/gviz/tq?tqx=out:csv"
 
-# Button to trigger refresh
-if st.button('🔄 Refresh Data'):
-    st.cache_data.clear()
+    @st.cache_data
+    def load_google_sheets(url):
+        df = pd.read_csv(url)
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+        return df
 
-# Load all 3 data sources
-df = load_google_sheets(sheet_url_raw)
-df_coff = load_google_sheets(sheet_url_off)
-df_full = load_google_sheets(sheet_url_full)
+    if st.button('🔄 Refresh Data'):
+        st.cache_data.clear()
 
-# -------- PAGE: INFLUENCER PERFORMANCE --------
-st.title("💰 Influencer Performance")
+    df = load_google_sheets(sheet_url_raw)
+    df_coff = load_google_sheets(sheet_url_off)
+    df_full = load_google_sheets(sheet_url_full)
 
-# Show cleaned column names (debug)
-st.write("🧾 Available columns:", df_full.columns.tolist())
-
-# Display raw data
-st.subheader("📋 Influencer Data from Google Sheets")
-st.dataframe(df_full)
-
-# ----------------- KOL Selection Logic ------------------
-def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
-    df = df.copy()
-
-    # Drop rows with missing or invalid cost or KPI
-    df = df[df['total_cost'].notna() & (df['total_cost'] > 0)]
-    df = df[df[kpi].notna()]
-
-    # Filter tiers if specified
-    if allowed_tiers and 'All' not in allowed_tiers:
-        df = df[df['tier'].isin(allowed_tiers)]
-
-    # Calculate score = KPI per THB
-    df['score'] = df[kpi] / df['total_cost']
-    df = df.sort_values(by='score', ascending=False)
-
-    selected = []
-    total_cost = 0
-
-    for _, row in df.iterrows():
-        if len(selected) >= num_kols:
-            break
-        if total_cost + row['total_cost'] <= budget:
-            selected.append(row)
-            total_cost += row['total_cost']
-
-    selected_df = pd.DataFrame(selected)
-
-    # Add summary row
-    if not selected_df.empty:
-        summary = {
-            'kol_name': 'TOTAL',
-            'platform': '',
-            'total_cost': selected_df['total_cost'].sum(),
-            'total_impression': selected_df['total_impression'].sum(),
-            'total_engagement': selected_df['total_engagement'].sum(),
-            'total_view': selected_df['total_view'].sum(),
-            'followers': '',
-            'tier': '',
-            'score': ''
-        }
-        selected_df = pd.concat([selected_df, pd.DataFrame([summary])], ignore_index=True)
-
-    return selected_df
-
-# ----------------- STREAMLIT UI ------------------
-st.title("🎯 KOL Selection Optimizer")
-
-# Input: Budget, number of KOLs
-budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
-num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
-
-# Input: KPI focus
-kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
-
-# Input: Tier selection
-all_tiers = ['VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano', 'All']
-tier_selection = st.multiselect("🏷️ Tier Selection", options=all_tiers, default=['All'])
-
-# Run selection
-if st.button("🚀 Run Selection"):
-    filtered_tiers = None if 'All' in tier_selection else [tier.lower() for tier in tier_selection]
-    result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
-    st.success("✅ KOL selection complete!")
-    st.dataframe(result_df)
-
-# Optional: Raw data display
-with st.expander("🔍 Show Raw Data"):
+    st.title("💰 Influencer Performance")
+    st.write("🧾 Available columns:", df_full.columns.tolist())
+    st.subheader("📋 Influencer Data from Google Sheets")
     st.dataframe(df_full)
+
+    def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
+        df = df.copy()
+        df = df[df['total_cost'].notna() & (df['total_cost'] > 0)]
+        df = df[df[kpi].notna()]
+        if allowed_tiers and 'All' not in allowed_tiers:
+            df = df[df['tier'].isin(allowed_tiers)]
+        df['score'] = df[kpi] / df['total_cost']
+        df = df.sort_values(by='score', ascending=False)
+
+        selected = []
+        total_cost = 0
+        for _, row in df.iterrows():
+            if len(selected) >= num_kols:
+                break
+            if total_cost + row['total_cost'] <= budget:
+                selected.append(row)
+                total_cost += row['total_cost']
+
+        selected_df = pd.DataFrame(selected)
+
+        if not selected_df.empty:
+            summary = {
+                'kol_name': 'TOTAL',
+                'platform': '',
+                'total_cost': selected_df['total_cost'].sum(),
+                'total_impression': selected_df['total_impression'].sum(),
+                'total_engagement': selected_df['total_engagement'].sum(),
+                'total_view': selected_df['total_view'].sum(),
+                'followers': '',
+                'tier': '',
+                'score': ''
+            }
+            selected_df = pd.concat([selected_df, pd.DataFrame([summary])], ignore_index=True)
+
+        return selected_df
+
+    st.title("🎯 KOL Selection Optimizer")
+
+    budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
+    num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
+
+    kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
+    all_tiers = ['VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano', 'All']
+    tier_selection = st.multiselect("🏷️ Tier Selection", options=all_tiers, default=['All'])
+
+    if st.button("🚀 Run Selection"):
+        filtered_tiers = None if 'All' in tier_selection else [tier.lower() for tier in tier_selection]
+        result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
+        st.success("✅ KOL selection complete!")
+        st.dataframe(result_df)
+
+    with st.expander("🔍 Show Raw Data"):
+        st.dataframe(df_full)
 
     # # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
     # col1, col2, col3 = st.columns(3)

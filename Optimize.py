@@ -304,12 +304,12 @@ df_full = load_google_sheets(sheet_url_full)
 
 # ---------- PAGE: INFLUENCER PERFORMANCE ----------
 if st.session_state.page == "Influencer Performance":
+    df_full = load_data()
     st.title("💰 Influencer Performance")
 
     # Show Data
     st.subheader("📋 Influencer Performance from Google Sheets")
     st.dataframe(df_full)  # Display the Google Sheets data
-    df_full = load_data()
     # ----------------- Selection Logic ------------------
     def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
         df = df.copy()

@@ -296,36 +296,35 @@ if st.session_state.page == "Influencer Performance":
         df = pd.read_csv(url)
         df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
         return df
-
     if st.button('🔄 Refresh Data'):
-        st.cache_data.clear()
+    st.cache_data.clear()
 
-    df = load_google_sheets(sheet_url_raw)
-    df_coff = load_google_sheets(sheet_url_off)
     df_full = load_google_sheets(sheet_url_full)
 
     st.title("💰 Influencer Performance")
     st.write("🧾 Available columns:", df_full.columns.tolist())
-    st.subheader("📋 Influencer Data from Google Sheets")
     st.dataframe(df_full)
 
-    def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
+    def select_kols(df, budget, num_kols, kpi='impression', allowed_tiers=None):
         df = df.copy()
-        df = df[df['total_cost'].notna() & (df['total_cost'] > 0)]
+        df = df[df['cost'].notna() & (df['cost'] > 0)]
         df = df[df[kpi].notna()]
+
         if allowed_tiers and 'All' not in allowed_tiers:
             df = df[df['tier'].isin(allowed_tiers)]
-        df['score'] = df[kpi] / df['total_cost']
+
+        df['score'] = df[kpi] / df['cost']
         df = df.sort_values(by='score', ascending=False)
 
         selected = []
         total_cost = 0
+
         for _, row in df.iterrows():
             if len(selected) >= num_kols:
                 break
-            if total_cost + row['total_cost'] <= budget:
+            if total_cost + row['cost'] <= budget:
                 selected.append(row)
-                total_cost += row['total_cost']
+                total_cost += row['cost']
 
         selected_df = pd.DataFrame(selected)
 
@@ -333,10 +332,10 @@ if st.session_state.page == "Influencer Performance":
             summary = {
                 'kol_name': 'TOTAL',
                 'platform': '',
-                'total_cost': selected_df['total_cost'].sum(),
-                'total_impression': selected_df['total_impression'].sum(),
-                'total_engagement': selected_df['total_engagement'].sum(),
-                'total_view': selected_df['total_view'].sum(),
+                'cost': selected_df['cost'].sum(),
+                'impression': selected_df['impression'].sum(),
+                'engagement': selected_df['engagement'].sum(),
+                'view': selected_df['view'].sum(),
                 'followers': '',
                 'tier': '',
                 'score': ''
@@ -349,8 +348,7 @@ if st.session_state.page == "Influencer Performance":
 
     budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
     num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
-
-    kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
+    kpi_option = st.selectbox("📊 KPI Focus", options=['impression', 'engagement', 'view'])
     all_tiers = ['VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano', 'All']
     tier_selection = st.multiselect("🏷️ Tier Selection", options=all_tiers, default=['All'])
 

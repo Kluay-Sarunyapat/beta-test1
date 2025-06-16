@@ -284,6 +284,7 @@ if st.session_state.page == "Simulation Budget":
 
 # ---------- PAGE 2: Influencer Performance ----------
 # ---------- GOOGLE SHEETS ----------
+if st.session_state.page == "Influencer Performance":
 sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
 sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
 sheet_url_full = "https://docs.google.com/spreadsheets/d/1f7x4teD3iBeFfhmpObHqcj8wl_DkipLwa_JxAO5sYp8/gviz/tq?tqx=out:csv"
@@ -448,7 +449,7 @@ with st.expander("🔍 Show Raw Data"):
 
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
-if st.session_state.page == "Optimized Budget":
+elif st.session_state.page == "Optimized Budget":
     st.title("📋 Optimized Budget")
 
     def get_weights(category):

@@ -308,71 +308,70 @@ if st.session_state.page == "Influencer Performance":
 
     # Show Data
     st.subheader("📋 Influencer Performance from Google Sheets")
-    st.dataframe(df)  # Display the Google Sheets data
     st.dataframe(df_full)  # Display the Google Sheets data
 
-    # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
-    col1, col2, col3 = st.columns(3)
+    # # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
+    # col1, col2, col3 = st.columns(3)
 
-    with col1:
-        st.subheader("🌍 Select Platform")
-        platforms = df_coff['Platform'].unique()  # Get unique platforms
-        selected_platform = st.selectbox("Select a Platform", options=platforms)
+    # with col1:
+    #     st.subheader("🌍 Select Platform")
+    #     platforms = df_coff['Platform'].unique()  # Get unique platforms
+    #     selected_platform = st.selectbox("Select a Platform", options=platforms)
 
-    with col2:
-        st.subheader("🌍 Select KPIs")
-        cost_per = df_coff['CPX'].unique()  # Get unique platforms
-        selected_cost_per = st.selectbox("Select a Cost Per XXX", options=cost_per)
+    # with col2:
+    #     st.subheader("🌍 Select KPIs")
+    #     cost_per = df_coff['CPX'].unique()  # Get unique platforms
+    #     selected_cost_per = st.selectbox("Select a Cost Per XXX", options=cost_per)
         
 
-    with col3:
-        st.subheader("🧑‍💼 Select KOL(s)")
-        # Filter KOLs based on selected platform and cost per (CPX)
-        filtered_kols_df_coff = df_coff[(df_coff['Platform'] == selected_platform) & 
-                                        (df_coff['CPX'] == selected_cost_per)]  # Filter by both platform and CPX
-        kol_names = filtered_kols_df_coff['KOL Name'].unique()  # Get unique KOL names
-        selected_kols = st.multiselect("Select KOL Names", options=kol_names)
+    # with col3:
+    #     st.subheader("🧑‍💼 Select KOL(s)")
+    #     # Filter KOLs based on selected platform and cost per (CPX)
+    #     filtered_kols_df_coff = df_coff[(df_coff['Platform'] == selected_platform) & 
+    #                                     (df_coff['CPX'] == selected_cost_per)]  # Filter by both platform and CPX
+    #     kol_names = filtered_kols_df_coff['KOL Name'].unique()  # Get unique KOL names
+    #     selected_kols = st.multiselect("Select KOL Names", options=kol_names)
 
-        # Input box for cost
-        Budget = st.number_input("💰 Enter Budget", min_value=0.0, value=0.1, step=0.01)
+    #     # Input box for cost
+    #     Budget = st.number_input("💰 Enter Budget", min_value=0.0, value=0.1, step=0.01)
 
-    if selected_kols:  # Check if any KOLs are selected
-        st.subheader("📊 Results")
+    # if selected_kols:  # Check if any KOLs are selected
+    #     st.subheader("📊 Results")
 
-        # Filter the data based on selected KOL names and platform
-        selected_kol_data = filtered_kols_df_coff[filtered_kols_df_coff['KOL Name'].isin(selected_kols)]
+    #     # Filter the data based on selected KOL names and platform
+    #     selected_kol_data = filtered_kols_df_coff[filtered_kols_df_coff['KOL Name'].isin(selected_kols)]
 
-        if not selected_kol_data.empty:
-            # Ensure 'Value' is numeric and calculate the Budget / Value for each selected KOL using `.loc` to avoid SettingWithCopyWarning
-            selected_kol_data['Value'] = pd.to_numeric(selected_kol_data['Value'], errors='coerce')  # Convert to numeric
-            selected_kol_data['Budget / Value'] = Budget / selected_kol_data['Value']  # Calculate Budget / Value
+    #     if not selected_kol_data.empty:
+    #         # Ensure 'Value' is numeric and calculate the Budget / Value for each selected KOL using `.loc` to avoid SettingWithCopyWarning
+    #         selected_kol_data['Value'] = pd.to_numeric(selected_kol_data['Value'], errors='coerce')  # Convert to numeric
+    #         selected_kol_data['Budget / Value'] = Budget / selected_kol_data['Value']  # Calculate Budget / Value
 
-            # Display results for each selected KOL
-            for index, row in selected_kol_data.iterrows():
-                st.write(f"KOL Name: {row['KOL Name']}")
-                st.write(f"Platform: {row['Platform']}")
-                st.write(f"CPX Type: {row['CPX']}")
-                st.write(f"Budget: {Budget}")
+    #         # Display results for each selected KOL
+    #         for index, row in selected_kol_data.iterrows():
+    #             st.write(f"KOL Name: {row['KOL Name']}")
+    #             st.write(f"Platform: {row['Platform']}")
+    #             st.write(f"CPX Type: {row['CPX']}")
+    #             st.write(f"Budget: {Budget}")
 
-                # Determine which calculation to display based on CPX type
-                if row['CPX'] == 'CPR':
-                    st.write(f"Calculated Value (Reach): {row['Budget / Value']:.2f}")  # Format to 2 decimal places
-                elif row['CPX'] == 'CPI':
-                    st.write(f"Calculated Value (Impression): {row['Budget / Value']:.2f}")
-                elif row['CPX'] == 'CPE':
-                    st.write(f"Calculated Value (Engagement): {row['Budget / Value']:.2f}")
-                elif row['CPX'] == 'CPC':
-                    st.write(f"Calculated Value (Click): {row['Budget / Value']:.2f}")
-                elif row['CPX'] == 'CPV':
-                    st.write(f"Calculated Value (View): {row['Budget / Value']:.2f}")
-                else:
-                    st.write(f"Calculated Value: {row['Budget / Value']:.2f}")  # Default case
+    #             # Determine which calculation to display based on CPX type
+    #             if row['CPX'] == 'CPR':
+    #                 st.write(f"Calculated Value (Reach): {row['Budget / Value']:.2f}")  # Format to 2 decimal places
+    #             elif row['CPX'] == 'CPI':
+    #                 st.write(f"Calculated Value (Impression): {row['Budget / Value']:.2f}")
+    #             elif row['CPX'] == 'CPE':
+    #                 st.write(f"Calculated Value (Engagement): {row['Budget / Value']:.2f}")
+    #             elif row['CPX'] == 'CPC':
+    #                 st.write(f"Calculated Value (Click): {row['Budget / Value']:.2f}")
+    #             elif row['CPX'] == 'CPV':
+    #                 st.write(f"Calculated Value (View): {row['Budget / Value']:.2f}")
+    #             else:
+    #                 st.write(f"Calculated Value: {row['Budget / Value']:.2f}")  # Default case
 
-                st.write("---")
-        else:
-            st.write("No data found for the selected KOL(s). Please check your selection.")
-    else:
-        st.write("No KOLs selected. Please select at least one KOL.")
+    #             st.write("---")
+    #     else:
+    #         st.write("No data found for the selected KOL(s). Please check your selection.")
+    # else:
+    #     st.write("No KOLs selected. Please select at least one KOL.")
 
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------

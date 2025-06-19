@@ -7,6 +7,7 @@ import requests
 import io
 import time
 from scipy.optimize import linprog
+from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 
 
 # Set Streamlit to wide layout
@@ -397,20 +398,100 @@ if st.session_state.page == "Influencer Performance":
 
         return selected_df
 
+        st.title("🎯 KOL Selection Optimizer")
+    
+        budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
+        num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
+        kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
+    
+        if st.button("🚀 Run Selection"):
+            result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
+            st.success("✅ KOL selection complete!")
+            st.dataframe(result_df)
+    
+        with st.expander("🔍 Show Raw Data"):
+            st.dataframe(df_full)
+    
+        ##Add New
+        def optimize_kols_lp(df, budget, num_kols, kpi='impression', allowed_tiers=None):
+            df = df.copy()
+        
+            # Filter invalid and null
+            df = df[df['cost'].notna() & (df['cost'] > 0)]
+            df = df[df[kpi].notna()]
+        
+            # Filter by tier
+            if allowed_tiers:
+                df = df[df['tier'].str.lower().isin(allowed_tiers)]
+        
+            # Limit to a reasonable number for performance
+            df = df.reset_index(drop=True)
+            if len(df) > 100:
+                df = df.nlargest(100, kpi)  # reduce problem size
+        
+            prob = LpProblem("KOL_Selection", LpMaximize)
+        
+            x = [LpVariable(f"x_{i}", cat=LpBinary) for i in range(len(df))]
+        
+            # Objective function: Maximize total KPI
+            prob += lpSum(df.loc[i, kpi] * x[i] for i in range(len(df)))
+        
+            # Constraints
+            prob += lpSum(df.loc[i, 'cost'] * x[i] for i in range(len(df))) <= budget
+            prob += lpSum(x[i] for i in range(len(df))) <= num_kols
+        
+            # Solve
+            prob.solve()
+        
+            selected_rows = []
+            for i in range(len(df)):
+                if x[i].varValue == 1:
+                    selected_rows.append(df.loc[i])
+        
+            result_df = pd.DataFrame(selected_rows)
+        
+            if not result_df.empty:
+                summary = {
+                    'kol_name': 'TOTAL',
+                    'platform': '',
+                    'cost': result_df["cost"].sum(),
+                    'impression': result_df["impression"].sum(),
+                    'engagement': result_df["engagement"].sum(),
+                    'view': result_df["view"].sum(),
+                    'followers': '',
+                    'tier': '',
+                    'score': ''
+                }
+                result_df = pd.concat([result_df, pd.DataFrame([summary])], ignore_index=True)
+        
+            return result_df
     st.title("🎯 KOL Selection Optimizer")
-
+    
+    selection_mode = st.radio("🔀 Optimization Method", ["Greedy", "Linear Programming"])
+    
     budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
     num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
     kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
-
-    if st.button("🚀 Run Selection"):
-        result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
-        st.success("✅ KOL selection complete!")
-        st.dataframe(result_df)
-
-    with st.expander("🔍 Show Raw Data"):
-        st.dataframe(df_full)
-
+    
+    kpi_map = {
+        'total_impression': 'impression',
+        'total_engagement': 'engagement',
+        'total_view': 'view',
+    }
+    kpi_col = kpi_map[kpi_option]
+    
+    if st.button("🚀 Run Optimization"):
+        if selection_mode == "Greedy":
+            result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
+        elif selection_mode == "Linear Programming":
+            result_df = optimize_kols_lp(df_full, budget, num_kols, kpi=kpi_col, allowed_tiers=filtered_tiers)
+    
+        if not result_df.empty:
+            st.success("✅ Optimization complete!")
+            st.dataframe(result_df)
+        else:
+            st.warning("⚠️ No KOLs selected based on criteria.")
+    
     # # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
     # col1, col2, col3 = st.columns(3)
 

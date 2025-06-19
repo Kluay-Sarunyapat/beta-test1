@@ -414,26 +414,30 @@ if st.session_state.page == "Influencer Performance":
     
         ##Add New
         def optimize_kols_lp(df, budget, num_kols, kpi='impression', allowed_tiers=None):
+            from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
+            import pandas as pd
+        
             df = df.copy()
         
-            # Filter invalid and null
+            # Clean input
             df = df[df['cost'].notna() & (df['cost'] > 0)]
             df = df[df[kpi].notna()]
         
-            # Filter by tier
+            # Tier filter if applicable
             if allowed_tiers:
                 df = df[df['tier'].str.lower().isin(allowed_tiers)]
         
-            # Limit to a reasonable number for performance
             df = df.reset_index(drop=True)
+        
+            # Limit to 100 rows to keep solver fast
             if len(df) > 100:
-                df = df.nlargest(100, kpi)  # reduce problem size
+                df = df.nlargest(100, kpi)
         
+            # Define LP problem
             prob = LpProblem("KOL_Selection", LpMaximize)
-        
             x = [LpVariable(f"x_{i}", cat=LpBinary) for i in range(len(df))]
         
-            # Objective function: Maximize total KPI
+            # Objective: maximize KPI
             prob += lpSum(df.loc[i, kpi] * x[i] for i in range(len(df)))
         
             # Constraints
@@ -465,6 +469,8 @@ if st.session_state.page == "Influencer Performance":
                 result_df = pd.concat([result_df, pd.DataFrame([summary])], ignore_index=True)
         
             return result_df
+
+    
     st.title("🎯 KOL Selection Optimizer")
     
     selection_mode = st.radio("🔀 Optimization Method", ["Greedy", "Linear Programming"])

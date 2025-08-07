@@ -114,59 +114,7 @@ if 'inputs' not in st.session_state:
 if 'page' not in st.session_state:
     st.session_state.page = 'Simulation Budget'  # Default page
 
-# # ---------- FUNCTION TO CHANGE PAGE ----------
-# def change_page(page_name):
-#     st.session_state.page = page_name
-
-# st.markdown(
-#     """
-#     <style>
-#     .stButton>button {
-#         width: 100%;
-#         padding: 10px;
-#         font-size: 16px;
-#         border-radius: 8px;
-#         background-color: #000000;
-#         color: white;
-#         border: none;
-#         transition: background-color 0.3s, color 0.3s;
-#         white-space: nowrap;  /* Prevents wrapping */
-#     }
-
-#     .stButton>button:hover {
-#         background-color: #333333;
-#         color: #ffffff;
-#         cursor: pointer;
-#     }
-#     </style>
-#     """,
-#     unsafe_allow_html=True
-# )
-
-# # ---------- TOP NAVIGATION BUTTONS ----------
-# st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-# col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
-
-# with col1:
-#     if st.button("📂 Simulation Budget"):
-#         change_page("Simulation Budget")
-
-# with col2:
-#     if st.button("💰 Influencer Performance"):
-#         change_page("Influencer Performance")
-
-# with col3:
-#     if st.button("📋 Optimized Budget"):
-#         change_page("Optimized Budget")
-
-# with col4:
-#     if st.button("🤖 GEN AI"):
-#         change_page("GEN AI")
-
-# with col5:
-#     if st.button("📊 Dashboard"):
-#         change_page("Dashboard")
-
+# ---------- FUNCTION TO CHANGE PAGE ----------
 def change_page(page_name):
     st.session_state.page = page_name
 
@@ -182,73 +130,45 @@ st.markdown(
         color: white;
         border: none;
         transition: background-color 0.3s, color 0.3s;
-        white-space: nowrap;
+        white-space: nowrap;  /* Prevents wrapping */
     }
-    .selected-button {
-        color: red !important;
+
+    .stButton>button:hover {
+        background-color: #333333;
+        color: #ffffff;
+        cursor: pointer;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-if "page" not in st.session_state:
-    st.session_state.page = "Simulation Budget"
-
+# ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, col4, col5 = st.columns(5)
+col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
 
 with col1:
-    if st.session_state.page == "Simulation Budget":
-        st.markdown(
-            "<div class='stButton'><button class='selected-button'>📂 Simulation Budget</button></div>",
-            unsafe_allow_html=True
-        )
-    else:
-        if st.button("📂 Simulation Budget"):
-            change_page("Simulation Budget")
+    if st.button("📂 Simulation Budget"):
+        change_page("Simulation Budget")
 
 with col2:
-    if st.session_state.page == "Influencer Performance":
-        st.markdown(
-            "<div class='stButton'><button class='selected-button'>💰 Influencer Performance</button></div>",
-            unsafe_allow_html=True
-        )
-    else:
-        if st.button("💰 Influencer Performance"):
-            change_page("Influencer Performance")
+    if st.button("💰 Influencer Performance"):
+        change_page("Influencer Performance")
 
 with col3:
-    if st.session_state.page == "Optimized Budget":
-        st.markdown(
-            "<div class='stButton'><button class='selected-button'>📋 Optimized Budget</button></div>",
-            unsafe_allow_html=True
-        )
-    else:
-        if st.button("📋 Optimized Budget"):
-            change_page("Optimized Budget")
+    if st.button("📋 Optimized Budget"):
+        change_page("Optimized Budget")
 
 with col4:
-    if st.session_state.page == "GEN AI":
-        st.markdown(
-            "<div class='stButton'><button class='selected-button'>🤖 GEN AI</button></div>",
-            unsafe_allow_html=True
-        )
-    else:
-        if st.button("🤖 GEN AI"):
-            change_page("GEN AI")
+    if st.button("🤖 GEN AI"):
+        change_page("GEN AI")
 
 with col5:
-    if st.session_state.page == "Dashboard":
-        st.markdown(
-            "<div class='stButton'><button class='selected-button'>📊 Dashboard</button></div>",
-            unsafe_allow_html=True
-        )
-    else:
-        if st.button("📊 Dashboard"):
-            change_page("Dashboard")
+    if st.button("📊 Dashboard"):
+        change_page("Dashboard")
 
 st.write(f"Current Page: {st.session_state.page}")
+
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data

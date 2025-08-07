@@ -207,6 +207,9 @@ for (name, icon), col in zip(buttons, cols):
             if st.button(f"{icon} {name}", key=name):
                 change_page(name)
 
+# Demo content
+st.write(f"Current Page: {st.session_state.page}")
+
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data

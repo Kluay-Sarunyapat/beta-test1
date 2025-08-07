@@ -182,7 +182,7 @@ st.markdown(
         color: white;
         border: none;
         transition: background-color 0.3s, color 0.3s;
-        white-space: nowrap;  /* Prevents wrapping */
+        white-space: nowrap;
     }
     .selected-button {
         color: red !important;
@@ -195,33 +195,60 @@ st.markdown(
 if "page" not in st.session_state:
     st.session_state.page = "Simulation Budget"
 
-# ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
+col1, col2, col3, col4, col5 = st.columns(5)
 
-buttons = [
-    ("Simulation Budget", "📂"),
-    ("Influencer Performance", "💰"),
-    ("Optimized Budget", "📋"),
-    ("GEN AI", "🤖"),
-    ("Dashboard", "📊")
-]
-cols = [col1, col2, col3, col4, col5]
+with col1:
+    if st.session_state.page == "Simulation Budget":
+        st.markdown(
+            "<div class='stButton'><button class='selected-button'>📂 Simulation Budget</button></div>",
+            unsafe_allow_html=True
+        )
+    else:
+        if st.button("📂 Simulation Budget"):
+            change_page("Simulation Budget")
 
-for (name, icon), col in zip(buttons, cols):
-    with col:
-        # Create the button label
-        btn_label = f"{icon} {name}"
-        # If this is the selected page, apply a red text style
-        if st.session_state.page == name:
-            # Use markdown for selected, else use st.button for others
-            st.markdown(
-                f"<div class='stButton'><button class='selected-button'>{btn_label}</button></div>",
-                unsafe_allow_html=True
-            )
-        else:
-            if st.button(btn_label, key=name):
-                change_page(name)
+with col2:
+    if st.session_state.page == "Influencer Performance":
+        st.markdown(
+            "<div class='stButton'><button class='selected-button'>💰 Influencer Performance</button></div>",
+            unsafe_allow_html=True
+        )
+    else:
+        if st.button("💰 Influencer Performance"):
+            change_page("Influencer Performance")
+
+with col3:
+    if st.session_state.page == "Optimized Budget":
+        st.markdown(
+            "<div class='stButton'><button class='selected-button'>📋 Optimized Budget</button></div>",
+            unsafe_allow_html=True
+        )
+    else:
+        if st.button("📋 Optimized Budget"):
+            change_page("Optimized Budget")
+
+with col4:
+    if st.session_state.page == "GEN AI":
+        st.markdown(
+            "<div class='stButton'><button class='selected-button'>🤖 GEN AI</button></div>",
+            unsafe_allow_html=True
+        )
+    else:
+        if st.button("🤖 GEN AI"):
+            change_page("GEN AI")
+
+with col5:
+    if st.session_state.page == "Dashboard":
+        st.markdown(
+            "<div class='stButton'><button class='selected-button'>📊 Dashboard</button></div>",
+            unsafe_allow_html=True
+        )
+    else:
+        if st.button("📊 Dashboard"):
+            change_page("Dashboard")
+
+st.write(f"Current Page: {st.session_state.page}")
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data

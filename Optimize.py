@@ -423,7 +423,13 @@ st.markdown(
             <td>{view_b_html}</td>
         </tr>
         <tr>
-            <td style="font-weight:bold)
+            <td style="font-weight:bold">Engagements</td>
+            <td>{eng_a_html}</td>
+            <td>{eng_b_html}</td>
+        </tr>
+    </table>
+    """, unsafe_allow_html=True
+)
 
 
 

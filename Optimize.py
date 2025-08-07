@@ -115,57 +115,149 @@ if 'page' not in st.session_state:
     st.session_state.page = 'Simulation Budget'  # Default page
 
 # ---------- FUNCTION TO CHANGE PAGE ----------
-def change_page(page_name):
-    st.session_state.page = page_name
+# def change_page(page_name):
+#     st.session_state.page = page_name
 
+# st.markdown(
+#     """
+#     <style>
+#     .stButton>button {
+#         width: 100%;
+#         padding: 10px;
+#         font-size: 16px;
+#         border-radius: 8px;
+#         background-color: #000000;
+#         color: white;
+#         border: none;
+#         transition: background-color 0.3s, color 0.3s;
+#         white-space: nowrap;  /* Prevents wrapping */
+#     }
+
+#     .stButton>button:hover {
+#         background-color: #333333;
+#         color: #ffffff;
+#         cursor: pointer;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # ---------- TOP NAVIGATION BUTTONS ----------
+# st.markdown("### 📁 Welcome To MBCS Optimize Tool")
+# col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
+
+# with col1:
+#     if st.button("📂 Simulation Budget"):
+#         change_page("Simulation Budget")
+
+# with col2:
+#     if st.button("💰 Influencer Performance"):
+#         change_page("Influencer Performance")
+
+# with col3:
+#     if st.button("📋 Optimized Budget"):
+#         change_page("Optimized Budget")
+
+# with col4:
+#     if st.button("🤖 GEN AI"):
+#         change_page("GEN AI")
+
+# with col5:
+#     if st.button("📊 Dashboard"):
+#         change_page("Dashboard")
+
+pages = [
+    ("Simulation Budget", "📂"),
+    ("Influencer Performance", "💰"),
+    ("Optimized Budget", "📋"),
+    ("GEN AI", "🤖"),
+    ("Dashboard", "📊")
+]
+
+if "page" not in st.session_state:
+    st.session_state.page = pages[0][0]  # default first page
+
+# ---------- CSS for Navigation Buttons ----------
+st.markdown("""
+<style>
+.nav-btn {
+    width: 100%;
+    padding: 12px 0;
+    margin-bottom: 4px;
+    font-size: 18px;
+    border-radius: 9px;
+    border: 2px solid transparent;
+    background-color: #242526;
+    color: #fff !important;
+    font-weight: 500;
+    transition: background-color 0.12s, color 0.12s, border 0.12s;
+    outline: none;
+    cursor: pointer;
+}
+.nav-btn:hover {
+    background-color: #555;
+    color: #fbc02d !important;
+}
+.nav-btn.selected {
+    background-color: #fbc02d !important;
+    color: #242526 !important;
+    border-color: #f57c00;
+    font-weight: bold !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("### 📁 Welcome To MBCS Optimize Tool")
+cols = st.columns(len(pages))
+
+# ---------- Display Navigation Buttons ----------
+for idx, (page_name, icon) in enumerate(pages):
+    selected = (st.session_state.page == page_name)
+    btn_class = "nav-btn selected" if selected else "nav-btn"
+    with cols[idx]:
+        # Use a form to avoid all buttons triggering at once
+        with st.form(key=f"form_{page_name}"):
+            submitted = st.form_submit_button(
+                label=f"{icon} {page_name}",
+                use_container_width=True
+            )
+            # Inject custom CSS class for styling
+            st.markdown(
+                f"""
+                <style>
+                  [data-testid="formSubmitButton"] button {{
+                    all: unset;
+                  }}
+                  [data-testid="formSubmitButton"] button {{
+                    width: 100% !important;
+                    display: block !important;
+                  }}
+                </style>
+                <button class="{btn_class}">{icon} {page_name}</button>
+                """, unsafe_allow_html=True
+            )
+            if submitted:
+                st.session_state.page = page_name
+
+# ---------- DEMO: Render Selected Page Content ----------
+st.markdown("---")
 st.markdown(
-    """
-    <style>
-    .stButton>button {
-        width: 100%;
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 8px;
-        background-color: #000000;
-        color: white;
-        border: none;
-        transition: background-color 0.3s, color 0.3s;
-        white-space: nowrap;  /* Prevents wrapping */
-    }
-
-    .stButton>button:hover {
-        background-color: #333333;
-        color: #ffffff;
-        cursor: pointer;
-    }
-    </style>
-    """,
+    f"### You are on: <span style='color:#fbc02d;font-weight:bold'>{st.session_state.page}</span>",
     unsafe_allow_html=True
 )
 
-# ---------- TOP NAVIGATION BUTTONS ----------
-st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
-
-with col1:
-    if st.button("📂 Simulation Budget"):
-        change_page("Simulation Budget")
-
-with col2:
-    if st.button("💰 Influencer Performance"):
-        change_page("Influencer Performance")
-
-with col3:
-    if st.button("📋 Optimized Budget"):
-        change_page("Optimized Budget")
-
-with col4:
-    if st.button("🤖 GEN AI"):
-        change_page("GEN AI")
-
-with col5:
-    if st.button("📊 Dashboard"):
-        change_page("Dashboard")
+# Demo content: Replace these blocks with YOUR page content!
+if st.session_state.page == "Simulation Budget":
+    st.info("Welcome to the **Simulation Budget** page.")
+elif st.session_state.page == "Influencer Performance":
+    st.info("Welcome to the **Influencer Performance** page.")
+elif st.session_state.page == "Optimized Budget":
+    st.info("Welcome to the **Optimized Budget** page.")
+elif st.session_state.page == "GEN AI":
+    st.info("Welcome to the **GEN AI** page.")
+elif st.session_state.page == "Dashboard":
+    st.info("Welcome to the **Dashboard** page.")
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data

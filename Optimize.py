@@ -285,13 +285,12 @@ weights_df = load_weights(csv_url)
 #         )
 
 #testNew
-# --- Initialize state for two simulations ---
+# --- Initial Session State ---
 if 'inputs_a' not in st.session_state:
-    st.session_state.inputs_a = {'VIP': 0, 'Mega': 0, 'Macro':0,'Mid': 0, 'Micro': 0, 'Nano': 0}
+    st.session_state.inputs_a = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
 if 'inputs_b' not in st.session_state:
-    st.session_state.inputs_b = {'VIP': 0, 'Mega': 0, 'Macro':0,'Mid': 0, 'Micro': 0, 'Nano': 0}
+    st.session_state.inputs_b = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
 
-# Prepare categories (if needed)
 available_categories = sorted(weights_df['Category'].unique())
 if 'category_a' not in st.session_state:
     st.session_state.category_a = available_categories[0]
@@ -306,49 +305,87 @@ def get_weights(category, kpi):
     filtered = weights_df[(weights_df['Category'] == category) & (weights_df['KPI'] == kpi)]
     return {row['Tier']: row['Weights'] for _, row in filtered.iterrows()}
 
+# Color function for percentage
+def colored_percentage(p):
+    if p >= 40:
+        return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
+    elif p >= 20:
+        return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
+    elif p > 0:
+        return f"<span style='color:#009688;'>{p:.1f}%</span>"
+    else:
+        return "<span style='color:#aaa;'>0.0%</span>"
+
 with col_input_a:
     st.subheader("Simulation A")
     st.session_state.category_a = st.selectbox("Simulation A - Category:", available_categories, key="cat_a", index=available_categories.index(st.session_state.category_a))
     inputs_a = {}
-    total_a = 0
-    for t in st.session_state.inputs_a:
-        val = st.number_input(f"Simulation A - {t}", min_value=0, value=st.session_state.inputs_a[t], key=f"a_{t}")
-        inputs_a[t] = val
-        total_a += val
+    total_a = sum(st.session_state.inputs_a.values())
 
-    st.session_state.inputs_a = inputs_a
-    st.markdown(f"**Total Budget A**: <span style='color:#4CAF50;font-size:22px;'>{total_a:,}</span>",unsafe_allow_html=True)
+    # Big total budget at the top (A)
+    st.markdown(
+        f"""
+        <div style="background-color:#e0f7fa;padding:10px 0 10px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #0288d180;">
+            <div style="font-size:2.3rem;font-weight:bold;color:#0277bd;">{total_a:,}</div>
+            <div style="font-size:1.2rem;">💰 Total Budget A</div>
+        </div>
+        """, unsafe_allow_html=True
+    )
+
+    st.write("")
+    new_inputs_a = {}
+    for t in st.session_state.inputs_a:
+        cols = st.columns([3, 2])
+        val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_a[t], key=f"a_{t}")
+        new_inputs_a[t] = val
+        total_a_new = sum(new_inputs_a.values())
+        percent = (val / total_a_new) * 100 if total_a_new > 0 else 0
+        cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
+
+    st.session_state.inputs_a = new_inputs_a
 
 with col_input_b:
     st.subheader("Simulation B")
     st.session_state.category_b = st.selectbox("Simulation B - Category:", available_categories, key="cat_b", index=available_categories.index(st.session_state.category_b))
     inputs_b = {}
-    total_b = 0
+    total_b = sum(st.session_state.inputs_b.values())
+
+    # Big total budget at the top (B)
+    st.markdown(
+        f"""
+        <div style="background-color:#f3e5f5;padding:10px 0 10px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #a26ad1;">
+            <div style="font-size:2.3rem;font-weight:bold;color:#8e24aa;">{total_b:,}</div>
+            <div style="font-size:1.2rem;">💰 Total Budget B</div>
+        </div>
+        """, unsafe_allow_html=True
+    )
+    st.write("")
+    new_inputs_b = {}
     for t in st.session_state.inputs_b:
-        val = st.number_input(f"Simulation B - {t}", min_value=0, value=st.session_state.inputs_b[t], key=f"b_{t}")
-        inputs_b[t] = val
-        total_b += val
+        cols = st.columns([3, 2])
+        val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_b[t], key=f"b_{t}")
+        new_inputs_b[t] = val
+        total_b_new = sum(new_inputs_b.values())
+        percent = (val / total_b_new) * 100 if total_b_new > 0 else 0
+        cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
+    st.session_state.inputs_b = new_inputs_b
 
-    st.session_state.inputs_b = inputs_b
-    st.markdown(f"**Total Budget B**: <span style='color:#4CAF50;font-size:22px;'>{total_b:,}</span>",unsafe_allow_html=True)
-
-# Calculate metrics for both simulations
+# --- Calculation ---
 def calc_metrics(inputs, category):
     impression_weights = get_weights(category, "Impression")
     view_weights = get_weights(category, "View")
     engagement_weights = get_weights(category, "Engagement")
-    total_impressions = sum(inputs[k] * impression_weights.get(k, 0) for k in inputs)
-    total_views = sum(inputs[k] * view_weights.get(k, 0) for k in inputs)
-    total_engagement = sum(inputs[k] * engagement_weights.get(k, 0) for k in inputs)
+    total_impressions = sum(inputs.get(k,0) * impression_weights.get(k, 0) for k in inputs)
+    total_views = sum(inputs.get(k,0) * view_weights.get(k, 0) for k in inputs)
+    total_engagement = sum(inputs.get(k,0) * engagement_weights.get(k, 0) for k in inputs)
     return total_impressions, total_views, total_engagement
 
 imp_a, view_a, eng_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a)
 imp_b, view_b, eng_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b)
 
-# Display results side by side
-st.markdown("---")
-st.subheader("📈 Simulation Results Comparison")
+# --- Display Results ---
 
+# Prepare DataFrame summary
 summary_df = pd.DataFrame({
     "Simulation": ["A", "B"],
     "Category": [st.session_state.category_a, st.session_state.category_b],
@@ -358,9 +395,11 @@ summary_df = pd.DataFrame({
     "Engagements": [eng_a, eng_b]
 })
 
-st.dataframe(summary_df)
+st.markdown("---")
+st.subheader("📈 Simulation Results Comparison")
+st.dataframe(summary_df, use_container_width=True)
 
-# Comparison bar chart
+# Chart 
 fig = go.Figure(data=[
     go.Bar(name="Total Impressions", x=["A", "B"], y=[imp_a, imp_b]),
     go.Bar(name="Total Views", x=["A", "B"], y=[view_a, view_b]),
@@ -374,6 +413,7 @@ fig.update_layout(
 )
 
 st.plotly_chart(fig, use_container_width=True)
+
 
 
 # ---------- PAGE 2: Influencer Performance ----------

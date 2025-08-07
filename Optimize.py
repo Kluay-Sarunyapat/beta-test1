@@ -423,7 +423,7 @@ st.markdown(
             <td>{view_b_html}</td>
         </tr>
         <tr>
-            <td style="font-weight:bold
+            <td style="font-weight:bold)
 
 
 

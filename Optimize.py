@@ -170,49 +170,11 @@ if 'page' not in st.session_state:
 def change_page(page_name):
     st.session_state.page = page_name
 
-# -------------- CSS FOR ACTIVE HIGHLIGHT --------------
-st.markdown(
-    """
-    <style>
-    .active-nav-btn {
-        width: 100%;
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 8px;
-        background-color: #fbc02d;
-        color: #000000 !important;
-        border: none;
-        font-weight: bold;
-        margin-bottom: 2px;
-    }
-    .inactive-nav-btn {
-        width: 100%;
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 8px;
-        background-color: #000000;
-        color: white;
-        border: none;
-        margin-bottom: 2px;
-        transition: background-color 0.3s, color 0.3s;
-        white-space: nowrap;
-    }
-    .inactive-nav-btn:hover {
-        background-color: #333333;
-        color: #ffffff;
-        cursor: pointer;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
 if "page" not in st.session_state:
     st.session_state.page = "Simulation Budget"
 
-# ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
+col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
 
 buttons = [
     ("Simulation Budget", "📂"),
@@ -227,34 +189,27 @@ for (name, icon), col in zip(buttons, cols):
     with col:
         if st.session_state.page == name:
             st.markdown(
-                f'<div class="active-nav-btn">{icon} {name}</div>',
+                f"""
+                <div style='
+                    border-radius:8px;
+                    background:#000;
+                    padding:10px;
+                    color:red;
+                    text-align:center;
+                    font-size:16px;
+                    border: none;
+                    font-weight: bold;
+                '>{icon} {name}</div>
+                """,
                 unsafe_allow_html=True,
             )
         else:
             if st.button(f"{icon} {name}", key=name):
                 change_page(name)
-            # Apply style to inactive Streamlit buttons
-            st.markdown(
-                """
-                <style>
-                [data-testid="stButton"] button {
-                    width: 100%;
-                    padding: 10px;
-                    font-size: 16px;
-                    border-radius: 8px;
-                    background-color: #000000;
-                    color: white;
-                    border: none;
-                    margin-bottom: 2px;
-                }
-                [data-testid="stButton"] button:hover {
-                    background-color: #333333 !important;
-                    color: #ffffff !important;
-                }
-                </style>
-                """,
-                unsafe_allow_html=True,
-            )
+
+# Demo content to show which page is active (can be removed)
+st.write(f"Current Page: {st.session_state.page}")
+
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data

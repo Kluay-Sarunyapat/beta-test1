@@ -305,7 +305,6 @@ def get_weights(category, kpi):
     filtered = weights_df[(weights_df['Category'] == category) & (weights_df['KPI'] == kpi)]
     return {row['Tier']: row['Weights'] for _, row in filtered.iterrows()}
 
-# Color function for percentage
 def colored_percentage(p):
     if p >= 40:
         return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
@@ -319,49 +318,32 @@ def colored_percentage(p):
 with col_input_a:
     st.subheader("Simulation A")
     st.session_state.category_a = st.selectbox("Simulation A - Category:", available_categories, key="cat_a", index=available_categories.index(st.session_state.category_a))
-    inputs_a = {}
-    total_a = sum(st.session_state.inputs_a.values())
-
-    # Big total budget at the top (A)
-    st.markdown(
-        f"""
-        <div style="background-color:#e0f7fa;padding:10px 0 10px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #0288d180;">
-            <div style="font-size:2.3rem;font-weight:bold;color:#0277bd;">{total_a:,}</div>
-            <div style="font-size:1.2rem;">💰 Total Budget A</div>
-        </div>
-        """, unsafe_allow_html=True
-    )
-
-    st.write("")
     new_inputs_a = {}
     for t in st.session_state.inputs_a:
+        total_a = sum(new_inputs_a.values()) if new_inputs_a else sum(st.session_state.inputs_a.values())
         cols = st.columns([3, 2])
         val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_a[t], key=f"a_{t}")
         new_inputs_a[t] = val
         total_a_new = sum(new_inputs_a.values())
         percent = (val / total_a_new) * 100 if total_a_new > 0 else 0
         cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-
     st.session_state.inputs_a = new_inputs_a
+    total_a_final = sum(new_inputs_a.values())
+    st.markdown(
+        f"""
+        <div style="background-color:#e0f7fa;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #0288d180;">
+            <div style="font-size:2.3rem;font-weight:bold;color:#0277bd;">{total_a_final:,}</div>
+            <div style="font-size:1.2rem;">💰 Total Budget A</div>
+        </div>
+        """, unsafe_allow_html=True
+    )
 
 with col_input_b:
     st.subheader("Simulation B")
     st.session_state.category_b = st.selectbox("Simulation B - Category:", available_categories, key="cat_b", index=available_categories.index(st.session_state.category_b))
-    inputs_b = {}
-    total_b = sum(st.session_state.inputs_b.values())
-
-    # Big total budget at the top (B)
-    st.markdown(
-        f"""
-        <div style="background-color:#f3e5f5;padding:10px 0 10px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #a26ad1;">
-            <div style="font-size:2.3rem;font-weight:bold;color:#8e24aa;">{total_b:,}</div>
-            <div style="font-size:1.2rem;">💰 Total Budget B</div>
-        </div>
-        """, unsafe_allow_html=True
-    )
-    st.write("")
     new_inputs_b = {}
     for t in st.session_state.inputs_b:
+        total_b = sum(new_inputs_b.values()) if new_inputs_b else sum(st.session_state.inputs_b.values())
         cols = st.columns([3, 2])
         val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_b[t], key=f"b_{t}")
         new_inputs_b[t] = val
@@ -369,8 +351,16 @@ with col_input_b:
         percent = (val / total_b_new) * 100 if total_b_new > 0 else 0
         cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
     st.session_state.inputs_b = new_inputs_b
+    total_b_final = sum(new_inputs_b.values())
+    st.markdown(
+        f"""
+        <div style="background-color:#f3e5f5;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #a26ad1;">
+            <div style="font-size:2.3rem;font-weight:bold;color:#8e24aa;">{total_b_final:,}</div>
+            <div style="font-size:1.2rem;">💰 Total Budget B</div>
+        </div>
+        """, unsafe_allow_html=True
+    )
 
-# --- Calculation ---
 def calc_metrics(inputs, category):
     impression_weights = get_weights(category, "Impression")
     view_weights = get_weights(category, "View")
@@ -382,37 +372,58 @@ def calc_metrics(inputs, category):
 
 imp_a, view_a, eng_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a)
 imp_b, view_b, eng_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b)
+budget_a = sum(st.session_state.inputs_a.values())
+budget_b = sum(st.session_state.inputs_b.values())
 
-# --- Display Results ---
+def highlight(a, b):
+    if a > b:
+        return (f"<span style='color:#388e3c;font-weight:bold;font-size:1.25em'>{a:,.0f}</span>",
+                f"<span style='color:#aaa;font-size:1.08em'>{b:,.0f}</span>")
+    elif b > a:
+        return (f"<span style='color:#aaa;font-size:1.08em'>{a:,.0f}</span>",
+                f"<span style='color:#388e3c;font-weight:bold;font-size:1.25em'>{b:,.0f}</span>")
+    else:  # tie
+        return (f"<span style='color:#1e88e5;font-weight:bold;font-size:1.2em'>{a:,.0f}</span>",
+                f"<span style='color:#1e88e5;font-weight:bold;font-size:1.2em'>{b:,.0f}</span>")
 
-# Prepare DataFrame summary
-summary_df = pd.DataFrame({
-    "Simulation": ["A", "B"],
-    "Category": [st.session_state.category_a, st.session_state.category_b],
-    "Budget": [sum(st.session_state.inputs_a.values()), sum(st.session_state.inputs_b.values())],
-    "Impressions": [imp_a, imp_b],
-    "Views": [view_a, view_b],
-    "Engagements": [eng_a, eng_b]
-})
+imp_a_html, imp_b_html = highlight(imp_a, imp_b)
+view_a_html, view_b_html = highlight(view_a, view_b)
+eng_a_html, eng_b_html = highlight(eng_a, eng_b)
+budget_a_html, budget_b_html = highlight(budget_a, budget_b)
 
 st.markdown("---")
 st.subheader("📈 Simulation Results Comparison")
-st.dataframe(summary_df, use_container_width=True)
 
-# Chart 
-fig = go.Figure(data=[
-    go.Bar(name="Total Impressions", x=["A", "B"], y=[imp_a, imp_b]),
-    go.Bar(name="Total Views", x=["A", "B"], y=[view_a, view_b]),
-    go.Bar(name="Total Engagement", x=["A", "B"], y=[eng_a, eng_b]),
-])
-fig.update_layout(
-    barmode='group', 
-    title="Simulation KPI Comparison",
-    xaxis_title="Simulation",
-    yaxis_title="KPI Value"
-)
-
-st.plotly_chart(fig, use_container_width=True)
+st.markdown(
+    f"""
+    <table style="width:75%;margin:auto;border-collapse:collapse;font-size:1.17em;">
+        <tr style="background-color:#f0f2f6;">
+            <th style="width:28%"></th>
+            <th style="color:#0277bd;">Simulation A</th>
+            <th style="color:#8e24aa;">Simulation B</th>
+        </tr>
+        <tr>
+            <td style="font-weight:bold">Category</td>
+            <td>{st.session_state.category_a}</td>
+            <td>{st.session_state.category_b}</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold">Budget</td>
+            <td>{budget_a_html}</td>
+            <td>{budget_b_html}</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold">Impressions</td>
+            <td>{imp_a_html}</td>
+            <td>{imp_b_html}</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold">Views</td>
+            <td>{view_a_html}</td>
+            <td>{view_b_html}</td>
+        </tr>
+        <tr>
+            <td style="font-weight:bold
 
 
 

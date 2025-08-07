@@ -114,7 +114,7 @@ if 'inputs' not in st.session_state:
 if 'page' not in st.session_state:
     st.session_state.page = 'Simulation Budget'  # Default page
 
-# ---------- FUNCTION TO CHANGE PAGE ----------
+# # ---------- FUNCTION TO CHANGE PAGE ----------
 # def change_page(page_name):
 #     st.session_state.page = page_name
 
@@ -167,36 +167,61 @@ if 'page' not in st.session_state:
 #     if st.button("📊 Dashboard"):
 #         change_page("Dashboard")
 
-pages = [
+def change_page(page_name):
+    st.session_state.page = page_name
+
+st.markdown(
+    """
+    <style>
+    .stButton>button {
+        width: 100%;
+        padding: 10px;
+        font-size: 16px;
+        border-radius: 8px;
+        background-color: #000000;
+        color: white;
+        border: none;
+        transition: background-color 0.3s, color 0.3s;
+        white-space: nowrap;  /* Prevents wrapping */
+    }
+    .selected-button {
+        color: red !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+if "page" not in st.session_state:
+    st.session_state.page = "Simulation Budget"
+
+# ---------- TOP NAVIGATION BUTTONS ----------
+st.markdown("### 📁 Welcome To MBCS Optimize Tool")
+col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
+
+buttons = [
     ("Simulation Budget", "📂"),
     ("Influencer Performance", "💰"),
     ("Optimized Budget", "📋"),
     ("GEN AI", "🤖"),
     ("Dashboard", "📊")
 ]
+cols = [col1, col2, col3, col4, col5]
 
-page_labels = [f"{icon} {name}" for name, icon in pages]
-
-if "page" not in st.session_state:
-    st.session_state.page = pages[0][0]
-
-# Index of currently selected page
-current_index = [name for name, _ in pages].index(st.session_state.page)
-
-# DRAW NAVIGATION
-selected = st.radio(
-    "Navigation", page_labels, horizontal=True, index=current_index
-)
-
-# Update session state immediately
-for (name, icon), label in zip(pages, page_labels):
-    if selected == label:
-        st.session_state.page = name
-
-# Demo content
-st.markdown("---")
-st.write(f"Current Page: {st.session_state.page}")
-
+for (name, icon), col in zip(buttons, cols):
+    with col:
+        # Create the button label
+        btn_label = f"{icon} {name}"
+        # If this is the selected page, apply a red text style
+        if st.session_state.page == name:
+            # Use markdown for selected, else use st.button for others
+            st.markdown(
+                f"<div class='stButton'><button class='selected-button'>{btn_label}</button></div>",
+                unsafe_allow_html=True
+            )
+        else:
+            if st.button(btn_label, key=name):
+                change_page(name)
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data

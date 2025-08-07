@@ -167,47 +167,34 @@ if 'page' not in st.session_state:
 #     if st.button("📊 Dashboard"):
 #         change_page("Dashboard")
 
-def change_page(page_name):
-    st.session_state.page = page_name
-
-if "page" not in st.session_state:
-    st.session_state.page = "Simulation Budget"
-
-st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])
-
-buttons = [
+pages = [
     ("Simulation Budget", "📂"),
     ("Influencer Performance", "💰"),
     ("Optimized Budget", "📋"),
     ("GEN AI", "🤖"),
     ("Dashboard", "📊")
 ]
-cols = [col1, col2, col3, col4, col5]
 
-for (name, icon), col in zip(buttons, cols):
-    with col:
-        if st.session_state.page == name:
-            st.markdown(
-                f"""
-                <div style='
-                    border-radius:8px;
-                    background:#000;
-                    padding:10px;
-                    color:red;
-                    text-align:center;
-                    font-size:16px;
-                    border: none;
-                    font-weight: bold;
-                '>{icon} {name}</div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            if st.button(f"{icon} {name}", key=name):
-                change_page(name)
+page_labels = [f"{icon} {name}" for name, icon in pages]
+
+if "page" not in st.session_state:
+    st.session_state.page = pages[0][0]
+
+# Index of currently selected page
+current_index = [name for name, _ in pages].index(st.session_state.page)
+
+# DRAW NAVIGATION
+selected = st.radio(
+    "Navigation", page_labels, horizontal=True, index=current_index
+)
+
+# Update session state immediately
+for (name, icon), label in zip(pages, page_labels):
+    if selected == label:
+        st.session_state.page = name
 
 # Demo content
+st.markdown("---")
 st.write(f"Current Page: {st.session_state.page}")
 
 

@@ -803,25 +803,25 @@ elif st.session_state.page == "Optimized Budget":
 #Page4
 if st.session_state.page == "GEN AI":
     st.title(" COMMING SOON...")
-    import pydata_google_auth
+    # import pydata_google_auth
     
-    SCOPES = [
-        'https://www.googleapis.com/auth/cloud-platform',
-        'https://www.googleapis.com/auth/drive',
-    ]
+    # SCOPES = [
+    #     'https://www.googleapis.com/auth/cloud-platform',
+    #     'https://www.googleapis.com/auth/drive',
+    # ]
     
-    credentials = pydata_google_auth.get_user_credentials(
-        SCOPES,
-        auth_local_webserver=True,
-    )
+    # credentials = pydata_google_auth.get_user_credentials(
+    #     SCOPES,
+    #     auth_local_webserver=True,
+    # )
     
-    query = """
-    SELECT * FROM `pj-allclient-4d2mru.view.industry_norm_fbgg_category_stats_view`
-    """
-    df = pd.read_gbq(query=query, project_id = "pj-newnestle-vmtifr", credentials=credentials, dialect = 'standard')
+    # query = """
+    # SELECT * FROM `pj-allclient-4d2mru.view.industry_norm_fbgg_category_stats_view`
+    # """
+    # df = pd.read_gbq(query=query, project_id = "pj-newnestle-vmtifr", credentials=credentials, dialect = 'standard')
     
-    # Show the data in Streamlit
-    st.dataframe(df)
+    # # Show the data in Streamlit
+    # st.dataframe(df)
 # # Page 4: GEN AI with PandasAI (Free Hugging Face Model, No API Key + Clear Chat)
 
 # if st.session_state.page == "GEN AI":

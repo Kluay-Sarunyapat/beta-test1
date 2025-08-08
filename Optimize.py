@@ -9,6 +9,7 @@ import io
 import time
 from scipy.optimize import linprog
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
+import altair as alt
 
 
 # Set Streamlit to wide layout
@@ -813,7 +814,7 @@ if st.session_state.page == "Influencer Performance":
 elif st.session_state.page == "Optimized Budget":
     # --------- Config ---------
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
-    DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']  # chart order
+    DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']  # stack order (bottom->top)
     
     # --------- Helper functions (self-contained) ---------
     def _validate_and_prepare_weights(weights_df):
@@ -992,9 +993,6 @@ elif st.session_state.page == "Optimized Budget":
     
         return top5[:5]
     
-    def allocation_series_for_chart(scenario, order=DISPLAY_ORDER):
-        return pd.Series([scenario['allocation'].get(t, 0.0) for t in order], index=order)
-    
     # --------- UI ---------
     st.title("📊 Budget Optimization Tool (5 Scenarios)")
     
@@ -1066,16 +1064,65 @@ elif st.session_state.page == "Optimized Budget":
             st.error("No feasible scenarios found with the given constraints.")
         else:
             st.success("✅ Generated up to 5 scenarios")
-            for i, s in enumerate(scenarios, start=1):
-                st.subheader(f"Scenario {i}: {s['label']}")
-                series = allocation_series_for_chart(s, order=DISPLAY_ORDER)
-                st.bar_chart(series)
-                c1, c2, c3 = st.columns(3)
-                c1.metric("Impressions", f"{s['impressions']:,.2f}")
-                c2.metric("Views", f"{s['views']:,.2f}")
-                c3.metric("Engagement", f"{s['engagement']:,.2f}")
-                with st.expander("View allocation details"):
-                    st.json(s['allocation'])
+    
+            # Build one DataFrame for a single stacked bar chart
+            scenario_labels = [f"S{i+1}: {s['label']}" for i, s in enumerate(scenarios)]
+            records = []
+            for idx, s in enumerate(scenarios):
+                scen_name = scenario_labels[idx]
+                for tier in DISPLAY_ORDER:
+                    records.append({
+                        "Scenario": scen_name,
+                        "Tier": tier,
+                        "Allocation": s['allocation'].get(tier, 0.0)
+                    })
+            chart_df = pd.DataFrame(records)
+    
+            # Stacked bar chart (one chart, stacks by tier within each scenario)
+            chart = (
+                alt.Chart(chart_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("Scenario:N", sort=scenario_labels, title="Scenario"),
+                    y=alt.Y("Allocation:Q", stack="zero", title="Allocation"),
+                    color=alt.Color(
+                        "Tier:N",
+                        sort=DISPLAY_ORDER,
+                        scale=alt.Scale(domain=DISPLAY_ORDER),
+                        title="Tier"
+                    ),
+                    order=alt.Order("Tier:N", sort=DISPLAY_ORDER),
+                    tooltip=[
+                        alt.Tooltip("Scenario:N"),
+                        alt.Tooltip("Tier:N"),
+                        alt.Tooltip("Allocation:Q", format=",.2f"),
+                    ],
+                )
+                .properties(height=420)
+            )
+            st.altair_chart(chart, use_container_width=True)
+    
+            # KPI table
+            kpi_rows = []
+            for idx, s in enumerate(scenarios):
+                kpi_rows.append({
+                    "Scenario": scenario_labels[idx],
+                    "Impressions": s['impressions'],
+                    "Views": s['views'],
+                    "Engagement": s['engagement'],
+                    "Total KPI": s['total_kpi'],
+                })
+            kpi_df = pd.DataFrame(kpi_rows)
+            st.dataframe(
+                kpi_df.style.format({
+                    "Impressions": "{:,.2f}",
+                    "Views": "{:,.2f}",
+                    "Engagement": "{:,.2f}",
+                    "Total KPI": "{:,.2f}",
+                }),
+                hide_index=True,
+                use_container_width=True
+            )
     
 #Page4
 if st.session_state.page == "GEN AI":

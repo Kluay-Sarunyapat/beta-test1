@@ -811,188 +811,188 @@ if st.session_state.page == "Influencer Performance":
 #             st.error("❌ Optimization failed. Check constraints.")
 
 elif st.session_state.page == "Optimized Budget":
-st.title("📋 Optimized Budget")
-
-tiers = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
-
-def get_weights(category):
-    """Extracts weights by KPI and Tier for the selected category from dataframe"""
-    cat_df = weights_df[weights_df['Category'] == category]
-    impression_weights = cat_df[cat_df['KPI'] == 'Impression'].set_index('Tier')['Weights'].to_dict()
-    view_weights = cat_df[cat_df['KPI'] == 'View'].set_index('Tier')['Weights'].to_dict()
-    engagement_weights = cat_df[cat_df['KPI'] == 'Engagement'].set_index('Tier')['Weights'].to_dict()
-    return impression_weights, view_weights, engagement_weights
-
-def build_priority_weights(priority, impression_w, view_w, engagement_w):
-    if priority == 'impressions':
-        w = [impression_w[t] for t in tiers]
-    elif priority == 'views':
-        w = [view_w[t] for t in tiers]
-    elif priority == 'engagement':
-        w = [engagement_w[t] for t in tiers]
-    else:  # balanced
-        w = [(impression_w[t] + view_w[t] + engagement_w[t]) / 3 for t in tiers]
-    return np.array(w, dtype=float)
-
-def compute_kpis(x, impression_w, view_w, engagement_w):
-    imps = sum(x[i] * impression_w[tiers[i]] for i in range(len(tiers)))
-    views = sum(x[i] * view_w[tiers[i]] for i in range(len(tiers)))
-    eng = sum(x[i] * engagement_w[tiers[i]] for i in range(len(tiers)))
-    total_kpi = imps + views + eng
-    return imps, views, eng, total_kpi
-
-def solve_lp(weights_vec, total_budget, min_alloc, max_alloc):
-    n = len(tiers)
-    c = -weights_vec  # maximize sum(weights * x) via minimizing -weights*x
-    A_eq = [np.ones(n)]
-    b_eq = [total_budget]
-    bounds = [(min_alloc[t], max_alloc[t]) for t in tiers]
-    res = linprog(c, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
-    return res
-
-def optimize_budget(total_budget, min_alloc, max_alloc, priority='balanced', category="F&B"):
-    impression_w, view_w, engagement_w = get_weights(category)
-    weights_vec = build_priority_weights(priority, impression_w, view_w, engagement_w)
-    res = solve_lp(weights_vec, total_budget, min_alloc, max_alloc)
-
-    if res.success:
-        allocation = {tiers[i]: res.x[i] for i in range(len(tiers))}
-        imps, views, eng, total_kpi = compute_kpis(res.x, impression_w, view_w, engagement_w)
-        primary_score = float(np.dot(res.x, weights_vec))  # objective value under selected priority
-        return allocation, imps, views, eng, total_kpi, primary_score, weights_vec
-    else:
-        return None, None, None, None, None, None, None
-
-def get_top_k_scenarios(total_budget, min_alloc, max_alloc, priority, category, k=5, epsilon_pct=1.0):
-    """
-    Returns up to K distinct near-optimal scenarios:
-    Maximize KPI, then for each tier, maximize that tier's allocation
-    while keeping KPI within (1 - epsilon_pct%) of the optimal KPI.
-    """
-    impression_w, view_w, engagement_w = get_weights(category)
-    weights_vec = build_priority_weights(priority, impression_w, view_w, engagement_w)
-
-    # 1) Base optimal
-    base_res = solve_lp(weights_vec, total_budget, min_alloc, max_alloc)
-    if not base_res.success:
-        return []
-
-    z_star = float(np.dot(base_res.x, weights_vec))
-    eps_abs = abs(z_star) * (epsilon_pct / 100.0)
-
-    scenarios = []
-
-    def pack_solution(x_vec, label):
-        alloc = {tiers[i]: float(x_vec[i]) for i in range(len(tiers))}
-        imps, views, eng, total_kpi = compute_kpis(x_vec, impression_w, view_w, engagement_w)
-        primary_score = float(np.dot(x_vec, weights_vec))
-        return dict(
-            label=label,
-            allocation=alloc,
-            impressions=imps,
-            views=views,
-            engagement=eng,
-            total_kpi=total_kpi,
-            primary_score=primary_score
-        )
-
-    # Add base optimal
-    scenarios.append(pack_solution(base_res.x, "Optimal"))
-
-    # 2) For each tier, find a near-optimal solution that maximizes that tier's allocation
-    # Subject to KPI >= z_star - eps_abs
-    n = len(tiers)
-    A_eq = [np.ones(n)]
-    b_eq = [total_budget]
-    bounds = [(min_alloc[t], max_alloc[t]) for t in tiers]
-    # KPI constraint: weights_vec @ x >= z_star - eps_abs  ->  -weights_vec @ x <= -(z_star - eps_abs)
-    A_ub = [-weights_vec]
-    b_ub = [-(z_star - eps_abs)]
-
-    for i, t in enumerate(tiers):
-        c = np.zeros(n)
-        c[i] = -1.0  # maximize x_i
-        res = linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+    st.title("📋 Optimized Budget")
+    
+    tiers = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
+    
+    def get_weights(category):
+        """Extracts weights by KPI and Tier for the selected category from dataframe"""
+        cat_df = weights_df[weights_df['Category'] == category]
+        impression_weights = cat_df[cat_df['KPI'] == 'Impression'].set_index('Tier')['Weights'].to_dict()
+        view_weights = cat_df[cat_df['KPI'] == 'View'].set_index('Tier')['Weights'].to_dict()
+        engagement_weights = cat_df[cat_df['KPI'] == 'Engagement'].set_index('Tier')['Weights'].to_dict()
+        return impression_weights, view_weights, engagement_weights
+    
+    def build_priority_weights(priority, impression_w, view_w, engagement_w):
+        if priority == 'impressions':
+            w = [impression_w[t] for t in tiers]
+        elif priority == 'views':
+            w = [view_w[t] for t in tiers]
+        elif priority == 'engagement':
+            w = [engagement_w[t] for t in tiers]
+        else:  # balanced
+            w = [(impression_w[t] + view_w[t] + engagement_w[t]) / 3 for t in tiers]
+        return np.array(w, dtype=float)
+    
+    def compute_kpis(x, impression_w, view_w, engagement_w):
+        imps = sum(x[i] * impression_w[tiers[i]] for i in range(len(tiers)))
+        views = sum(x[i] * view_w[tiers[i]] for i in range(len(tiers)))
+        eng = sum(x[i] * engagement_w[tiers[i]] for i in range(len(tiers)))
+        total_kpi = imps + views + eng
+        return imps, views, eng, total_kpi
+    
+    def solve_lp(weights_vec, total_budget, min_alloc, max_alloc):
+        n = len(tiers)
+        c = -weights_vec  # maximize sum(weights * x) via minimizing -weights*x
+        A_eq = [np.ones(n)]
+        b_eq = [total_budget]
+        bounds = [(min_alloc[t], max_alloc[t]) for t in tiers]
+        res = linprog(c, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+        return res
+    
+    def optimize_budget(total_budget, min_alloc, max_alloc, priority='balanced', category="F&B"):
+        impression_w, view_w, engagement_w = get_weights(category)
+        weights_vec = build_priority_weights(priority, impression_w, view_w, engagement_w)
+        res = solve_lp(weights_vec, total_budget, min_alloc, max_alloc)
+    
         if res.success:
-            scenarios.append(pack_solution(res.x, f"Near-optimal (emphasize {t})"))
-
-    # Deduplicate scenarios by allocation pattern (rounded)
-    def alloc_key(s):
-        return tuple(round(s['allocation'][t], 2) for t in tiers)
-
-    unique = {}
-    for s in scenarios:
-        unique.setdefault(alloc_key(s), s)
-    uniq_list = list(unique.values())
-
-    # Sort by primary KPI score (descending) and keep top K
-    uniq_list.sort(key=lambda s: s['primary_score'], reverse=True)
-    return uniq_list[:k]
-
-# Streamlit UI
-st.title("📊 Budget Optimization Tool")
-
-# Category selection
-categories = weights_df['Category'].unique()
-category = st.selectbox("Select Category:", categories)
-
-# Total Budget input
-total_budget = st.number_input("Enter Total Budget:", min_value=0, value=10000, step=100)
-
-# Min/Max Allocation inputs
-min_alloc = {}
-max_alloc = {}
-col1, col2 = st.columns(2)
-with col1:
-    st.subheader("Minimum Allocation")
-    for tier in tiers:
-        min_alloc[tier] = st.number_input(f"Min {tier}", min_value=0, value=0)
-with col2:
-    st.subheader("Maximum Allocation")
-    for tier in tiers:
-        max_alloc[tier] = st.number_input(f"Max {tier}", min_value=0, value=total_budget)
-
-# Priority selection for optimization
-priority = st.selectbox("Select Optimization Priority:", ["balanced", "impressions", "views", "engagement"])
-
-# Options for near-optimal scenarios
-show_top_k = st.checkbox("Suggest near-optimal alternatives", value=False)
-k_alt = st.number_input("How many alternatives (K)?", min_value=2, max_value=10, value=5, step=1, disabled=not show_top_k)
-epsilon_pct = st.number_input("Max KPI loss from optimal (%)", min_value=0.1, max_value=10.0, value=1.0, step=0.1, disabled=not show_top_k)
-
-# Optimization button
-if st.button("Optimize Budget"):
-    allocation, impressions, views, engagement, total_kpi, primary_score, weights_vec = optimize_budget(
-        total_budget, min_alloc, max_alloc, priority, category
-    )
-
-    if allocation:
-        st.success("✅ Optimization Successful!")
-        st.subheader("Best Allocation (Max KPI)")
-        st.json(allocation)
-
-        st.subheader("📊 KPI Breakdown")
-        st.write(f"Impressions: {impressions:,.2f}")
-        st.write(f"Views: {views:,.2f}")
-        st.write(f"Engagement: {engagement:,.2f}")
-        st.write(f"💰 Total KPI (Impressions + Views + Engagement): {total_kpi:,.2f}")
-
-        if show_top_k:
-            st.subheader(f"🔎 Top {k_alt} near-optimal scenarios (within {epsilon_pct:.1f}% KPI loss)")
-            scenarios = get_top_k_scenarios(
-                total_budget, min_alloc, max_alloc, priority, category, k=int(k_alt), epsilon_pct=float(epsilon_pct)
+            allocation = {tiers[i]: res.x[i] for i in range(len(tiers))}
+            imps, views, eng, total_kpi = compute_kpis(res.x, impression_w, view_w, engagement_w)
+            primary_score = float(np.dot(res.x, weights_vec))  # objective value under selected priority
+            return allocation, imps, views, eng, total_kpi, primary_score, weights_vec
+        else:
+            return None, None, None, None, None, None, None
+    
+    def get_top_k_scenarios(total_budget, min_alloc, max_alloc, priority, category, k=5, epsilon_pct=1.0):
+        """
+        Returns up to K distinct near-optimal scenarios:
+        Maximize KPI, then for each tier, maximize that tier's allocation
+        while keeping KPI within (1 - epsilon_pct%) of the optimal KPI.
+        """
+        impression_w, view_w, engagement_w = get_weights(category)
+        weights_vec = build_priority_weights(priority, impression_w, view_w, engagement_w)
+    
+        # 1) Base optimal
+        base_res = solve_lp(weights_vec, total_budget, min_alloc, max_alloc)
+        if not base_res.success:
+            return []
+    
+        z_star = float(np.dot(base_res.x, weights_vec))
+        eps_abs = abs(z_star) * (epsilon_pct / 100.0)
+    
+        scenarios = []
+    
+        def pack_solution(x_vec, label):
+            alloc = {tiers[i]: float(x_vec[i]) for i in range(len(tiers))}
+            imps, views, eng, total_kpi = compute_kpis(x_vec, impression_w, view_w, engagement_w)
+            primary_score = float(np.dot(x_vec, weights_vec))
+            return dict(
+                label=label,
+                allocation=alloc,
+                impressions=imps,
+                views=views,
+                engagement=eng,
+                total_kpi=total_kpi,
+                primary_score=primary_score
             )
-            if scenarios:
-                for idx, s in enumerate(scenarios):
-                    with st.expander(f"{idx+1}. {s['label']} | Primary score: {s['primary_score']:,.4f} | Total KPI: {s['total_kpi']:,.2f}", expanded=(idx==0)):
-                        st.json(s['allocation'])
-                        st.write(f"Impressions: {s['impressions']:,.2f}")
-                        st.write(f"Views: {s['views']:,.2f}")
-                        st.write(f"Engagement: {s['engagement']:,.2f}")
-            else:
-                st.info("No alternative scenarios found under the given constraints/tolerance.")
-    else:
-        st.error("❌ Optimization failed. Check constraints.")
+    
+        # Add base optimal
+        scenarios.append(pack_solution(base_res.x, "Optimal"))
+    
+        # 2) For each tier, find a near-optimal solution that maximizes that tier's allocation
+        # Subject to KPI >= z_star - eps_abs
+        n = len(tiers)
+        A_eq = [np.ones(n)]
+        b_eq = [total_budget]
+        bounds = [(min_alloc[t], max_alloc[t]) for t in tiers]
+        # KPI constraint: weights_vec @ x >= z_star - eps_abs  ->  -weights_vec @ x <= -(z_star - eps_abs)
+        A_ub = [-weights_vec]
+        b_ub = [-(z_star - eps_abs)]
+    
+        for i, t in enumerate(tiers):
+            c = np.zeros(n)
+            c[i] = -1.0  # maximize x_i
+            res = linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+            if res.success:
+                scenarios.append(pack_solution(res.x, f"Near-optimal (emphasize {t})"))
+    
+        # Deduplicate scenarios by allocation pattern (rounded)
+        def alloc_key(s):
+            return tuple(round(s['allocation'][t], 2) for t in tiers)
+    
+        unique = {}
+        for s in scenarios:
+            unique.setdefault(alloc_key(s), s)
+        uniq_list = list(unique.values())
+    
+        # Sort by primary KPI score (descending) and keep top K
+        uniq_list.sort(key=lambda s: s['primary_score'], reverse=True)
+        return uniq_list[:k]
+    
+    # Streamlit UI
+    st.title("📊 Budget Optimization Tool")
+    
+    # Category selection
+    categories = weights_df['Category'].unique()
+    category = st.selectbox("Select Category:", categories)
+    
+    # Total Budget input
+    total_budget = st.number_input("Enter Total Budget:", min_value=0, value=10000, step=100)
+    
+    # Min/Max Allocation inputs
+    min_alloc = {}
+    max_alloc = {}
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("Minimum Allocation")
+        for tier in tiers:
+            min_alloc[tier] = st.number_input(f"Min {tier}", min_value=0, value=0)
+    with col2:
+        st.subheader("Maximum Allocation")
+        for tier in tiers:
+            max_alloc[tier] = st.number_input(f"Max {tier}", min_value=0, value=total_budget)
+    
+    # Priority selection for optimization
+    priority = st.selectbox("Select Optimization Priority:", ["balanced", "impressions", "views", "engagement"])
+    
+    # Options for near-optimal scenarios
+    show_top_k = st.checkbox("Suggest near-optimal alternatives", value=False)
+    k_alt = st.number_input("How many alternatives (K)?", min_value=2, max_value=10, value=5, step=1, disabled=not show_top_k)
+    epsilon_pct = st.number_input("Max KPI loss from optimal (%)", min_value=0.1, max_value=10.0, value=1.0, step=0.1, disabled=not show_top_k)
+    
+    # Optimization button
+    if st.button("Optimize Budget"):
+        allocation, impressions, views, engagement, total_kpi, primary_score, weights_vec = optimize_budget(
+            total_budget, min_alloc, max_alloc, priority, category
+        )
+    
+        if allocation:
+            st.success("✅ Optimization Successful!")
+            st.subheader("Best Allocation (Max KPI)")
+            st.json(allocation)
+    
+            st.subheader("📊 KPI Breakdown")
+            st.write(f"Impressions: {impressions:,.2f}")
+            st.write(f"Views: {views:,.2f}")
+            st.write(f"Engagement: {engagement:,.2f}")
+            st.write(f"💰 Total KPI (Impressions + Views + Engagement): {total_kpi:,.2f}")
+    
+            if show_top_k:
+                st.subheader(f"🔎 Top {k_alt} near-optimal scenarios (within {epsilon_pct:.1f}% KPI loss)")
+                scenarios = get_top_k_scenarios(
+                    total_budget, min_alloc, max_alloc, priority, category, k=int(k_alt), epsilon_pct=float(epsilon_pct)
+                )
+                if scenarios:
+                    for idx, s in enumerate(scenarios):
+                        with st.expander(f"{idx+1}. {s['label']} | Primary score: {s['primary_score']:,.4f} | Total KPI: {s['total_kpi']:,.2f}", expanded=(idx==0)):
+                            st.json(s['allocation'])
+                            st.write(f"Impressions: {s['impressions']:,.2f}")
+                            st.write(f"Views: {s['views']:,.2f}")
+                            st.write(f"Engagement: {s['engagement']:,.2f}")
+                else:
+                    st.info("No alternative scenarios found under the given constraints/tolerance.")
+        else:
+            st.error("❌ Optimization failed. Check constraints.")
 
 #Page4
 if st.session_state.page == "GEN AI":

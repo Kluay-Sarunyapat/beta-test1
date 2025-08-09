@@ -718,6 +718,7 @@ if st.session_state.page == "Influencer Performance":
 
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
+elif st.session_state.page == "Optimized Budget":
     # --------- Config ---------
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']  # desired bottom->top order

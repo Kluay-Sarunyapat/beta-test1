@@ -719,21 +719,17 @@ if st.session_state.page == "Influencer Performance":
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
 elif st.session_state.page == "Optimized Budget":
-
     # ---------- Compatibility rerun wrapper ----------
     def _rerun():
-        # Streamlit >= 1.25 has st.rerun; older had st.experimental_rerun
         if hasattr(st, "rerun"):
             st.rerun()
         elif hasattr(st, "experimental_rerun"):
             st.experimental_rerun()
-        else:
-            # As a fallback, trigger a no-op change that forces a rerun next interaction
-            pass
     
     # --------- Config ---------
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']  # display stack order
+    BIG_MAX = 1_000_000_000.0  # default max for min-budget mode
     
     # --------- Helpers ---------
     def _validate_and_prepare_weights(df):
@@ -840,7 +836,7 @@ elif st.session_state.page == "Optimized Budget":
     
         scenarios = [pack("Optimal", x_star)]
     
-        # KPI tolerance to diversify
+        # KPI tolerance to diversify (fixed 1.5%)
         eps_abs = abs(z_star) * 0.015
         A_ub = [-weights_vec]; b_ub = [-(z_star - eps_abs)]
     
@@ -865,6 +861,7 @@ elif st.session_state.page == "Optimized Budget":
         raise ValueError("kpi_type must be one of: impressions, views, engagement")
     
     def get_five_target_scenarios(weights_df, target_value, kpi_type, min_alloc, max_alloc, category='Total IPG', epsilon_pct=1.5):
+        # epsilon_pct is fixed internally; no UI
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
         if invalid: raise ValueError(f"Missing bounds: {invalid}")
         if any(min_alloc[t] > max_alloc[t] for t in TIERS):
@@ -873,7 +870,6 @@ elif st.session_state.page == "Optimized Budget":
         df = _validate_and_prepare_weights(weights_df)
         imp_w, view_w, eng_w = _get_weights_by_kpi(df, category)
         w_map, _ = _kpi_map_for_type(kpi_type, imp_w, view_w, eng_w)
-        w_vec = np.array([w_map[t] for t in TIERS], float)
     
         max_possible = sum(max_alloc[t] * w_map[t] for t in TIERS)
         if float(target_value) > max_possible + 1e-9:
@@ -920,41 +916,6 @@ elif st.session_state.page == "Optimized Budget":
         out = list(uniq.values())
         out.sort(key=lambda s: (s['required_budget'], -s['total_kpi']))
         return out[:5]
-    
-    def _budget_for_target_with_fixed_mix(df, target_value, kpi_type, shares, min_alloc, max_alloc, category):
-        imp_w, view_w, eng_w = _get_weights_by_kpi(df, category)
-        w_map, _ = _kpi_map_for_type(kpi_type, imp_w, view_w, eng_w)
-    
-        missing = [t for t in TIERS if t not in shares]
-        if missing: return dict(success=False, reason=f"Missing shares for: {missing}")
-    
-        s = {t: max(0.0, float(shares[t])) for t in TIERS}
-        s_sum = sum(s.values())
-        if s_sum <= 0: return dict(success=False, reason="Shares must sum to > 0.")
-        s = {t: v / s_sum for t, v in s.items()}
-    
-        eff_w = sum(s[t] * w_map[t] for t in TIERS)
-        if eff_w <= 0: return dict(success=False, reason="Effective KPI per $ is zero with this mix.")
-    
-        B_target = float(target_value) / eff_w
-    
-        B_low, B_high = 0.0, float('inf')
-        for t in TIERS:
-            share = s[t]; mn = float(min_alloc[t]); mx = float(max_alloc[t])
-            if share == 0:
-                if mn > 0: return dict(success=False, reason=f"{t} share=0 but min>0.")
-                continue
-            B_low = max(B_low, mn/share)
-            B_high = min(B_high, mx/share)
-    
-        if B_low > B_high: return dict(success=False, reason="Bounds infeasible for this mix.")
-        B = max(B_target, B_low)
-        if B > B_high + 1e-9: return dict(success=False, reason="Target infeasible with this mix and bounds.")
-    
-        alloc = {t: s[t] * B for t in TIERS}
-        imps, views, eng, total_kpi = _compute_kpis([alloc[t] for t in TIERS], imp_w, view_w, eng_w)
-        return dict(success=True, allocation={t: float(alloc[t]) for t in TIERS}, required_budget=float(B),
-                    imps=imps, views=views, eng=eng, total_kpi=total_kpi)
     
     # --------- UI ---------
     st.title("Budget Optimization Tool")
@@ -1059,15 +1020,11 @@ elif st.session_state.page == "Optimized Budget":
                 st.dataframe(kpi_df.style.format({"Impressions":"{:,.2f}","Views":"{:,.2f}","Engagement":"{:,.2f}","Total KPI":"{:,.2f}"}), hide_index=True, use_container_width=True)
     
     else:
-        # Option 2
+        # Min budget mode (no fixed-mix option; advanced constraints shown)
         kpi_type = st.selectbox("KPI to target", ["impressions", "views", "engagement"], key="kpi_tgt")
         target_value = st.number_input(f"Target {kpi_type.title()}", min_value=0.0, value=1_000_000.0, step=1000.0, key="target_value_tgt")
-        epsilon_pct = st.slider("Scenario tolerance over minimum budget (%)", 0.0, 10.0, 1.5, 0.1, key="eps_tgt")
     
-        mix_mode = st.radio("Tier mix", ["Optimize mix (free) – return 5 scenarios", "Use fixed mix (percentages) – return single scenario"], key="mix_mode_tgt")
-    
-        use_adv = st.checkbox("Show advanced constraints (per-tier min/max)", value=False, key="adv_tgt")
-        if use_adv:
+        with st.expander("Advanced constraints (per-tier min/max)", expanded=True):
             col1, col2 = st.columns(2)
             min_alloc, max_alloc = {}, {}
             with col1:
@@ -1077,115 +1034,61 @@ elif st.session_state.page == "Optimized Budget":
             with col2:
                 st.subheader("Maximum Allocation")
                 for t in TIERS:
-                    max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=1_000_000.0, step=100.0, key=f"max_{t}_tgt")
-        else:
-            min_alloc = {t: 0.0 for t in TIERS}
-            max_alloc = {t: 1_000_000_000.0 for t in TIERS}
+                    max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=BIG_MAX, step=100.0, key=f"max_{t}_tgt")
     
-        if mix_mode.startswith("Optimize mix"):
-            if st.button("Generate 5 scenarios to achieve KPI", key="run_tgt_free"):
-                try:
-                    scenarios = get_five_target_scenarios(
-                        weights_df=weights_df,
-                        target_value=float(target_value),
-                        kpi_type=kpi_type,
-                        min_alloc=min_alloc, max_alloc=max_alloc,
-                        category=category,
-                        epsilon_pct=float(epsilon_pct)
-                    )
-                except Exception as e:
-                    st.exception(e)
-                    st.stop()
+        if st.button("Generate 5 scenarios to achieve KPI", key="run_tgt_free"):
+            try:
+                scenarios = get_five_target_scenarios(
+                    weights_df=weights_df,
+                    target_value=float(target_value),
+                    kpi_type=kpi_type,
+                    min_alloc=min_alloc, max_alloc=max_alloc,
+                    category=category  # uses internal 1.5% tolerance automatically
+                )
+            except Exception as e:
+                st.exception(e)
+                st.stop()
     
-                if not scenarios:
-                    st.error("No feasible scenarios for the given target and constraints.")
-                else:
-                    st.success("Generated scenarios.")
-                    scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
-                    recs = []
-                    for i, s in enumerate(scenarios):
-                        for tier in DISPLAY_ORDER:
-                            recs.append({"Scenario": scenario_ids[i], "Tier": tier, "Allocation": float(s['allocation'].get(tier, 0.0))})
-                    chart_df = pd.DataFrame(recs)
-                    chart_df["TierOrder"] = chart_df["Tier"].map({t:i for i,t in enumerate(DISPLAY_ORDER)})
+            if not scenarios:
+                st.error("No feasible scenarios for the given target and constraints.")
+            else:
+                st.success("Generated scenarios.")
+                scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
+                recs = []
+                for i, s in enumerate(scenarios):
+                    for tier in DISPLAY_ORDER:
+                        recs.append({"Scenario": scenario_ids[i], "Tier": tier, "Allocation": float(s['allocation'].get(tier, 0.0))})
+                chart_df = pd.DataFrame(recs)
+                chart_df["TierOrder"] = chart_df["Tier"].map({t:i for i,t in enumerate(DISPLAY_ORDER)})
     
-                    chart = (
-                        alt.Chart(chart_df)
-                        .mark_bar()
-                        .encode(
-                            x=alt.X("Scenario:N", sort=scenario_ids),
-                            y=alt.Y("Allocation:Q", stack="zero", title="Allocation (Budget)"),
-                            color=alt.Color("Tier:N", sort=DISPLAY_ORDER, scale=alt.Scale(domain=DISPLAY_ORDER)),
-                            order=alt.Order("TierOrder:Q"),
-                            tooltip=[alt.Tooltip("Scenario:N"), alt.Tooltip("Tier:N"), alt.Tooltip("Allocation:Q", format=",.2f")]
-                        ).properties(height=420)
-                    )
-                    st.altair_chart(chart, use_container_width=True)
+                chart = (
+                    alt.Chart(chart_df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("Scenario:N", sort=scenario_ids),
+                        y=alt.Y("Allocation:Q", stack="zero", title="Allocation (Budget)"),
+                        color=alt.Color("Tier:N", sort=DISPLAY_ORDER, scale=alt.Scale(domain=DISPLAY_ORDER)),
+                        order=alt.Order("TierOrder:Q"),
+                        tooltip=[alt.Tooltip("Scenario:N"), alt.Tooltip("Tier:N"), alt.Tooltip("Allocation:Q", format=",.2f")]
+                    ).properties(height=420)
+                )
+                st.altair_chart(chart, use_container_width=True)
     
-                    kpi_df = pd.DataFrame([{
-                        "Scenario": scenario_ids[i],
-                        "Required Budget": s['required_budget'],
-                        "Impressions": s['impressions'],
-                        "Views": s['views'],
-                        "Engagement": s['engagement'],
-                        "Total KPI": s['total_kpi'],
-                    } for i, s in enumerate(scenarios)])
-                    st.dataframe(kpi_df.style.format({
-                        "Required Budget":"{:,.2f}",
-                        "Impressions":"{:,.2f}",
-                        "Views":"{:,.2f}",
-                        "Engagement":"{:,.2f}",
-                        "Total KPI":"{:,.2f}",
-                    }), hide_index=True, use_container_width=True)
-    
-        else:
-            st.caption("Enter percentages per tier (normalized if not exactly 100).")
-            shares = {t: st.number_input(f"{t} %", min_value=0.0, value=0.0, step=1.0, key=f"share_{t}_tgt") for t in TIERS}
-            if st.button("Compute required budget (fixed mix)", key="run_tgt_fixed"):
-                try:
-                    result = _budget_for_target_with_fixed_mix(
-                        df=_validate_and_prepare_weights(weights_df),
-                        target_value=float(target_value), kpi_type=kpi_type,
-                        shares=shares, min_alloc=min_alloc, max_alloc=max_alloc,
-                        category=category
-                    )
-                except Exception as e:
-                    st.exception(e)
-                    st.stop()
-    
-                if not result.get('success', False):
-                    st.error(result.get('reason', 'No feasible solution.'))
-                else:
-                    st.success(f"Minimum required budget: {result['required_budget']:,.2f}")
-    
-                    scen_name = "Required Budget (Fixed Mix)"
-                    chart_df = pd.DataFrame([{
-                        "Scenario": scen_name,
-                        "Tier": tier,
-                        "Allocation": float(result['allocation'].get(tier, 0.0)),
-                        "TierOrder": DISPLAY_ORDER.index(tier),
-                    } for tier in DISPLAY_ORDER])
-    
-                    chart = (
-                        alt.Chart(chart_df)
-                        .mark_bar()
-                        .encode(
-                            x=alt.X("Scenario:N", title=""),
-                            y=alt.Y("Allocation:Q", stack="zero", title="Allocation (Budget)"),
-                            color=alt.Color("Tier:N", sort=DISPLAY_ORDER, scale=alt.Scale(domain=DISPLAY_ORDER)),
-                            order=alt.Order("TierOrder:Q"),
-                            tooltip=[alt.Tooltip("Tier:N"), alt.Tooltip("Allocation:Q", format=",.2f")]
-                        ).properties(height=420)
-                    )
-                    st.altair_chart(chart, use_container_width=True)
-    
-                    st.write({
-                        "Required Budget": result['required_budget'],
-                        "Impressions": result['imps'],
-                        "Views": result['views'],
-                        "Engagement": result['eng'],
-                        "Total KPI": result['total_kpi'],
-                    })
+                kpi_df = pd.DataFrame([{
+                    "Scenario": scenario_ids[i],
+                    "Required Budget": s['required_budget'],
+                    "Impressions": s['impressions'],
+                    "Views": s['views'],
+                    "Engagement": s['engagement'],
+                    "Total KPI": s['total_kpi'],
+                } for i, s in enumerate(scenarios)])
+                st.dataframe(kpi_df.style.format({
+                    "Required Budget":"{:,.2f}",
+                    "Impressions":"{:,.2f}",
+                    "Views":"{:,.2f}",
+                    "Engagement":"{:,.2f}",
+                    "Total KPI":"{:,.2f}",
+                }), hide_index=True, use_container_width=True)
     
 #Page4
 if st.session_state.page == "GEN AI":

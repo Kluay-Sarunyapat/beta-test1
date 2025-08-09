@@ -719,6 +719,7 @@ if st.session_state.page == "Influencer Performance":
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
 elif st.session_state.page == "Optimized Budget":
+    
     # --------- Config ---------
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']  # desired bottom->top order
@@ -991,7 +992,6 @@ elif st.session_state.page == "Optimized Budget":
             if share == 0:
                 if min_t > 0:
                     return dict(success=False, reason=f"Tier {t} share=0% but its min allocation > 0.")
-                # otherwise any B assigns 0 to this tier; check max_t >= 0 is implicit
                 continue
     
             B_low = max(B_low, min_t / share)
@@ -1018,14 +1018,15 @@ elif st.session_state.page == "Optimized Budget":
     
     
     # --------- UI ---------
-    # If you are using a multipage app with st.session_state.page, you can wrap the UI below in:
-    # if st.session_state.get("page") == "Optimized Budget":
-    #     ... (UI below)
-    # For a single-page demo, we just render directly.
-    
     st.title("📊 Budget Optimization Tool")
     
-    # Check weights_df presence and clean
+    # 1) Select optimization mode FIRST (top)
+    mode = st.radio(
+        "Select optimization mode:",
+        ["Maximize KPI (given budget)", "Achieve KPI target (min budget)"]
+    )
+    
+    # 2) Check weights_df presence and clean
     if 'weights_df' not in globals():
         st.error("weights_df not found. Load your Google Sheet into a DataFrame named 'weights_df' before this page runs.")
         st.stop()
@@ -1035,7 +1036,7 @@ elif st.session_state.page == "Optimized Budget":
         st.error(str(e))
         st.stop()
     
-    # Category
+    # 3) Category (common to both modes)
     categories = sorted(df_clean['Category'].dropna().unique().tolist())
     if not categories:
         st.error("No categories found in weights_df.")
@@ -1043,27 +1044,27 @@ elif st.session_state.page == "Optimized Budget":
     default_idx = categories.index("Total IPG") if "Total IPG" in categories else 0
     category = st.selectbox("Select Category:", options=categories, index=default_idx)
     
-    # Common bounds inputs
-    col1, col2 = st.columns(2)
-    min_alloc, max_alloc = {}, {}
-    with col1:
-        st.subheader("Minimum Allocation")
-        for t in TIERS:
-            min_alloc[t] = st.number_input(f"Min {t}", min_value=0.0, value=0.0, step=100.0, key=f"min_{t}")
-    with col2:
-        st.subheader("Maximum Allocation")
-        # Default a large number so it's not accidentally binding; users can lower as needed
-        for t in TIERS:
-            max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=1_000_000.0, step=100.0, key=f"max_{t}")
     
-    # Mode
-    mode = st.radio("Select optimization mode:", ["Maximize KPI (given budget)", "Achieve KPI target (min budget)"])
-    
+    # 4) Mode-specific inputs and actions
     if mode == "Maximize KPI (given budget)":
-        total_budget = st.number_input("Enter Total Budget:", min_value=0.0, value=10000.0, step=100.0)
-        priority = st.selectbox("Select Optimization Priority:", ["balanced", "impressions", "views", "engagement"])
+        # Inputs for this mode
+        total_budget = st.number_input("Enter Total Budget:", min_value=0.0, value=10000.0, step=100.0, key="total_budget_max")
+        priority = st.selectbox("Select Optimization Priority:", ["balanced", "impressions", "views", "engagement"], key="priority_max")
     
-        if st.button("Generate 5 scenarios"):
+        # Per-tier bounds for this mode (defaults: min=0, max=total_budget)
+        col1, col2 = st.columns(2)
+        min_alloc, max_alloc = {}, {}
+        with col1:
+            st.subheader("Minimum Allocation")
+            for t in TIERS:
+                min_alloc[t] = st.number_input(f"Min {t}", min_value=0.0, value=0.0, step=100.0, key=f"min_{t}_max")
+        with col2:
+            st.subheader("Maximum Allocation")
+            for t in TIERS:
+                max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=float(total_budget), step=100.0, key=f"max_{t}_max")
+    
+        # Action
+        if st.button("Generate 5 scenarios", key="run_max"):
             # Feasibility checks
             if any(min_alloc[t] > max_alloc[t] for t in TIERS):
                 bad = [t for t in TIERS if min_alloc[t] > max_alloc[t]]
@@ -1158,18 +1159,32 @@ elif st.session_state.page == "Optimized Budget":
     
     else:
         # Achieve KPI target (min budget)
-        kpi_type = st.selectbox("KPI to target:", ["impressions", "views", "engagement"])
-        target_value = st.number_input(f"Target {kpi_type.title()}:", min_value=0.0, value=1_000_000.0, step=1000.0)
+        # Inputs for this mode
+        kpi_type = st.selectbox("KPI to target:", ["impressions", "views", "engagement"], key="kpi_tgt")
+        target_value = st.number_input(f"Target {kpi_type.title()}:", min_value=0.0, value=1_000_000.0, step=1000.0, key="target_value_tgt")
     
-        mix_mode = st.radio("Tier mix:", ["Optimize mix (free)", "Use fixed mix (percentages)"])
+        mix_mode = st.radio("Tier mix:", ["Optimize mix (free)", "Use fixed mix (percentages)"], key="mix_mode_tgt")
         shares = None
         if mix_mode == "Use fixed mix (percentages)":
             st.caption("Enter percentages per tier (they will be normalized if not exactly 100).")
             shares = {}
             for t in TIERS:
-                shares[t] = st.number_input(f"{t} %", min_value=0.0, value=0.0, step=1.0, key=f"share_{t}")
+                shares[t] = st.number_input(f"{t} %", min_value=0.0, value=0.0, step=1.0, key=f"share_{t}_tgt")
     
-        if st.button("Compute required budget"):
+        # Per-tier bounds for this mode (defaults: min=0, max=large number)
+        col1, col2 = st.columns(2)
+        min_alloc, max_alloc = {}, {}
+        with col1:
+            st.subheader("Minimum Allocation")
+            for t in TIERS:
+                min_alloc[t] = st.number_input(f"Min {t}", min_value=0.0, value=0.0, step=100.0, key=f"min_{t}_tgt")
+        with col2:
+            st.subheader("Maximum Allocation")
+            for t in TIERS:
+                max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=1_000_000.0, step=100.0, key=f"max_{t}_tgt")
+    
+        # Action
+        if st.button("Compute required budget", key="run_tgt"):
             if any(min_alloc[t] > max_alloc[t] for t in TIERS):
                 bad = [t for t in TIERS if min_alloc[t] > max_alloc[t]]
                 st.error(f"Infeasible: Min > Max for {', '.join(bad)}")
@@ -1235,6 +1250,7 @@ elif st.session_state.page == "Optimized Budget":
                     "Engagement": result['eng'],
                     "Total KPI": result['total_kpi'],
                 })
+
 #Page4
 if st.session_state.page == "GEN AI":
     st.title(" COMMING SOON...")

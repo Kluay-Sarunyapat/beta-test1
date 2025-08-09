@@ -720,6 +720,17 @@ if st.session_state.page == "Influencer Performance":
 # ---------- PAGE 3: SUMMARY BUDGET ----------
 elif st.session_state.page == "Optimized Budget":
 
+    # ---------- Compatibility rerun wrapper ----------
+    def _rerun():
+        # Streamlit >= 1.25 has st.rerun; older had st.experimental_rerun
+        if hasattr(st, "rerun"):
+            st.rerun()
+        elif hasattr(st, "experimental_rerun"):
+            st.experimental_rerun()
+        else:
+            # As a fallback, trigger a no-op change that forces a rerun next interaction
+            pass
+    
     # --------- Config ---------
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']  # display stack order
@@ -749,7 +760,6 @@ elif st.session_state.page == "Optimized Budget":
         cat_df = df[df['Category'] == category]
         if cat_df.empty:
             raise ValueError(f"No rows found for Category='{category}'.")
-    
         def to_map(kpi):
             sub = cat_df[cat_df['KPI'] == kpi]
             if sub.empty:
@@ -759,7 +769,6 @@ elif st.session_state.page == "Optimized Budget":
             if miss:
                 raise ValueError(f"Missing tiers for KPI='{kpi}': {miss}")
             return mp
-    
         return to_map('Impression'), to_map('View'), to_map('Engagement')
     
     def _build_priority_weights(priority, imp_w, view_w, eng_w):
@@ -894,14 +903,14 @@ elif st.session_state.page == "Optimized Budget":
     
         # Near-min variations under budget cap and KPI >= target
         A_ub2 = [
-            np.array([-w_map[t] for t in TIERS], float),  # keep KPI >= target
-            np.ones(n, float)                             # keep budget <= cap
+            np.array([-w_map[t] for t in TIERS], float),  # KPI >= target
+            np.ones(n, float)                             # Budget <= B_cap
         ]
         b_ub2 = [-float(target_value), float(B_cap)]
     
         for i, t in enumerate(TIERS):
-            c = np.zeros(n, float); c[i] = -1.0
-            res2 = _solve_lp_general(c, A_ub=A_ub2, b_ub=b_ub2, bounds=bounds)
+            c2 = np.zeros(n, float); c2[i] = -1.0
+            res2 = _solve_lp_general(c2, A_ub=A_ub2, b_ub=b_ub2, bounds=bounds)
             if res2.success:
                 scenarios.append(pack(f"Near-min (emphasize {t})", res2.x))
     
@@ -953,16 +962,18 @@ elif st.session_state.page == "Optimized Budget":
     # Mode selector at top
     mode = st.radio("Select optimization mode:", ["Maximize KPI (given budget)", "Achieve KPI target (min budget)"])
     
-    # Clear state on mode change to avoid carry-over widgets/results
+    # Clear state on mode change to avoid carry-over
     if 'mode_prev' not in st.session_state:
         st.session_state.mode_prev = mode
     elif mode != st.session_state.mode_prev:
-        # clear keys used by other mode
         for k in list(st.session_state.keys()):
             if k.endswith('_max') or k.endswith('_tgt') or k.startswith('result_'):
-                del st.session_state[k]
+                try:
+                    del st.session_state[k]
+                except KeyError:
+                    pass
         st.session_state.mode_prev = mode
-        st.experimental_rerun()
+        _rerun()
     
     # Data check
     if 'weights_df' not in globals():
@@ -1055,7 +1066,6 @@ elif st.session_state.page == "Optimized Budget":
     
         mix_mode = st.radio("Tier mix", ["Optimize mix (free) – return 5 scenarios", "Use fixed mix (percentages) – return single scenario"], key="mix_mode_tgt")
     
-        # Advanced constraints hidden by default to avoid confusion
         use_adv = st.checkbox("Show advanced constraints (per-tier min/max)", value=False, key="adv_tgt")
         if use_adv:
             col1, col2 = st.columns(2)
@@ -1069,7 +1079,6 @@ elif st.session_state.page == "Optimized Budget":
                 for t in TIERS:
                     max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=1_000_000.0, step=100.0, key=f"max_{t}_tgt")
         else:
-            # default unconstraining bounds
             min_alloc = {t: 0.0 for t in TIERS}
             max_alloc = {t: 1_000_000_000.0 for t in TIERS}
     
@@ -1092,7 +1101,6 @@ elif st.session_state.page == "Optimized Budget":
                     st.error("No feasible scenarios for the given target and constraints.")
                 else:
                     st.success("Generated scenarios.")
-    
                     scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
                     recs = []
                     for i, s in enumerate(scenarios):
@@ -1131,7 +1139,6 @@ elif st.session_state.page == "Optimized Budget":
                     }), hide_index=True, use_container_width=True)
     
         else:
-            # Fixed mix -> single scenario
             st.caption("Enter percentages per tier (normalized if not exactly 100).")
             shares = {t: st.number_input(f"{t} %", min_value=0.0, value=0.0, step=1.0, key=f"share_{t}_tgt") for t in TIERS}
             if st.button("Compute required budget (fixed mix)", key="run_tgt_fixed"):

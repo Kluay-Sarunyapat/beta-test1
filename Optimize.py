@@ -449,9 +449,9 @@ if st.session_state.page == "Influencer Performance":
     
     @st.cache_data(show_spinner=False)
     def load_google_sheets(url):
-    df = pd.read_csv(url)
-    # normalize columns
-    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+        df = pd.read_csv(url)
+        # normalize columns
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
     return df
     
     if st.button('🔄 Refresh Data'):

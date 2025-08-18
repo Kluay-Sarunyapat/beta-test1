@@ -552,7 +552,7 @@ if st.session_state.page == "Simulation Budget":
     
     
     # ---------- PAGE 2: Influencer Performance ----------
-    if st.session_state.page == "Influencer Performance":
+if st.session_state.page == "Influencer Performance":
     
         # ---------- GOOGLE SHEETS ----------
         sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"

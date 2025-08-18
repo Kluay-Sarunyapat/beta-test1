@@ -339,7 +339,7 @@ weights_df = load_weights(csv_url)
 #     )
 
 if st.session_state.page == "Simulation Budget":
-st.title("📊 Simulation Budget")
+    st.title("📊 Simulation Budget")
 
     # Validate weights_df presence and columns
     if 'weights_df' in st.session_state:

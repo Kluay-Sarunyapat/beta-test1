@@ -340,21 +340,6 @@ weights_df = load_weights(csv_url)
 
 if st.session_state.page == "Simulation Budget":
     st.title("📊 Simulation Budget")
-
-    # Validate weights_df presence and columns
-    if 'weights_df' in st.session_state:
-        weights_df = st.session_state.weights_df
-    else:
-        try:
-            weights_df  # will raise NameError if not defined in global scope
-        except NameError:
-            st.error("weights_df not found. Please load weights_df with columns: Category, KPI, Tier, Weights.")
-            st.stop()
-    
-    required_cols = {"Category", "KPI", "Tier", "Weights"}
-    if not required_cols.issubset(set(weights_df.columns)):
-        st.error("weights_df must contain columns: Category, KPI, Tier, Weights.")
-        st.stop()
     
     # Initialize session state for simulations
     if 'inputs_a' not in st.session_state:

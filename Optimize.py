@@ -573,9 +573,9 @@ if st.session_state.page == "Influencer Performance":
     
         st.title("💰 Influencer Performance")
         
-        st.write("🧾 Available columns:", df_full.columns.tolist())
-        with st.expander("📋 Influencer Data from Google Sheets"):
-            st.dataframe(df_full, use_container_width=True)
+        # st.write("🧾 Available columns:", df_full.columns.tolist())
+        # with st.expander("📋 Influencer Data from Google Sheets"):
+        #     st.dataframe(df_full, use_container_width=True)
         
         # --------------------- Tier Selection ---------------------
         all_tiers = ['All', 'VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano']

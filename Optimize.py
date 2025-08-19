@@ -396,28 +396,23 @@ weights_df = load_weights(csv_url)
 #     )
 
 if st.session_state.page == "Simulation Budget":
-    # Init tiers and inputs
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     for key in ['inputs_a', 'inputs_b', 'inputs_c']:
         if key not in st.session_state:
             st.session_state[key] = {t: 0 for t in TIERS}
     
-    # Category list
     available_categories = sorted(weights_df['Category'].dropna().unique().tolist())
     if not available_categories:
         st.error("No categories found in weights_df.")
         st.stop()
     
-    # Default categories
     for key in ['category_a', 'category_b', 'category_c']:
         if key not in st.session_state:
             st.session_state[key] = available_categories[0]
     
-    # Helpers
     def platforms_for_category(cat):
         return sorted(weights_df.loc[weights_df['Category'] == cat, 'Platform'].dropna().unique().tolist())
     
-    # Default platforms
     if 'platform_a' not in st.session_state:
         pls = platforms_for_category(st.session_state.category_a)
         st.session_state.platform_a = pls[0] if pls else None
@@ -432,6 +427,8 @@ if st.session_state.page == "Simulation Budget":
     col_input_a, col_input_b, col_input_c = st.columns(3)
     
     def get_weights(category, platform, kpi):
+        if platform is None:
+            return {}
         f = (
             (weights_df['Category'] == category) &
             (weights_df['Platform'] == platform) &
@@ -453,18 +450,15 @@ if st.session_state.page == "Simulation Budget":
         else:
             return "<span style='color:#aaa;'>0.0%</span>"
     
-    # Inputs panel template
     def inputs_panel(col, sim_key_prefix, cat_key, plat_key, inputs_key, bg_color, title_color):
         with col:
             st.subheader(f"Simulation {sim_key_prefix.upper()}")
-            # Category
             st.session_state[cat_key] = st.selectbox(
                 f"Simulation {sim_key_prefix.upper()} - Category:",
                 available_categories,
                 key=f"cat_{sim_key_prefix}",
                 index=available_categories.index(st.session_state[cat_key])
             )
-            # Platform
             plats = platforms_for_category(st.session_state[cat_key])
             if st.session_state[plat_key] not in plats and plats:
                 st.session_state[plat_key] = plats[0]
@@ -472,10 +466,8 @@ if st.session_state.page == "Simulation Budget":
                 f"Simulation {sim_key_prefix.upper()} - Platform:",
                 plats,
                 key=f"plat_{sim_key_prefix}",
-                index=plats.index(st.session_state[plat_key]) if st.session_state[plat_key] in plats else 0
+                index=plats.index(st.session_state[plat_key]) if (plats and st.session_state[plat_key] in plats) else 0
             )
-    
-            # Budget inputs by Tier
             new_inputs = {}
             for t in st.session_state[inputs_key]:
                 cols = st.columns([3, 2])
@@ -486,7 +478,6 @@ if st.session_state.page == "Simulation Budget":
                 cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
             st.session_state[inputs_key] = new_inputs
             total_final = sum(new_inputs.values())
-    
             st.markdown(
                 f"""
                 <div style="background-color:{bg_color};padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #00000022;">
@@ -496,20 +487,16 @@ if st.session_state.page == "Simulation Budget":
                 """, unsafe_allow_html=True
             )
     
-    # Panels
     inputs_panel(col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', '#e0f7fa', '#0277bd')
     inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
     inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
     
-    # Metric calculations
     def sum_per_cost(inputs, per_cost_weights):
-        # per_cost_weights: metric per 1 unit cost (e.g., Impressions/Cost)
         if not per_cost_weights:
             return 0.0
         return sum(inputs.get(t, 0) * (per_cost_weights.get(t) or 0) for t in inputs)
     
     def sum_units_from_cpu(inputs, cpu_weights):
-        # cpu_weights: cost per unit (e.g., CPE, CPShare)
         if not cpu_weights:
             return 0.0
         total_units = 0.0
@@ -520,8 +507,6 @@ if st.session_state.page == "Simulation Budget":
         return total_units
     
     def combine_cpu_as_hmean(inputs, cpu_weights):
-        # Scenario-level cost-per-unit from weighted harmonic mean of per-tier CPU
-        # Only uses provided CPE/CPShare weights (no extra calculations from other KPIs)
         if not cpu_weights:
             return np.nan
         total_spend = sum(inputs.values())
@@ -533,18 +518,16 @@ if st.session_state.page == "Simulation Budget":
         return (total_spend / denom) if denom > 0 else np.nan
     
     def calc_metrics(inputs, category, platform):
-        imp_w = get_weights(category, platform, "Impression")   # per cost
-        view_w = get_weights(category, platform, "View")         # per cost
-        eng_w = get_weights(category, platform, "Engagement")    # per cost
-        share_w = get_weights(category, platform, "Share")       # per cost
-    
-        cpe_w = get_weights(category, platform, "CPE")           # cost per engagement
-        cpshare_w = get_weights(category, platform, "CPShare")   # cost per share
+        imp_w = get_weights(category, platform, "Impression")
+        view_w = get_weights(category, platform, "View")
+        eng_w = get_weights(category, platform, "Engagement")
+        share_w = get_weights(category, platform, "Share")
+        cpe_w = get_weights(category, platform, "CPE")
+        cpshare_w = get_weights(category, platform, "CPShare")
     
         total_impressions = sum_per_cost(inputs, imp_w)
         total_views = sum_per_cost(inputs, view_w)
     
-        # Engagement/Share prioritize per-cost weights; fallback to CPU weights if per-cost not available
         total_engagement = sum_per_cost(inputs, eng_w)
         if total_engagement == 0:
             total_engagement = sum_units_from_cpu(inputs, cpe_w)
@@ -553,7 +536,6 @@ if st.session_state.page == "Simulation Budget":
         if total_share == 0:
             total_share = sum_units_from_cpu(inputs, cpshare_w)
     
-        # CPE / CPShare from provided weights only (harmonic mean by spend)
         cpe_val = combine_cpu_as_hmean(inputs, cpe_w)
         cpshare_val = combine_cpu_as_hmean(inputs, cpshare_w)
     
@@ -567,45 +549,10 @@ if st.session_state.page == "Simulation Budget":
     budget_b = sum(st.session_state.inputs_b.values())
     budget_c = sum(st.session_state.inputs_c.values())
     
-    def highlight3_max(a, b, c, fmt=":,.0f"):
-        vals = [a, b, c]
-        vals_num = [v if pd.notna(v) else -np.inf for v in vals]
-        maxv = max(vals_num)
-        top_count = vals_num.count(maxv)
-        styled = []
-        for v, vn in zip(vals, vals_num):
-            if pd.isna(v):
-                styled.append("<span style='color:#aaa;font-size:1.08em'>-</span>")
-            elif vn == maxv and top_count >= 2:
-                styled.append(f"<span style='color:#1e88e5;font-weight:bold;font-size:1.2em'>{format(v, fmt)}</span>")
-            elif vn == maxv:
-                styled.append(f"<span style='color:#388e3c;font-weight:bold;font-size:1.25em'>{format(v, fmt)}</span>")
-            else:
-                styled.append(f"<span style='color:#aaa;font-size:1.08em'>{format(v, fmt)}</span>")
-        return tuple(styled)
-    
-    def highlight3_min(a, b, c, fmt=":,.2f"):
-        vals = [a, b, c]
-        vals_num = [v if (pd.notna(v) and not np.isinf(v)) else np.inf for v in vals]
-        minv = min(vals_num)
-        top_count = vals_num.count(minv)
-        styled = []
-        for v, vn in zip(vals, vals_num):
-            if pd.isna(v) or np.isinf(v):
-                styled.append("<span style='color:#aaa;font-size:1.08em'>-</span>")
-            elif vn == minv and top_count >= 2:
-                styled.append(f"<span style='color:#1e88e5;font-weight:bold;font-size:1.2em'>{format(v, fmt)}</span>")
-            elif vn == minv:
-                styled.append(f"<span style='color:#388e3c;font-weight:bold;font-size:1.25em'>{format(v, fmt)}</span>")
-            else:
-                styled.append(f"<span style='color:#aaa;font-size:1.08em'>{format(v, fmt)}</span>")
-        return tuple(styled)
-    
     imp_a_html, imp_b_html, imp_c_html = highlight3_max(imp_a, imp_b, imp_c, fmt=":,.0f")
     view_a_html, view_b_html, view_c_html = highlight3_max(view_a, view_b, view_c, fmt=":,.0f")
     eng_a_html, eng_b_html, eng_c_html = highlight3_max(eng_a, eng_b, eng_c, fmt=":,.0f")
     share_a_html, share_b_html, share_c_html = highlight3_max(share_a, share_b, share_c, fmt=":,.0f")
-    
     budget_a_html, budget_b_html, budget_c_html = highlight3_max(budget_a, budget_b, budget_c, fmt=":,.0f")
     cpe_a_html, cpe_b_html, cpe_c_html = highlight3_min(cpe_a, cpe_b, cpe_c, fmt=":,.2f")
     cpshare_a_html, cpshare_b_html, cpshare_c_html = highlight3_min(cpshare_a, cpshare_b, cpshare_c, fmt=":,.2f")

@@ -404,14 +404,14 @@ if st.session_state.page == "Simulation Budget":
     
     
     # ---------- Validate weights_df ----------
-    try:
-        weights_df
-    except NameError:
-        if 'weights_df' in st.session_state:
-            weights_df = st.session_state.weights_df
-        else:
-            st.error("weights_df is not defined. Please load a DataFrame with columns: Category, Tier, Platform, KPI, Weights")
-            st.stop()
+    # try:
+    #     weights_df
+    # except NameError:
+    #     if 'weights_df' in st.session_state:
+    #         weights_df = st.session_state.weights_df
+    #     else:
+    #         st.error("weights_df is not defined. Please load a DataFrame with columns: Category, Tier, Platform, KPI, Weights")
+    #         st.stop()
     
     required_cols = {'Category', 'Tier', 'Platform', 'KPI', 'Weights'}
     missing_cols = required_cols - set(weights_df.columns)

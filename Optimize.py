@@ -397,17 +397,17 @@ weights_df = load_weights(csv_url)
 
 if st.session_state.page == "Simulation Budget":
 
-        # Ensure weights_df exists
+    st.subheader("📊 Budget Simulation Comparison")
+    
     if 'weights_df' in st.session_state:
         weights_df = st.session_state.weights_df
     else:
         try:
             weights_df
         except NameError:
-            st.error("weights_df is not defined. Load it before entering Simulation Budget.")
+            st.error("weights_df is not defined.")
             st.stop()
     
-    TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     for key in ['inputs_a', 'inputs_b', 'inputs_c']:
         if key not in st.session_state:
             st.session_state[key] = {t: 0 for t in TIERS}
@@ -422,21 +422,61 @@ if st.session_state.page == "Simulation Budget":
             st.session_state[key] = available_categories[0]
     
     if 'platform_a' not in st.session_state:
-        pls = platforms_for_category(weights_df, st.session_state.category_a)
-        st.session_state.platform_a = pls[0] if pls else None
+        pa = platforms_for_category(weights_df, st.session_state.category_a)
+        st.session_state.platform_a = pa[0] if pa else None
     if 'platform_b' not in st.session_state:
-        pls = platforms_for_category(weights_df, st.session_state.category_b)
-        st.session_state.platform_b = pls[0] if pls else None
+        pb = platforms_for_category(weights_df, st.session_state.category_b)
+        st.session_state.platform_b = pb[0] if pb else None
     if 'platform_c' not in st.session_state:
-        pls = platforms_for_category(weights_df, st.session_state.category_c)
-        st.session_state.platform_c = pls[0] if pls else None
+        pc = platforms_for_category(weights_df, st.session_state.category_c)
+        st.session_state.platform_c = pc[0] if pc else None
     
-    st.subheader("📊 Budget Simulation Comparison")
     col_input_a, col_input_b, col_input_c = st.columns(3)
     
-    inputs_panel(weights_df, col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', available_categories, '#e0f7fa', '#0277bd')
-    inputs_panel(weights_df, col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', available_categories, '#f3e5f5', '#8e24aa')
-    inputs_panel(weights_df, col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', available_categories, '#e8f5e9', '#2e7d32')
+    def inputs_panel(col, sim_key_prefix, cat_key, plat_key, inputs_key, bg_color, title_color):
+        with col:
+            st.subheader(f"Simulation {sim_key_prefix.upper()}")
+            st.session_state[cat_key] = st.selectbox(
+                f"Simulation {sim_key_prefix.upper()} - Category:",
+                available_categories,
+                key=f"cat_{sim_key_prefix}",
+                index=available_categories.index(st.session_state[cat_key])
+            )
+            plats = platforms_for_category(weights_df, st.session_state[cat_key])
+            display_options = plats if plats else ['(None)']
+            current_value = st.session_state.get(plat_key)
+            if current_value not in display_options:
+                current_value = display_options[0]
+            sel = st.selectbox(
+                f"Simulation {sim_key_prefix.upper()} - Platform:",
+                display_options,
+                key=f"plat_{sim_key_prefix}",
+                index=display_options.index(current_value)
+            )
+            st.session_state[plat_key] = None if sel == '(None)' else sel
+    
+            new_inputs = {}
+            for t in st.session_state[inputs_key]:
+                cols = st.columns([3, 2])
+                val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state[inputs_key][t], key=f"{sim_key_prefix}_{t}")
+                new_inputs[t] = val
+                total_new = sum(new_inputs.values())
+                percent = (val / total_new) * 100 if total_new > 0 else 0
+                cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
+            st.session_state[inputs_key] = new_inputs
+            total_final = sum(new_inputs.values())
+            st.markdown(
+                f"""
+                <div style="background-color:{bg_color};padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #00000022;">
+                    <div style="font-size:2.3rem;font-weight:bold;color:{title_color};">{total_final:,}</div>
+                    <div style="font-size:1.2rem;">💰 Total Budget {sim_key_prefix.upper()}</div>
+                </div>
+                """, unsafe_allow_html=True
+            )
+    
+    inputs_panel(col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', '#e0f7fa', '#0277bd')
+    inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
+    inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
     
     imp_a, view_a, eng_a, share_a, cpe_a, cpshare_a = calc_metrics(weights_df, st.session_state.inputs_a, st.session_state.category_a, st.session_state.platform_a)
     imp_b, view_b, eng_b, share_b, cpe_b, cpshare_b = calc_metrics(weights_df, st.session_state.inputs_b, st.session_state.category_b, st.session_state.platform_b)

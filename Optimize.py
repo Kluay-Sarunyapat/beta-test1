@@ -184,7 +184,7 @@ weights_df = load_weights(csv_url)
 # ---------- PAGE 1: Initialize session state ----------
 
 # if st.session_state.page == "Simulation Budget":
-    st.title("📊 Simulation Budget")
+st.title("📊 Simulation Budget")
     
     # Initialize session state for simulations
     if 'inputs_a' not in st.session_state:

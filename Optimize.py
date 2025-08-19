@@ -396,7 +396,8 @@ weights_df = load_weights(csv_url)
 #     )
 
 if st.session_state.page == "Simulation Budget":
-    # Ensure weights_df is available
+
+        # Ensure weights_df exists
     if 'weights_df' in st.session_state:
         weights_df = st.session_state.weights_df
     else:

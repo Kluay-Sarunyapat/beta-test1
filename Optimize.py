@@ -641,25 +641,13 @@ if st.session_state.page == "Simulation Budget":
     #     unsafe_allow_html=True
     # )
 
-
     # ---------- Title ----------
     st.title("📊 Simulation Budget")
-    
     
     # ---------- Config ----------
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     
-    
     # ---------- Validate weights_df ----------
-    try:
-        weights_df
-    except NameError:
-        if 'weights_df' in st.session_state:
-            weights_df = st.session_state.weights_df
-        else:
-            st.error("weights_df is not defined. Please load a DataFrame with columns: Category, Tier, Platform, KPI, Weights")
-            st.stop()
-    
     required_cols = {'Category', 'Tier', 'Platform', 'KPI', 'Weights'}
     missing_cols = required_cols - set(weights_df.columns)
     if missing_cols:
@@ -670,7 +658,6 @@ if st.session_state.page == "Simulation Budget":
     for c in ['Category', 'Tier', 'Platform', 'KPI']:
         weights_df[c] = weights_df[c].astype(str).str.strip()
     weights_df['Weights'] = pd.to_numeric(weights_df['Weights'], errors='coerce')
-    
     
     # ---------- Initialize Session State ----------
     if 'inputs_a' not in st.session_state:
@@ -691,7 +678,6 @@ if st.session_state.page == "Simulation Budget":
         st.session_state.category_b = available_categories[0]
     if 'category_c' not in st.session_state:
         st.session_state.category_c = available_categories[0]
-    
     
     # ---------- Helpers ----------
     def platforms_for_category(cat):
@@ -734,7 +720,6 @@ if st.session_state.page == "Simulation Budget":
         else:
             return "<span style='color:#aaa;'>0.0%</span>"
     
-    
     # ---------- Panels ----------
     st.subheader("📊 Budget Simulation Comparison")
     col_input_a, col_input_b, col_input_c = st.columns(3)
@@ -743,7 +728,6 @@ if st.session_state.page == "Simulation Budget":
         with col:
             st.subheader(f"Simulation {sim_key.upper()}")
     
-            # Category
             st.session_state[cat_key] = st.selectbox(
                 f"Simulation {sim_key.upper()} - Category:",
                 available_categories,
@@ -751,7 +735,6 @@ if st.session_state.page == "Simulation Budget":
                 index=available_categories.index(st.session_state[cat_key])
             )
     
-            # Platform under selected category
             plats = platforms_for_category(st.session_state[cat_key])
             display_options = plats if plats else ['(None)']
             current = st.session_state.get(plat_key, display_options[0])
@@ -765,7 +748,6 @@ if st.session_state.page == "Simulation Budget":
             )
             st.session_state[plat_key] = None if sel == '(None)' else sel
     
-            # Budget inputs by Tier
             new_inputs = {}
             for t in st.session_state[inputs_key]:
                 cols = st.columns([3, 2])
@@ -791,7 +773,6 @@ if st.session_state.page == "Simulation Budget":
     inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
     inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
     
-    
     # ---------- Metric calculations ----------
     def calc_metrics(inputs, category, platform):
         impression_weights  = get_weights(category, platform, "Impression")
@@ -813,7 +794,6 @@ if st.session_state.page == "Simulation Budget":
     budget_a = sum(st.session_state.inputs_a.values())
     budget_b = sum(st.session_state.inputs_b.values())
     budget_c = sum(st.session_state.inputs_c.values())
-    
     
     # ---------- Highlight ----------
     def highlight3(a, b, c):
@@ -862,87 +842,85 @@ if st.session_state.page == "Simulation Budget":
     cpe_a_html,     cpe_b_html,     cpe_c_html     = highlight3_low(cpe_a, cpe_b, cpe_c)
     cpshare_a_html, cpshare_b_html, cpshare_c_html = highlight3_low(cpshare_a, cpshare_b, cpshare_c)
     
-    
     # ---------- Results ----------
     st.markdown("---")
     st.subheader("📈 Simulation Results Comparison")
     
-    st.markdown(
-        f"""
-        <table style="width:92%;margin:auto;border-collapse:collapse;font-size:1.17em;">
-            <tr style="background-color:#f0f2f6;">
-                <th style="width:20%"></th>
-                <th style="color:#0277bd;">Simulation A</th>
-                <th style="color:#8e24aa;">Simulation B</th>
-                <th style="color:#2e7d32;">Simulation C</th>
-            </tr>
+    html_table = f"""
+    <table style="width:92%;margin:auto;border-collapse:collapse;font-size:1.17em;">
+      <tr style="background-color:#f0f2f6;">
+        <th style="width:20%"></th>
+        <th style="color:#0277bd;">Simulation A</th>
+        <th style="color:#8e24aa;">Simulation B</th>
+        <th style="color:#2e7d32;">Simulation C</th>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">Category</td>
-                <td>{st.session_state.category_a}</td>
-                <td>{st.session_state.category_b}</td>
-                <td>{st.session_state.category_c}</td>
-            </tr>
+      <tr>
+        <td style="font-weight:bold">Category</td>
+        <td>{st.session_state.category_a}</td>
+        <td>{st.session_state.category_b}</td>
+        <td>{st.session_state.category_c}</td>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">Platform</td>
-                <td>{st.session_state.platform_a if st.session_state.platform_a is not None else '-'}</td>
-                <td>{st.session_state.platform_b if st.session_state.platform_b is not None else '-'}</td>
-                <td>{st.session_state.platform_c if st.session_state.platform_c is not None else '-'}</td>
-            </tr>
+      <tr>
+        <td style="font-weight:bold">Platform</td>
+        <td>{st.session_state.platform_a if st.session_state.platform_a is not None else '-'}</td>
+        <td>{st.session_state.platform_b if st.session_state.platform_b is not None else '-'}</td>
+        <td>{st.session_state.platform_c if st.session_state.platform_c is not None else '-'}</td>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">Budget</td>
-                <td>{budget_a_html}</td>
-                <td>{budget_b_html}</td>
-                <td>{budget_c_html}</td>
-            </tr>
+      <tr>
+        <td style="font-weight:bold">Budget</td>
+        <td>{budget_a_html}</td>
+        <td>{budget_b_html}</td>
+        <td>{budget_c_html}</td>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">Impressions</td>
-                <td>{imp_a_html}</td>
-                <td>{imp_b_html}</td>
-                <td>{imp_c_html}</td>
-            </tr>
+      <tr>
+        <td style="font-weight:bold">Impressions</td>
+        <td>{imp_a_html}</td>
+        <td>{imp_b_html}</td>
+        <td>{imp_c_html}</td>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">Views</td>
-                <td>{view_a_html}</td>
-                <td>{view_b_html}</td>
-                <td>{view_c_html}</td>
-            </tr>
+      <tr>
+        <td style="font-weight:bold">Views</td>
+        <td>{view_a_html}</td>
+        <td>{view_b_html}</td>
+        <td>{view_c_html}</td>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">Engagements</td>
-                <td>{eng_a_html}</td>
-                <td>{eng_b_html}</td>
-                <td>{eng_c_html}</td>
-            </tr>
+      <tr>
+        <td style="font-weight:bold">Engagements</td>
+        <td>{eng_a_html}</td>
+        <td>{eng_b_html}</td>
+        <td>{eng_c_html}</td>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">Shares</td>
-                <td>{share_a_html}</td>
-                <td>{share_b_html}</td>
-                <td>{share_c_html}</td>
-            </tr>
+      <tr>
+        <td style="font-weight:bold">Shares</td>
+        <td>{share_a_html}</td>
+        <td>{share_b_html}</td>
+        <td>{share_c_html}</td>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">CPE</td>
-                <td>{cpe_a_html}</td>
-                <td>{cpe_b_html}</td>
-                <td>{cpe_c_html}</td>
-            </tr>
+      <tr>
+        <td style="font-weight:bold">CPE</td>
+        <td>{cpe_a_html}</td>
+        <td>{cpe_b_html}</td>
+        <td>{cpe_c_html}</td>
+      </tr>
     
-            <tr>
-                <td style="font-weight:bold">CPShare</td>
-                <td>{cpshare_a_html}</td>
-                <td>{cpshare_b_html}</td>
-                <td>{cpshare_c_html}</td>
-            </tr>
-        </table>
-        """,
-        unsafe_allow_html=True
-    )
+      <tr>
+        <td style="font-weight:bold">CPShare</td>
+        <td>{cpshare_a_html}</td>
+        <td>{cpshare_b_html}</td>
+        <td>{cpshare_c_html}</td>
+      </tr>
+    </table>
+    """
+    
+    st.markdown(html_table, unsafe_allow_html=True)
     
 # # ---------- PAGE 2: Influencer Performance ----------
 # if st.session_state.page == "Influencer Performance":

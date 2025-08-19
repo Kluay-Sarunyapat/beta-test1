@@ -184,315 +184,169 @@ weights_df = load_weights(csv_url)
 # ---------- PAGE 1: Initialize session state ----------
 
 # if st.session_state.page == "Simulation Budget":
-#     st.title("📊 Simulation Budget")
+    st.title("📊 Simulation Budget")
     
-#     # Initialize session state for simulations
-#     if 'inputs_a' not in st.session_state:
-#         st.session_state.inputs_a = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
-#     if 'inputs_b' not in st.session_state:
-#         st.session_state.inputs_b = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
-#     if 'inputs_c' not in st.session_state:
-#         st.session_state.inputs_c = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
+    # Initialize session state for simulations
+    if 'inputs_a' not in st.session_state:
+        st.session_state.inputs_a = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
+    if 'inputs_b' not in st.session_state:
+        st.session_state.inputs_b = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
+    if 'inputs_c' not in st.session_state:
+        st.session_state.inputs_c = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
     
-#     available_categories = sorted(weights_df['Category'].unique())
-#     if len(available_categories) == 0:
-#         st.error("No categories found in weights_df.")
-#         st.stop()
-    
-#     if 'category_a' not in st.session_state:
-#         st.session_state.category_a = available_categories[0]
-#     if 'category_b' not in st.session_state:
-#         st.session_state.category_b = available_categories[0]
-#     if 'category_c' not in st.session_state:
-#         st.session_state.category_c = available_categories[0]
-    
-#     st.subheader("📊 Budget Simulation Comparison")
-    
-#     col_input_a, col_input_b, col_input_c = st.columns(3)
-    
-#     # Helpers
-#     def get_weights(category, kpi):
-#         filtered = weights_df[(weights_df['Category'] == category) & (weights_df['KPI'] == kpi)]
-#         return {row['Tier']: row['Weights'] for _, row in filtered.iterrows()}
-    
-#     def colored_percentage(p):
-#         if p >= 40:
-#             return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
-#         elif p >= 20:
-#             return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
-#         elif p > 0:
-#             return f"<span style='color:#009688;'>{p:.1f}%</span>"
-#         else:
-#             return "<span style='color:#aaa;'>0.0%</span>"
-    
-#     # Simulation A
-#     with col_input_a:
-#         st.subheader("Simulation A")
-#         st.session_state.category_a = st.selectbox(
-#             "Simulation A - Category:",
-#             available_categories,
-#             key="cat_a",
-#             index=available_categories.index(st.session_state.category_a)
-#         )
-#         new_inputs_a = {}
-#         for t in st.session_state.inputs_a:
-#             cols = st.columns([3, 2])
-#             val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_a[t], key=f"a_{t}")
-#             new_inputs_a[t] = val
-#             total_a_new = sum(new_inputs_a.values())
-#             percent = (val / total_a_new) * 100 if total_a_new > 0 else 0
-#             cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-#         st.session_state.inputs_a = new_inputs_a
-#         total_a_final = sum(new_inputs_a.values())
-#         st.markdown(
-#             f"""
-#             <div style="background-color:#e0f7fa;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #0288d180;">
-#                 <div style="font-size:2.3rem;font-weight:bold;color:#0277bd;">{total_a_final:,}</div>
-#                 <div style="font-size:1.2rem;">💰 Total Budget A</div>
-#             </div>
-#             """, unsafe_allow_html=True
-#         )
-    
-#     # Simulation B
-#     with col_input_b:
-#         st.subheader("Simulation B")
-#         st.session_state.category_b = st.selectbox(
-#             "Simulation B - Category:",
-#             available_categories,
-#             key="cat_b",
-#             index=available_categories.index(st.session_state.category_b)
-#         )
-#         new_inputs_b = {}
-#         for t in st.session_state.inputs_b:
-#             cols = st.columns([3, 2])
-#             val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_b[t], key=f"b_{t}")
-#             new_inputs_b[t] = val
-#             total_b_new = sum(new_inputs_b.values())
-#             percent = (val / total_b_new) * 100 if total_b_new > 0 else 0
-#             cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-#         st.session_state.inputs_b = new_inputs_b
-#         total_b_final = sum(new_inputs_b.values())
-#         st.markdown(
-#             f"""
-#             <div style="background-color:#f3e5f5;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #a26ad1;">
-#                 <div style="font-size:2.3rem;font-weight:bold;color:#8e24aa;">{total_b_final:,}</div>
-#                 <div style="font-size:1.2rem;">💰 Total Budget B</div>
-#             </div>
-#             """, unsafe_allow_html=True
-#         )
-    
-#     # Simulation C
-#     with col_input_c:
-#         st.subheader("Simulation C")
-#         st.session_state.category_c = st.selectbox(
-#             "Simulation C - Category:",
-#             available_categories,
-#             key="cat_c",
-#             index=available_categories.index(st.session_state.category_c)
-#         )
-#         new_inputs_c = {}
-#         for t in st.session_state.inputs_c:
-#             cols = st.columns([3, 2])
-#             val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_c[t], key=f"c_{t}")
-#             new_inputs_c[t] = val
-#             total_c_new = sum(new_inputs_c.values())
-#             percent = (val / total_c_new) * 100 if total_c_new > 0 else 0
-#             cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-#         st.session_state.inputs_c = new_inputs_c
-#         total_c_final = sum(new_inputs_c.values())
-#         st.markdown(
-#             f"""
-#             <div style="background-color:#e8f5e9;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #66bb6a80;">
-#                 <div style="font-size:2.3rem;font-weight:bold;color:#2e7d32;">{total_c_final:,}</div>
-#                 <div style="font-size:1.2rem;">💰 Total Budget C</div>
-#             </div>
-#             """, unsafe_allow_html=True
-#         )
-    
-#     # Metric calculations
-#     def calc_metrics(inputs, category):
-#         impression_weights = get_weights(category, "Impression")
-#         view_weights = get_weights(category, "View")
-#         engagement_weights = get_weights(category, "Engagement")
-#         total_impressions = sum(inputs.get(k, 0) * impression_weights.get(k, 0) for k in inputs)
-#         total_views = sum(inputs.get(k, 0) * view_weights.get(k, 0) for k in inputs)
-#         total_engagement = sum(inputs.get(k, 0) * engagement_weights.get(k, 0) for k in inputs)
-#         return total_impressions, total_views, total_engagement
-    
-#     imp_a, view_a, eng_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a)
-#     imp_b, view_b, eng_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b)
-#     imp_c, view_c, eng_c = calc_metrics(st.session_state.inputs_c, st.session_state.category_c)
-    
-#     budget_a = sum(st.session_state.inputs_a.values())
-#     budget_b = sum(st.session_state.inputs_b.values())
-#     budget_c = sum(st.session_state.inputs_c.values())
-    
-#     def highlight3(a, b, c):
-#         vals = [a, b, c]
-#         maxv = max(vals)
-#         top_count = vals.count(maxv)
-#         styled = []
-#         for v in vals:
-#             if v == maxv and top_count >= 2:
-#                 # tie for top
-#                 styled.append(f"<span style='color:#1e88e5;font-weight:bold;font-size:1.2em'>{v:,.0f}</span>")
-#             elif v == maxv:
-#                 # single winner
-#                 styled.append(f"<span style='color:#388e3c;font-weight:bold;font-size:1.25em'>{v:,.0f}</span>")
-#             else:
-#                 styled.append(f"<span style='color:#aaa;font-size:1.08em'>{v:,.0f}</span>")
-#         return tuple(styled)
-    
-#     imp_a_html, imp_b_html, imp_c_html = highlight3(imp_a, imp_b, imp_c)
-#     view_a_html, view_b_html, view_c_html = highlight3(view_a, view_b, view_c)
-#     eng_a_html, eng_b_html, eng_c_html = highlight3(eng_a, eng_b, eng_c)
-#     budget_a_html, budget_b_html, budget_c_html = highlight3(budget_a, budget_b, budget_c)
-    
-#     st.markdown("---")
-#     st.subheader("📈 Simulation Results Comparison")
-    
-#     st.markdown(
-#         f"""
-#         <table style="width:92%;margin:auto;border-collapse:collapse;font-size:1.17em;">
-#             <tr style="background-color:#f0f2f6;">
-#                 <th style="width:20%"></th>
-#                 <th style="color:#0277bd;">Simulation A</th>
-#                 <th style="color:#8e24aa;">Simulation B</th>
-#                 <th style="color:#2e7d32;">Simulation C</th>
-#             </tr>
-#             <tr>
-#                 <td style="font-weight:bold">Category</td>
-#                 <td>{st.session_state.category_a}</td>
-#                 <td>{st.session_state.category_b}</td>
-#                 <td>{st.session_state.category_c}</td>
-#             </tr>
-#             <tr>
-#                 <td style="font-weight:bold">Budget</td>
-#                 <td>{budget_a_html}</td>
-#                 <td>{budget_b_html}</td>
-#                 <td>{budget_c_html}</td>
-#             </tr>
-#             <tr>
-#                 <td style="font-weight:bold">Impressions</td>
-#                 <td>{imp_a_html}</td>
-#                 <td>{imp_b_html}</td>
-#                 <td>{imp_c_html}</td>
-#             </tr>
-#             <tr>
-#                 <td style="font-weight:bold">Views</td>
-#                 <td>{view_a_html}</td>
-#                 <td>{view_b_html}</td>
-#                 <td>{view_c_html}</td>
-#             </tr>
-#             <tr>
-#                 <td style="font-weight:bold">Engagements</td>
-#                 <td>{eng_a_html}</td>
-#                 <td>{eng_b_html}</td>
-#                 <td>{eng_c_html}</td>
-#             </tr>
-#         </table>
-#         """,
-#         unsafe_allow_html=True
-#     )
-
-if st.session_state.page == "Simulation Budget":
-
-    st.subheader("📊 Budget Simulation Comparison")
-    
-    if 'weights_df' in st.session_state:
-        weights_df = st.session_state.weights_df
-    else:
-        try:
-            weights_df
-        except NameError:
-            st.error("weights_df is not defined.")
-            st.stop()
-    
-    for key in ['inputs_a', 'inputs_b', 'inputs_c']:
-        if key not in st.session_state:
-            st.session_state[key] = {t: 0 for t in TIERS}
-    
-    available_categories = sorted(weights_df['Category'].dropna().unique().tolist())
-    if not available_categories:
+    available_categories = sorted(weights_df['Category'].unique())
+    if len(available_categories) == 0:
         st.error("No categories found in weights_df.")
         st.stop()
     
-    for key in ['category_a', 'category_b', 'category_c']:
-        if key not in st.session_state:
-            st.session_state[key] = available_categories[0]
+    if 'category_a' not in st.session_state:
+        st.session_state.category_a = available_categories[0]
+    if 'category_b' not in st.session_state:
+        st.session_state.category_b = available_categories[0]
+    if 'category_c' not in st.session_state:
+        st.session_state.category_c = available_categories[0]
     
-    if 'platform_a' not in st.session_state:
-        pa = platforms_for_category(weights_df, st.session_state.category_a)
-        st.session_state.platform_a = pa[0] if pa else None
-    if 'platform_b' not in st.session_state:
-        pb = platforms_for_category(weights_df, st.session_state.category_b)
-        st.session_state.platform_b = pb[0] if pb else None
-    if 'platform_c' not in st.session_state:
-        pc = platforms_for_category(weights_df, st.session_state.category_c)
-        st.session_state.platform_c = pc[0] if pc else None
+    st.subheader("📊 Budget Simulation Comparison")
     
     col_input_a, col_input_b, col_input_c = st.columns(3)
     
-    def inputs_panel(col, sim_key_prefix, cat_key, plat_key, inputs_key, bg_color, title_color):
-        with col:
-            st.subheader(f"Simulation {sim_key_prefix.upper()}")
-            st.session_state[cat_key] = st.selectbox(
-                f"Simulation {sim_key_prefix.upper()} - Category:",
-                available_categories,
-                key=f"cat_{sim_key_prefix}",
-                index=available_categories.index(st.session_state[cat_key])
-            )
-            plats = platforms_for_category(weights_df, st.session_state[cat_key])
-            display_options = plats if plats else ['(None)']
-            current_value = st.session_state.get(plat_key)
-            if current_value not in display_options:
-                current_value = display_options[0]
-            sel = st.selectbox(
-                f"Simulation {sim_key_prefix.upper()} - Platform:",
-                display_options,
-                key=f"plat_{sim_key_prefix}",
-                index=display_options.index(current_value)
-            )
-            st.session_state[plat_key] = None if sel == '(None)' else sel
+    # Helpers
+    def get_weights(category, kpi):
+        filtered = weights_df[(weights_df['Category'] == category) & (weights_df['KPI'] == kpi)]
+        return {row['Tier']: row['Weights'] for _, row in filtered.iterrows()}
     
-            new_inputs = {}
-            for t in st.session_state[inputs_key]:
-                cols = st.columns([3, 2])
-                val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state[inputs_key][t], key=f"{sim_key_prefix}_{t}")
-                new_inputs[t] = val
-                total_new = sum(new_inputs.values())
-                percent = (val / total_new) * 100 if total_new > 0 else 0
-                cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-            st.session_state[inputs_key] = new_inputs
-            total_final = sum(new_inputs.values())
-            st.markdown(
-                f"""
-                <div style="background-color:{bg_color};padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #00000022;">
-                    <div style="font-size:2.3rem;font-weight:bold;color:{title_color};">{total_final:,}</div>
-                    <div style="font-size:1.2rem;">💰 Total Budget {sim_key_prefix.upper()}</div>
-                </div>
-                """, unsafe_allow_html=True
-            )
+    def colored_percentage(p):
+        if p >= 40:
+            return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
+        elif p >= 20:
+            return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
+        elif p > 0:
+            return f"<span style='color:#009688;'>{p:.1f}%</span>"
+        else:
+            return "<span style='color:#aaa;'>0.0%</span>"
     
-    inputs_panel(col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', '#e0f7fa', '#0277bd')
-    inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
-    inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
+    # Simulation A
+    with col_input_a:
+        st.subheader("Simulation A")
+        st.session_state.category_a = st.selectbox(
+            "Simulation A - Category:",
+            available_categories,
+            key="cat_a",
+            index=available_categories.index(st.session_state.category_a)
+        )
+        new_inputs_a = {}
+        for t in st.session_state.inputs_a:
+            cols = st.columns([3, 2])
+            val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_a[t], key=f"a_{t}")
+            new_inputs_a[t] = val
+            total_a_new = sum(new_inputs_a.values())
+            percent = (val / total_a_new) * 100 if total_a_new > 0 else 0
+            cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
+        st.session_state.inputs_a = new_inputs_a
+        total_a_final = sum(new_inputs_a.values())
+        st.markdown(
+            f"""
+            <div style="background-color:#e0f7fa;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #0288d180;">
+                <div style="font-size:2.3rem;font-weight:bold;color:#0277bd;">{total_a_final:,}</div>
+                <div style="font-size:1.2rem;">💰 Total Budget A</div>
+            </div>
+            """, unsafe_allow_html=True
+        )
     
-    imp_a, view_a, eng_a, share_a, cpe_a, cpshare_a = calc_metrics(weights_df, st.session_state.inputs_a, st.session_state.category_a, st.session_state.platform_a)
-    imp_b, view_b, eng_b, share_b, cpe_b, cpshare_b = calc_metrics(weights_df, st.session_state.inputs_b, st.session_state.category_b, st.session_state.platform_b)
-    imp_c, view_c, eng_c, share_c, cpe_c, cpshare_c = calc_metrics(weights_df, st.session_state.inputs_c, st.session_state.category_c, st.session_state.platform_c)
+    # Simulation B
+    with col_input_b:
+        st.subheader("Simulation B")
+        st.session_state.category_b = st.selectbox(
+            "Simulation B - Category:",
+            available_categories,
+            key="cat_b",
+            index=available_categories.index(st.session_state.category_b)
+        )
+        new_inputs_b = {}
+        for t in st.session_state.inputs_b:
+            cols = st.columns([3, 2])
+            val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_b[t], key=f"b_{t}")
+            new_inputs_b[t] = val
+            total_b_new = sum(new_inputs_b.values())
+            percent = (val / total_b_new) * 100 if total_b_new > 0 else 0
+            cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
+        st.session_state.inputs_b = new_inputs_b
+        total_b_final = sum(new_inputs_b.values())
+        st.markdown(
+            f"""
+            <div style="background-color:#f3e5f5;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #a26ad1;">
+                <div style="font-size:2.3rem;font-weight:bold;color:#8e24aa;">{total_b_final:,}</div>
+                <div style="font-size:1.2rem;">💰 Total Budget B</div>
+            </div>
+            """, unsafe_allow_html=True
+        )
+    
+    # Simulation C
+    with col_input_c:
+        st.subheader("Simulation C")
+        st.session_state.category_c = st.selectbox(
+            "Simulation C - Category:",
+            available_categories,
+            key="cat_c",
+            index=available_categories.index(st.session_state.category_c)
+        )
+        new_inputs_c = {}
+        for t in st.session_state.inputs_c:
+            cols = st.columns([3, 2])
+            val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_c[t], key=f"c_{t}")
+            new_inputs_c[t] = val
+            total_c_new = sum(new_inputs_c.values())
+            percent = (val / total_c_new) * 100 if total_c_new > 0 else 0
+            cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
+        st.session_state.inputs_c = new_inputs_c
+        total_c_final = sum(new_inputs_c.values())
+        st.markdown(
+            f"""
+            <div style="background-color:#e8f5e9;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #66bb6a80;">
+                <div style="font-size:2.3rem;font-weight:bold;color:#2e7d32;">{total_c_final:,}</div>
+                <div style="font-size:1.2rem;">💰 Total Budget C</div>
+            </div>
+            """, unsafe_allow_html=True
+        )
+    
+    # Metric calculations
+    def calc_metrics(inputs, category):
+        impression_weights = get_weights(category, "Impression")
+        view_weights = get_weights(category, "View")
+        engagement_weights = get_weights(category, "Engagement")
+        total_impressions = sum(inputs.get(k, 0) * impression_weights.get(k, 0) for k in inputs)
+        total_views = sum(inputs.get(k, 0) * view_weights.get(k, 0) for k in inputs)
+        total_engagement = sum(inputs.get(k, 0) * engagement_weights.get(k, 0) for k in inputs)
+        return total_impressions, total_views, total_engagement
+    
+    imp_a, view_a, eng_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a)
+    imp_b, view_b, eng_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b)
+    imp_c, view_c, eng_c = calc_metrics(st.session_state.inputs_c, st.session_state.category_c)
     
     budget_a = sum(st.session_state.inputs_a.values())
     budget_b = sum(st.session_state.inputs_b.values())
     budget_c = sum(st.session_state.inputs_c.values())
     
-    imp_a_html, imp_b_html, imp_c_html = highlight3_max(imp_a, imp_b, imp_c, fmt=":,.0f")
-    view_a_html, view_b_html, view_c_html = highlight3_max(view_a, view_b, view_c, fmt=":,.0f")
-    eng_a_html, eng_b_html, eng_c_html = highlight3_max(eng_a, eng_b, eng_c, fmt=":,.0f")
-    share_a_html, share_b_html, share_c_html = highlight3_max(share_a, share_b, share_c, fmt=":,.0f")
-    budget_a_html, budget_b_html, budget_c_html = highlight3_max(budget_a, budget_b, budget_c, fmt=":,.0f")
-    cpe_a_html, cpe_b_html, cpe_c_html = highlight3_min(cpe_a, cpe_b, cpe_c, fmt=":,.2f")
-    cpshare_a_html, cpshare_b_html, cpshare_c_html = highlight3_min(cpshare_a, cpshare_b, cpshare_c, fmt=":,.2f")
+    def highlight3(a, b, c):
+        vals = [a, b, c]
+        maxv = max(vals)
+        top_count = vals.count(maxv)
+        styled = []
+        for v in vals:
+            if v == maxv and top_count >= 2:
+                # tie for top
+                styled.append(f"<span style='color:#1e88e5;font-weight:bold;font-size:1.2em'>{v:,.0f}</span>")
+            elif v == maxv:
+                # single winner
+                styled.append(f"<span style='color:#388e3c;font-weight:bold;font-size:1.25em'>{v:,.0f}</span>")
+            else:
+                styled.append(f"<span style='color:#aaa;font-size:1.08em'>{v:,.0f}</span>")
+        return tuple(styled)
+    
+    imp_a_html, imp_b_html, imp_c_html = highlight3(imp_a, imp_b, imp_c)
+    view_a_html, view_b_html, view_c_html = highlight3(view_a, view_b, view_c)
+    eng_a_html, eng_b_html, eng_c_html = highlight3(eng_a, eng_b, eng_c)
+    budget_a_html, budget_b_html, budget_c_html = highlight3(budget_a, budget_b, budget_c)
     
     st.markdown("---")
     st.subheader("📈 Simulation Results Comparison")
@@ -511,12 +365,6 @@ if st.session_state.page == "Simulation Budget":
                 <td>{st.session_state.category_a}</td>
                 <td>{st.session_state.category_b}</td>
                 <td>{st.session_state.category_c}</td>
-            </tr>
-            <tr>
-                <td style="font-weight:bold">Platform</td>
-                <td>{st.session_state.platform_a}</td>
-                <td>{st.session_state.platform_b}</td>
-                <td>{st.session_state.platform_c}</td>
             </tr>
             <tr>
                 <td style="font-weight:bold">Budget</td>
@@ -541,24 +389,6 @@ if st.session_state.page == "Simulation Budget":
                 <td>{eng_a_html}</td>
                 <td>{eng_b_html}</td>
                 <td>{eng_c_html}</td>
-            </tr>
-            <tr>
-                <td style="font-weight:bold">Shares</td>
-                <td>{share_a_html}</td>
-                <td>{share_b_html}</td>
-                <td>{share_c_html}</td>
-            </tr>
-            <tr>
-                <td style="font-weight:bold">CPE (lower is better)</td>
-                <td>{cpe_a_html}</td>
-                <td>{cpe_b_html}</td>
-                <td>{cpe_c_html}</td>
-            </tr>
-            <tr>
-                <td style="font-weight:bold">CPShare (lower is better)</td>
-                <td>{cpshare_a_html}</td>
-                <td>{cpshare_b_html}</td>
-                <td>{cpshare_c_html}</td>
             </tr>
         </table>
         """,

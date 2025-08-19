@@ -396,6 +396,16 @@ weights_df = load_weights(csv_url)
 #     )
 
 if st.session_state.page == "Simulation Budget":
+    # Ensure weights_df is available
+    if 'weights_df' in st.session_state:
+        weights_df = st.session_state.weights_df
+    else:
+        try:
+            weights_df
+        except NameError:
+            st.error("weights_df is not defined. Load it before entering Simulation Budget.")
+            st.stop()
+    
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     for key in ['inputs_a', 'inputs_b', 'inputs_c']:
         if key not in st.session_state:
@@ -410,140 +420,26 @@ if st.session_state.page == "Simulation Budget":
         if key not in st.session_state:
             st.session_state[key] = available_categories[0]
     
-    def platforms_for_category(cat):
-        return sorted(weights_df.loc[weights_df['Category'] == cat, 'Platform'].dropna().unique().tolist())
-    
     if 'platform_a' not in st.session_state:
-        pls = platforms_for_category(st.session_state.category_a)
+        pls = platforms_for_category(weights_df, st.session_state.category_a)
         st.session_state.platform_a = pls[0] if pls else None
     if 'platform_b' not in st.session_state:
-        pls = platforms_for_category(st.session_state.category_b)
+        pls = platforms_for_category(weights_df, st.session_state.category_b)
         st.session_state.platform_b = pls[0] if pls else None
     if 'platform_c' not in st.session_state:
-        pls = platforms_for_category(st.session_state.category_c)
+        pls = platforms_for_category(weights_df, st.session_state.category_c)
         st.session_state.platform_c = pls[0] if pls else None
     
     st.subheader("📊 Budget Simulation Comparison")
     col_input_a, col_input_b, col_input_c = st.columns(3)
     
-    def get_weights(category, platform, kpi):
-        if platform is None:
-            return {}
-        f = (
-            (weights_df['Category'] == category) &
-            (weights_df['Platform'] == platform) &
-            (weights_df['KPI'] == kpi)
-        )
-        sub = weights_df.loc[f, ['Tier', 'Weights']].copy()
-        if sub.empty:
-            return {}
-        sub['Weights'] = pd.to_numeric(sub['Weights'], errors='coerce')
-        return {row['Tier']: (None if pd.isna(row['Weights']) else float(row['Weights'])) for _, row in sub.iterrows()}
+    inputs_panel(weights_df, col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', available_categories, '#e0f7fa', '#0277bd')
+    inputs_panel(weights_df, col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', available_categories, '#f3e5f5', '#8e24aa')
+    inputs_panel(weights_df, col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', available_categories, '#e8f5e9', '#2e7d32')
     
-    def colored_percentage(p):
-        if p >= 40:
-            return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
-        elif p >= 20:
-            return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
-        elif p > 0:
-            return f"<span style='color:#009688;'>{p:.1f}%</span>"
-        else:
-            return "<span style='color:#aaa;'>0.0%</span>"
-    
-    def inputs_panel(col, sim_key_prefix, cat_key, plat_key, inputs_key, bg_color, title_color):
-        with col:
-            st.subheader(f"Simulation {sim_key_prefix.upper()}")
-            st.session_state[cat_key] = st.selectbox(
-                f"Simulation {sim_key_prefix.upper()} - Category:",
-                available_categories,
-                key=f"cat_{sim_key_prefix}",
-                index=available_categories.index(st.session_state[cat_key])
-            )
-            plats = platforms_for_category(st.session_state[cat_key])
-            if st.session_state[plat_key] not in plats and plats:
-                st.session_state[plat_key] = plats[0]
-            st.session_state[plat_key] = st.selectbox(
-                f"Simulation {sim_key_prefix.upper()} - Platform:",
-                plats,
-                key=f"plat_{sim_key_prefix}",
-                index=plats.index(st.session_state[plat_key]) if (plats and st.session_state[plat_key] in plats) else 0
-            )
-            new_inputs = {}
-            for t in st.session_state[inputs_key]:
-                cols = st.columns([3, 2])
-                val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state[inputs_key][t], key=f"{sim_key_prefix}_{t}")
-                new_inputs[t] = val
-                total_new = sum(new_inputs.values())
-                percent = (val / total_new) * 100 if total_new > 0 else 0
-                cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-            st.session_state[inputs_key] = new_inputs
-            total_final = sum(new_inputs.values())
-            st.markdown(
-                f"""
-                <div style="background-color:{bg_color};padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #00000022;">
-                    <div style="font-size:2.3rem;font-weight:bold;color:{title_color};">{total_final:,}</div>
-                    <div style="font-size:1.2rem;">💰 Total Budget {sim_key_prefix.upper()}</div>
-                </div>
-                """, unsafe_allow_html=True
-            )
-    
-    inputs_panel(col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', '#e0f7fa', '#0277bd')
-    inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
-    inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
-    
-    def sum_per_cost(inputs, per_cost_weights):
-        if not per_cost_weights:
-            return 0.0
-        return sum(inputs.get(t, 0) * (per_cost_weights.get(t) or 0) for t in inputs)
-    
-    def sum_units_from_cpu(inputs, cpu_weights):
-        if not cpu_weights:
-            return 0.0
-        total_units = 0.0
-        for t, spend in inputs.items():
-            cpu = cpu_weights.get(t)
-            if cpu is not None and cpu > 0:
-                total_units += spend / cpu
-        return total_units
-    
-    def combine_cpu_as_hmean(inputs, cpu_weights):
-        if not cpu_weights:
-            return np.nan
-        total_spend = sum(inputs.values())
-        denom = 0.0
-        for t, spend in inputs.items():
-            cpu = cpu_weights.get(t)
-            if cpu is not None and cpu > 0 and spend > 0:
-                denom += spend / cpu
-        return (total_spend / denom) if denom > 0 else np.nan
-    
-    def calc_metrics(inputs, category, platform):
-        imp_w = get_weights(category, platform, "Impression")
-        view_w = get_weights(category, platform, "View")
-        eng_w = get_weights(category, platform, "Engagement")
-        share_w = get_weights(category, platform, "Share")
-        cpe_w = get_weights(category, platform, "CPE")
-        cpshare_w = get_weights(category, platform, "CPShare")
-    
-        total_impressions = sum_per_cost(inputs, imp_w)
-        total_views = sum_per_cost(inputs, view_w)
-    
-        total_engagement = sum_per_cost(inputs, eng_w)
-        if total_engagement == 0:
-            total_engagement = sum_units_from_cpu(inputs, cpe_w)
-    
-        total_share = sum_per_cost(inputs, share_w)
-        if total_share == 0:
-            total_share = sum_units_from_cpu(inputs, cpshare_w)
-    
-        cpe_val = combine_cpu_as_hmean(inputs, cpe_w)
-        cpshare_val = combine_cpu_as_hmean(inputs, cpshare_w)
-    
-        return total_impressions, total_views, total_engagement, total_share, cpe_val, cpshare_val
-    
-    imp_a, view_a, eng_a, share_a, cpe_a, cpshare_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a, st.session_state.platform_a)
-    imp_b, view_b, eng_b, share_b, cpe_b, cpshare_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b, st.session_state.platform_b)
-    imp_c, view_c, eng_c, share_c, cpe_c, cpshare_c = calc_metrics(st.session_state.inputs_c, st.session_state.category_c, st.session_state.platform_c)
+    imp_a, view_a, eng_a, share_a, cpe_a, cpshare_a = calc_metrics(weights_df, st.session_state.inputs_a, st.session_state.category_a, st.session_state.platform_a)
+    imp_b, view_b, eng_b, share_b, cpe_b, cpshare_b = calc_metrics(weights_df, st.session_state.inputs_b, st.session_state.category_b, st.session_state.platform_b)
+    imp_c, view_c, eng_c, share_c, cpe_c, cpshare_c = calc_metrics(weights_df, st.session_state.inputs_c, st.session_state.category_c, st.session_state.platform_c)
     
     budget_a = sum(st.session_state.inputs_a.values())
     budget_b = sum(st.session_state.inputs_b.values())

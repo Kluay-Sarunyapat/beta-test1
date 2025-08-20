@@ -1584,7 +1584,7 @@ if st.session_state.page == "Influencer Performance":
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
 elif st.session_state.page == "Optimized Budget":
-    # ---------- Compatibility rerun wrapper ----------
+# ---------- Compatibility rerun wrapper ----------
     def _rerun():
         if hasattr(st, "rerun"):
             st.rerun()
@@ -1613,10 +1613,9 @@ elif st.session_state.page == "Optimized Budget":
         for col in ['Category', 'Tier', 'KPI']:
             df[col] = df[col].astype(str).str.strip()
 
-        # Platform is optional; ensure it exists
+        # Platform optional
         if 'Platform' not in df.columns:
             df['Platform'] = ''
-
         df['Platform'] = df['Platform'].astype(str).str.strip()
 
         df['Weights'] = pd.to_numeric(df['Weights'], errors='coerce')
@@ -1636,25 +1635,25 @@ elif st.session_state.page == "Optimized Budget":
         return df
 
     def _platform_set(series):
-        # Filter out blanks if Platform exists but empty
-        vals = sorted({str(x).strip() for x in series if str(x).strip() != ''})
-        return vals
+        return sorted({str(x).strip() for x in series if str(x).strip() != ''})
 
-    def _get_weights_for_kpi_strict(df, category, kpi, agg='sum'):
+    def _get_weights_for_kpi_lenient(df, category, kpi, agg='sum'):
         """
-        Strict loader:
-          - Requires at least one row for the category+kpi
-          - Requires every Tier in TIERS to have at least one row
-          - If a Platform dimension exists for this category+kpi, requires every Tier to have weights for every Platform in that set
-          - Aggregates across platforms to a per-Tier map (sum by default)
-        Raises NotEnoughDataError with a readable message if coverage is incomplete.
+        Lenient loader used for optimization:
+          - Aggregates across available platforms to Tier-level weights.
+          - Missing tiers/platform pairs are filled as 0.0 (we still run).
+          - Returns (weights_map, warning_message_or_None, has_any_weights_bool).
+        If there are no usable weights at all, has_any=False and a warning explains it.
         """
         sub = df[(df['Category'] == category) & (df['KPI'] == kpi)]
+        mp = {t: 0.0 for t in TIERS}
+
         if sub.empty:
-            raise NotEnoughDataError(f"No rows for KPI='{kpi}' in Category='{category}'.")
+            warn = f"No rows for KPI='{kpi}' in Category='{category}'."
+            return mp, warn, False
 
         platforms = _platform_set(sub['Platform'])
-        # Check tier coverage and per-platform coverage
+        # Find missing tiers and tier-platform pairs
         missing_tiers = []
         missing_pairs = []
         for t in TIERS:
@@ -1668,60 +1667,53 @@ elif st.session_state.page == "Optimized Budget":
                         if p not in present_p:
                             missing_pairs.append((t, p))
 
-        if missing_tiers or missing_pairs:
-            parts = []
-            if missing_tiers:
-                parts.append("missing tiers: " + ", ".join(missing_tiers))
-            if missing_pairs:
-                parts.append("missing tier-platform pairs: " + ", ".join([f"{t}/{p}" for t, p in missing_pairs]))
-            msg = f"Insufficient weights for KPI='{kpi}' in Category='{category}' ({'; '.join(parts)})."
-            raise NotEnoughDataError(msg)
-
-        # Aggregate across platforms to Tier-level weights
-        grouped = sub.groupby('Tier', as_index=False)['Weights'].agg(agg)
-        mp = {t: 0.0 for t in TIERS}
-        for _, row in grouped.iterrows():
-            t = str(row['Tier']).strip()
-            if t in mp:
-                mp[t] = float(row['Weights'])
-
-        # Safety: ensure we didn't end up all zeros
-        if not any(v != 0.0 for v in mp.values()):
-            raise NotEnoughDataError(f"No usable weights for KPI='{kpi}' in Category='{category}'.")
-        return mp
-
-    def _get_weights_for_kpi_lenient(df, category, kpi, agg='sum'):
-        """
-        Lenient loader used only for reporting secondary KPIs.
-        Aggregates available rows; missing tiers are filled with 0.0 and do not raise.
-        """
-        sub = df[(df['Category'] == category) & (df['KPI'] == kpi)]
-        mp = {t: 0.0 for t in TIERS}
-        if sub.empty:
-            return mp
+        # Aggregate across platforms for existing data
         grouped = sub.groupby('Tier', as_index=False)['Weights'].agg(agg)
         for _, row in grouped.iterrows():
             t = str(row['Tier']).strip()
             if t in mp:
                 mp[t] = float(row['Weights'])
-        return mp
 
-    def _build_weights_vector_for_priority(df, category, priority):
+        has_any = any(v != 0.0 for v in mp.values())
+
+        warn_parts = []
+        if missing_tiers:
+            warn_parts.append("missing tiers: " + ", ".join(missing_tiers))
+        if missing_pairs:
+            warn_parts.append("missing tier-platform pairs: " + ", ".join([f"{t}/{p}" for t, p in missing_pairs]))
+
+        warn = None
+        if warn_parts:
+            warn = f"Partial coverage for KPI='{kpi}' in Category='{category}' (" + "; ".join(warn_parts) + "). Proceeding with zeros for missing items."
+        if not has_any:
+            warn = f"No usable weights for KPI='{kpi}' in Category='{category}'."
+        return mp, warn, has_any
+
+    def _build_weights_vector_for_priority_lenient(df, category, priority):
         """
-        Builds the per-tier weights vector for the chosen priority.
-        For 'balanced' requires full coverage for Impressions, Views, Engagement.
-        For single-KPI priorities (including Share/CPE/CPShare) requires full coverage for that KPI.
-        Returns (weights_vec, used_kpis) where used_kpis is a list of KPI names the vector is built from.
+        Returns: weights_vec, used_kpis, warnings_list
+        - balanced: average of Impression/View/Engagement (lenient, with warnings)
+        - single KPI (incl. Share/CPE/CPShare): that KPI (lenient, with warning)
+        If all contributing KPIs have no usable weights, raises NotEnoughDataError.
         """
         p = str(priority).strip().lower()
+        warnings = []
+        used = []
+
         if p == 'balanced':
-            imp_w = _get_weights_for_kpi_strict(df, category, 'Impression')
-            view_w = _get_weights_for_kpi_strict(df, category, 'View')
-            eng_w = _get_weights_for_kpi_strict(df, category, 'Engagement')
-            w = [ (imp_w[t] + view_w[t] + eng_w[t]) / 3.0 for t in TIERS ]
-            return np.array(w, float), ['Impression', 'View', 'Engagement']
+            imap, iwarn, iok = _get_weights_for_kpi_lenient(df, category, 'Impression')
+            vmap, vwarn, vok = _get_weights_for_kpi_lenient(df, category, 'View')
+            emap, ewarn, eok = _get_weights_for_kpi_lenient(df, category, 'Engagement')
+            if iwarn: warnings.append(iwarn)
+            if vwarn: warnings.append(vwarn)
+            if ewarn: warnings.append(ewarn)
+
+            if not (iok or vok or eok):
+                raise NotEnoughDataError(f"No usable weights for Impressions, Views, or Engagement in Category='{category}'.")
+            w = [ (imap[t] + vmap[t] + emap[t]) / 3.0 for t in TIERS ]
+            used = ['Impression', 'View', 'Engagement']
+            return np.array(w, float), used, [w for w in warnings if w]
         else:
-            # Map UI value to canonical KPI name
             kpi_map = {
                 'impression':'Impression','impressions':'Impression','imp':'Impression',
                 'view':'View','views':'View',
@@ -1729,9 +1721,13 @@ elif st.session_state.page == "Optimized Budget":
                 'share':'Share','cpe':'CPE','cpshare':'CPShare'
             }
             kpi_key = kpi_map.get(p, p)
-            w_map = _get_weights_for_kpi_strict(df, category, kpi_key)
-            w = [ w_map[t] for t in TIERS ]
-            return np.array(w, float), [kpi_key]
+            mp, warn, ok = _get_weights_for_kpi_lenient(df, category, kpi_key)
+            if warn: warnings.append(warn)
+            if not ok:
+                raise NotEnoughDataError(warn or f"No usable weights for KPI='{kpi_key}' in Category='{category}'.")
+            w = [ mp[t] for t in TIERS ]
+            used = [kpi_key]
+            return np.array(w, float), used, [w for w in warnings if w]
 
     def _compute_kpis_safe(x, imp_w=None, view_w=None, eng_w=None):
         def dot_with(w_map):
@@ -1755,28 +1751,26 @@ elif st.session_state.page == "Optimized Budget":
         return linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
 
     def _optimize_primary(df, total_budget, min_alloc, max_alloc, priority, category):
-        # Build vector according to chosen priority (strict coverage required)
-        weights_vec, used_kpis = _build_weights_vector_for_priority(df, category, priority)
-
-        # Solve maximize (linprog minimizes, so use negative)
+        weights_vec, used_kpis, warns = _build_weights_vector_for_priority_lenient(df, category, priority)
         res = _solve_lp(-weights_vec, total_budget, min_alloc, max_alloc)
         if not res.success:
-            return None
+            return None, warns
 
-        # For reporting classic KPIs if available (lenient)
-        imp_w = _get_weights_for_kpi_lenient(df, category, 'Impression')
-        view_w = _get_weights_for_kpi_lenient(df, category, 'View')
-        eng_w = _get_weights_for_kpi_lenient(df, category, 'Engagement')
+        # For reporting classic KPIs
+        imap, _, _ = _get_weights_for_kpi_lenient(df, category, 'Impression')
+        vmap, _, _ = _get_weights_for_kpi_lenient(df, category, 'View')
+        emap, _, _ = _get_weights_for_kpi_lenient(df, category, 'Engagement')
 
-        imps, views, eng, total_kpi = _compute_kpis_safe(res.x, imp_w, view_w, eng_w)
+        imps, views, eng, total_kpi = _compute_kpis_safe(res.x, imap, vmap, emap)
         return dict(
             x=res.x, weights_vec=weights_vec, used_kpis=used_kpis,
-            impression_w=imp_w, view_w=view_w, engagement_w=eng_w,
+            impression_w=imap, view_w=vmap, engagement_w=emap,
             primary_score=float(np.dot(res.x, weights_vec)),
             imps=imps, views=views, eng=eng, total_kpi=total_kpi
-        )
+        ), warns
 
     def get_five_budget_scenarios(weights_df, total_budget, min_alloc, max_alloc, priority='balanced', category='Total IPG'):
+        warnings = []
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
         if invalid:
             raise ValueError(f"Missing bounds for tiers: {invalid}")
@@ -1786,19 +1780,18 @@ elif st.session_state.page == "Optimized Budget":
             raise ValueError("Sum of minimums exceeds total budget.")
 
         df = _validate_and_prepare_weights(weights_df)
-
-        # If strict coverage for the selected priority is missing, this will raise NotEnoughDataError
-        base = _optimize_primary(df, total_budget, min_alloc, max_alloc, priority, category)
+        base, warns = _optimize_primary(df, total_budget, min_alloc, max_alloc, priority, category)
+        warnings.extend(warns or [])
         if base is None:
-            return []
+            return [], warnings
 
         x_star = base['x']; weights_vec = base['weights_vec']
-        imp_w, view_w, eng_w = base['impression_w'], base['view_w'], base['engagement_w']
+        im_w, v_w, e_w = base['impression_w'], base['view_w'], base['engagement_w']
         z_star = base['primary_score']
 
         def pack(label, x_vec):
             alloc = {TIERS[i]: float(x_vec[i]) for i in range(len(TIERS))}
-            imps, views, eng, total_kpi = _compute_kpis_safe(x_vec, imp_w, view_w, eng_w)
+            imps, views, eng, total_kpi = _compute_kpis_safe(x_vec, im_w, v_w, e_w)
             return dict(label=label, allocation=alloc, impressions=imps, views=views,
                         engagement=eng, total_kpi=total_kpi,
                         primary_score=float(np.dot(x_vec, weights_vec)))
@@ -1821,9 +1814,10 @@ elif st.session_state.page == "Optimized Budget":
             uniq.setdefault(key(s), s)
         out = list(uniq.values())
         out.sort(key=lambda s: s['primary_score'], reverse=True)
-        return out[:5]
+        return out[:5], warnings
 
     def get_five_target_scenarios(weights_df, target_value, kpi_type, min_alloc, max_alloc, category='Total IPG', epsilon_pct=1.5):
+        warnings = []
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
         if invalid:
             raise ValueError(f"Missing bounds: {invalid}")
@@ -1832,24 +1826,25 @@ elif st.session_state.page == "Optimized Budget":
 
         df = _validate_and_prepare_weights(weights_df)
 
-        # Canonicalize KPI name like validator
+        # Canonicalize KPI name
         kpi_map = {
             'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
             'view': 'View', 'views': 'View',
             'engagement': 'Engagement', 'eng': 'Engagement',
-            'share': 'Share',
-            'cpe': 'CPE',
-            'cpshare': 'CPShare'
+            'share': 'Share', 'cpe': 'CPE', 'cpshare': 'CPShare'
         }
         kpi_key = kpi_map.get(str(kpi_type).lower(), kpi_type)
 
-        # Strict coverage is required in target mode
-        w_map = _get_weights_for_kpi_strict(df, category, kpi_key)
+        # Lenient load with warnings; stop only if no usable weights
+        w_map, warn, ok = _get_weights_for_kpi_lenient(df, category, kpi_key)
+        if warn: warnings.append(warn)
+        if not ok:
+            raise NotEnoughDataError(warn or f"No usable weights for KPI='{kpi_key}' in Category='{category}'.")
 
         # Feasibility check
         max_possible = sum(float(max_alloc[t]) * w_map.get(t, 0.0) for t in TIERS)
         if float(target_value) > max_possible + 1e-9:
-            return []
+            return [], warnings
 
         n = len(TIERS)
         # Minimize total budget s.t. KPI >= target
@@ -1859,20 +1854,20 @@ elif st.session_state.page == "Optimized Budget":
         bounds = [(float(min_alloc[t]), float(max_alloc[t])) for t in TIERS]
         res = _solve_lp_general(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds)
         if not res.success:
-            return []
+            return [], warnings
 
         x_star = res.x
         B_star = float(np.sum(x_star))
         B_cap = B_star * (1 + float(epsilon_pct)/100.0)
 
         # Secondary KPIs (lenient, for reporting only)
-        imp_w = _get_weights_for_kpi_lenient(df, category, 'Impression')
-        view_w = _get_weights_for_kpi_lenient(df, category, 'View')
-        eng_w = _get_weights_for_kpi_lenient(df, category, 'Engagement')
+        im_w, _, _ = _get_weights_for_kpi_lenient(df, category, 'Impression')
+        v_w, _, _ = _get_weights_for_kpi_lenient(df, category, 'View')
+        e_w, _, _ = _get_weights_for_kpi_lenient(df, category, 'Engagement')
 
         def pack(label, x):
             alloc = {TIERS[i]: float(x[i]) for i in range(n)}
-            imps, views, eng, total_kpi = _compute_kpis_safe(x, imp_w, view_w, eng_w)
+            imps, views, eng, total_kpi = _compute_kpis_safe(x, im_w, v_w, e_w)
             achieved_target_kpi = float(sum(x[i] * w_map.get(TIERS[i], 0.0) for i in range(n)))
             return dict(
                 label=label,
@@ -1907,7 +1902,7 @@ elif st.session_state.page == "Optimized Budget":
             uniq.setdefault(key(s), s)
         out = list(uniq.values())
         out.sort(key=lambda s: (s['required_budget'], -s['target_kpi_value']))
-        return out[:5]
+        return out[:5], warnings
 
     # --------- UI ---------
     st.title("Budget Optimization Tool")
@@ -1976,7 +1971,7 @@ elif st.session_state.page == "Optimized Budget":
                 st.stop()
 
             try:
-                scenarios = get_five_budget_scenarios(
+                scenarios, warns = get_five_budget_scenarios(
                     weights_df=weights_df,
                     total_budget=float(total_budget),
                     min_alloc={k: float(v) for k, v in min_alloc.items()},
@@ -1984,6 +1979,10 @@ elif st.session_state.page == "Optimized Budget":
                     priority=priority,
                     category=category
                 )
+                # Show any coverage warnings
+                warn_set = [w for w in (warns or []) if w]
+                for w in dict.fromkeys(warn_set):
+                    st.warning(w)
             except NotEnoughDataError as e:
                 st.warning("We don't have enough data to optimize for this selection. " + str(e))
                 st.stop()
@@ -2016,16 +2015,21 @@ elif st.session_state.page == "Optimized Budget":
                 )
                 st.altair_chart(chart, use_container_width=True)
 
+                # Add Priority KPI Score column so users see the optimized metric
                 kpi_df = pd.DataFrame([{
                     "Scenario": scenario_ids[i],
+                    "Priority KPI Score": s['primary_score'],
                     "Impressions": s['impressions'],
                     "Views": s['views'],
                     "Engagement": s['engagement'],
                     "Total KPI (Imp+View+Eng)": s['total_kpi'],
                 } for i, s in enumerate(scenarios)])
                 st.dataframe(kpi_df.style.format({
-                    "Impressions":"{:,.2f}","Views":"{:,.2f}",
-                    "Engagement":"{:,.2f}","Total KPI (Imp+View+Eng)":"{:,.2f}"
+                    "Priority KPI Score":"{:,.2f}",
+                    "Impressions":"{:,.2f}",
+                    "Views":"{:,.2f}",
+                    "Engagement":"{:,.2f}",
+                    "Total KPI (Imp+View+Eng)":"{:,.2f}"
                 }), hide_index=True, use_container_width=True)
 
     else:
@@ -2051,13 +2055,17 @@ elif st.session_state.page == "Optimized Budget":
 
         if st.button("Generate 5 scenarios to achieve KPI", key="run_tgt_free"):
             try:
-                scenarios = get_five_target_scenarios(
+                scenarios, warns = get_five_target_scenarios(
                     weights_df=weights_df,
                     target_value=float(target_value),
                     kpi_type=kpi_type,
                     min_alloc=min_alloc, max_alloc=max_alloc,
-                    category=category  # uses internal 1.5% tolerance automatically
+                    category=category
                 )
+                # Show coverage warnings
+                warn_set = [w for w in (warns or []) if w]
+                for w in dict.fromkeys(warn_set):
+                    st.warning(w)
             except NotEnoughDataError as e:
                 st.warning("We don't have enough data to optimize for this selection. " + str(e))
                 st.stop()
@@ -2108,7 +2116,6 @@ elif st.session_state.page == "Optimized Budget":
                     "Engagement":"{:,.2f}",
                     "Total KPI (Imp+View+Eng)":"{:,.2f}",
                 }), hide_index=True, use_container_width=True)
-
 
 # elif st.session_state.page == "Optimized Budget":
 #     # ---------- Compatibility rerun wrapper ----------

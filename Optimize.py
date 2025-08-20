@@ -1584,7 +1584,7 @@ if st.session_state.page == "Influencer Performance":
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
 elif st.session_state.page == "Optimized Budget":
-# ---------- Compatibility rerun wrapper ----------
+    # ---------- Compatibility rerun wrapper ----------
     def _rerun():
         if hasattr(st, "rerun"):
             st.rerun()
@@ -1595,6 +1595,7 @@ elif st.session_state.page == "Optimized Budget":
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']  # display stack order
     BIG_MAX = 1_000_000_000.0  # default max for min-budget mode
+    KPI_CANON = ['Impression','View','Engagement','Share','CPE','CPShare']
 
     # --------- Custom Errors ---------
     class NotEnoughDataError(Exception):
@@ -1639,7 +1640,7 @@ elif st.session_state.page == "Optimized Budget":
 
     def _get_weights_for_kpi_lenient(df, category, kpi, agg='sum'):
         """
-        Lenient loader used for optimization:
+        Lenient loader used for optimization and reporting:
           - Aggregates across available platforms to Tier-level weights.
           - Missing tiers/platform pairs are filled as 0.0 (we still run).
           - Returns (weights_map, warning_message_or_None, has_any_weights_bool).
@@ -1689,6 +1690,18 @@ elif st.session_state.page == "Optimized Budget":
             warn = f"No usable weights for KPI='{kpi}' in Category='{category}'."
         return mp, warn, has_any
 
+    def _gather_kpi_maps_with_warnings(df, category, kpis=KPI_CANON):
+        maps = {}
+        warns = []
+        for k in kpis:
+            m, w, _ = _get_weights_for_kpi_lenient(df, category, k)
+            maps[k] = m
+            if w:
+                warns.append(w)
+        # dedupe warnings while preserving order
+        warns = list(dict.fromkeys([w for w in warns if w]))
+        return maps, warns
+
     def _build_weights_vector_for_priority_lenient(df, category, priority):
         """
         Returns: weights_vec, used_kpis, warnings_list
@@ -1729,16 +1742,11 @@ elif st.session_state.page == "Optimized Budget":
             used = [kpi_key]
             return np.array(w, float), used, [w for w in warnings if w]
 
-    def _compute_kpis_safe(x, imp_w=None, view_w=None, eng_w=None):
-        def dot_with(w_map):
-            if not w_map:
-                return 0.0
+    def _compute_named_scores(x, kpi_maps):
+        # kpi_maps: dict name -> {tier -> weight}
+        def dot(w_map):
             return float(sum(x[i] * w_map.get(TIERS[i], 0.0) for i in range(len(TIERS))))
-        imps = dot_with(imp_w)
-        views = dot_with(view_w)
-        eng = dot_with(eng_w)
-        total_kpi = imps + views + eng
-        return imps, views, eng, total_kpi
+        return {name: dot(wmap) for name, wmap in kpi_maps.items()}
 
     def _solve_lp(c, total_budget, min_alloc, max_alloc, A_ub=None, b_ub=None):
         n = len(TIERS)
@@ -1756,18 +1764,19 @@ elif st.session_state.page == "Optimized Budget":
         if not res.success:
             return None, warns
 
-        # For reporting classic KPIs
-        imap, _, _ = _get_weights_for_kpi_lenient(df, category, 'Impression')
-        vmap, _, _ = _get_weights_for_kpi_lenient(df, category, 'View')
-        emap, _, _ = _get_weights_for_kpi_lenient(df, category, 'Engagement')
+        # Build maps for all KPIs (for reporting)
+        kpi_maps, warn_all = _gather_kpi_maps_with_warnings(df, category, KPI_CANON)
+        warns.extend(warn_all)
 
-        imps, views, eng, total_kpi = _compute_kpis_safe(res.x, imap, vmap, emap)
+        scores = _compute_named_scores(res.x, kpi_maps)
         return dict(
-            x=res.x, weights_vec=weights_vec, used_kpis=used_kpis,
-            impression_w=imap, view_w=vmap, engagement_w=emap,
+            x=res.x,
+            weights_vec=weights_vec,
+            used_kpis=used_kpis,
             primary_score=float(np.dot(res.x, weights_vec)),
-            imps=imps, views=views, eng=eng, total_kpi=total_kpi
-        ), warns
+            kpi_maps=kpi_maps,      # for reuse when packing scenarios
+            scores=scores           # scores for optimal
+        ), list(dict.fromkeys([w for w in warns if w]))
 
     def get_five_budget_scenarios(weights_df, total_budget, min_alloc, max_alloc, priority='balanced', category='Total IPG'):
         warnings = []
@@ -1785,16 +1794,20 @@ elif st.session_state.page == "Optimized Budget":
         if base is None:
             return [], warnings
 
-        x_star = base['x']; weights_vec = base['weights_vec']
-        im_w, v_w, e_w = base['impression_w'], base['view_w'], base['engagement_w']
+        x_star = base['x']
+        weights_vec = base['weights_vec']
         z_star = base['primary_score']
+        kpi_maps = base['kpi_maps']
 
         def pack(label, x_vec):
             alloc = {TIERS[i]: float(x_vec[i]) for i in range(len(TIERS))}
-            imps, views, eng, total_kpi = _compute_kpis_safe(x_vec, im_w, v_w, e_w)
-            return dict(label=label, allocation=alloc, impressions=imps, views=views,
-                        engagement=eng, total_kpi=total_kpi,
-                        primary_score=float(np.dot(x_vec, weights_vec)))
+            scores = _compute_named_scores(x_vec, kpi_maps)
+            return dict(
+                label=label,
+                allocation=alloc,
+                primary_score=float(np.dot(x_vec, weights_vec)),
+                scores=scores
+            )
 
         scenarios = [pack("Optimal", x_star)]
 
@@ -1860,25 +1873,21 @@ elif st.session_state.page == "Optimized Budget":
         B_star = float(np.sum(x_star))
         B_cap = B_star * (1 + float(epsilon_pct)/100.0)
 
-        # Secondary KPIs (lenient, for reporting only)
-        im_w, _, _ = _get_weights_for_kpi_lenient(df, category, 'Impression')
-        v_w, _, _ = _get_weights_for_kpi_lenient(df, category, 'View')
-        e_w, _, _ = _get_weights_for_kpi_lenient(df, category, 'Engagement')
+        # Collect maps for all KPIs for reporting
+        kpi_maps, warn_all = _gather_kpi_maps_with_warnings(df, category, KPI_CANON)
+        warnings.extend(warn_all)
 
         def pack(label, x):
             alloc = {TIERS[i]: float(x[i]) for i in range(n)}
-            imps, views, eng, total_kpi = _compute_kpis_safe(x, im_w, v_w, e_w)
+            scores = _compute_named_scores(x, kpi_maps)
             achieved_target_kpi = float(sum(x[i] * w_map.get(TIERS[i], 0.0) for i in range(n)))
             return dict(
                 label=label,
                 allocation=alloc,
                 required_budget=float(np.sum(x)),
-                impressions=imps,
-                views=views,
-                engagement=eng,
-                total_kpi=total_kpi,
                 target_kpi_name=kpi_key,
-                target_kpi_value=achieved_target_kpi
+                target_kpi_value=achieved_target_kpi,
+                scores=scores
             )
 
         scenarios = [pack("Target-Optimal (min budget)", x_star)]
@@ -1901,8 +1910,8 @@ elif st.session_state.page == "Optimized Budget":
         for s in scenarios:
             uniq.setdefault(key(s), s)
         out = list(uniq.values())
-        out.sort(key=lambda s: (s['required_budget'], -s['target_kpi_value']))
-        return out[:5], warnings
+        out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
+        return out[:5], list(dict.fromkeys([w for w in warnings if w]))
 
     # --------- UI ---------
     st.title("Budget Optimization Tool")
@@ -1939,7 +1948,14 @@ elif st.session_state.page == "Optimized Budget":
     default_idx = cats.index("Total IPG") if "Total IPG" in cats else 0
     category = st.selectbox("Select Category:", options=cats, index=default_idx)
 
-    # Render only the selected mode
+    # Helper for styling: highlight max in each numeric column
+    def _highlight_max(s):
+        try:
+            max_val = s.max()
+            return ['background-color: #d1ffd6; font-weight: 700' if v == max_val else '' for v in s]
+        except Exception:
+            return [''] * len(s)
+
     if mode == "Maximize KPI (given budget)":
         total_budget = st.number_input("Total Budget", min_value=0.0, value=10000.0, step=100.0, key="total_budget_max")
 
@@ -1979,9 +1995,7 @@ elif st.session_state.page == "Optimized Budget":
                     priority=priority,
                     category=category
                 )
-                # Show any coverage warnings
-                warn_set = [w for w in (warns or []) if w]
-                for w in dict.fromkeys(warn_set):
+                for w in (warns or []):
                     st.warning(w)
             except NotEnoughDataError as e:
                 st.warning("We don't have enough data to optimize for this selection. " + str(e))
@@ -2015,22 +2029,38 @@ elif st.session_state.page == "Optimized Budget":
                 )
                 st.altair_chart(chart, use_container_width=True)
 
-                # Add Priority KPI Score column so users see the optimized metric
-                kpi_df = pd.DataFrame([{
-                    "Scenario": scenario_ids[i],
-                    "Priority KPI Score": s['primary_score'],
-                    "Impressions": s['impressions'],
-                    "Views": s['views'],
-                    "Engagement": s['engagement'],
-                    "Total KPI (Imp+View+Eng)": s['total_kpi'],
-                } for i, s in enumerate(scenarios)])
-                st.dataframe(kpi_df.style.format({
+                # Build KPI table with 6 KPIs; highlight max per column; exclude Total KPI
+                rows = []
+                for i, s in enumerate(scenarios):
+                    sc = s['scores']
+                    rows.append({
+                        "Scenario": scenario_ids[i],
+                        "Priority KPI Score": s['primary_score'],
+                        "Impressions": sc.get('Impression', 0.0),
+                        "Views": sc.get('View', 0.0),
+                        "Engagement": sc.get('Engagement', 0.0),
+                        "Share": sc.get('Share', 0.0),
+                        "CPE": sc.get('CPE', 0.0),
+                        "CPShare": sc.get('CPShare', 0.0),
+                    })
+                kpi_df = pd.DataFrame(rows)
+
+                fmt = {
                     "Priority KPI Score":"{:,.2f}",
                     "Impressions":"{:,.2f}",
                     "Views":"{:,.2f}",
                     "Engagement":"{:,.2f}",
-                    "Total KPI (Imp+View+Eng)":"{:,.2f}"
-                }), hide_index=True, use_container_width=True)
+                    "Share":"{:,.2f}",
+                    "CPE":"{:,.2f}",
+                    "CPShare":"{:,.2f}",
+                }
+                highlight_cols = ["Priority KPI Score","Impressions","Views","Engagement","Share","CPE","CPShare"]
+                st.dataframe(
+                    kpi_df.style
+                    .format(fmt)
+                    .apply(_highlight_max, subset=highlight_cols),
+                    hide_index=True, use_container_width=True
+                )
 
     else:
         # Min budget mode with expanded KPI choices
@@ -2062,9 +2092,7 @@ elif st.session_state.page == "Optimized Budget":
                     min_alloc=min_alloc, max_alloc=max_alloc,
                     category=category
                 )
-                # Show coverage warnings
-                warn_set = [w for w in (warns or []) if w]
-                for w in dict.fromkeys(warn_set):
+                for w in (warns or []):
                     st.warning(w)
             except NotEnoughDataError as e:
                 st.warning("We don't have enough data to optimize for this selection. " + str(e))
@@ -2098,24 +2126,42 @@ elif st.session_state.page == "Optimized Budget":
                 )
                 st.altair_chart(chart, use_container_width=True)
 
-                kpi_df = pd.DataFrame([{
-                    "Scenario": scenario_ids[i],
-                    "Required Budget": s['required_budget'],
-                    "Target KPI": s['target_kpi_name'],
-                    "Target KPI Achieved": s['target_kpi_value'],
-                    "Impressions": s['impressions'],
-                    "Views": s['views'],
-                    "Engagement": s['engagement'],
-                    "Total KPI (Imp+View+Eng)": s['total_kpi'],
-                } for i, s in enumerate(scenarios)])
-                st.dataframe(kpi_df.style.format({
+                # KPI table for target mode: include 6 KPIs, plus Required Budget and Target KPI fields
+                rows = []
+                for i, s in enumerate(scenarios):
+                    sc = s['scores']
+                    rows.append({
+                        "Scenario": scenario_ids[i],
+                        "Required Budget": s['required_budget'],
+                        "Target KPI": s['target_kpi_name'],
+                        "Target KPI Achieved": s['target_kpi_value'],
+                        "Impressions": sc.get('Impression', 0.0),
+                        "Views": sc.get('View', 0.0),
+                        "Engagement": sc.get('Engagement', 0.0),
+                        "Share": sc.get('Share', 0.0),
+                        "CPE": sc.get('CPE', 0.0),
+                        "CPShare": sc.get('CPShare', 0.0),
+                    })
+                kpi_df = pd.DataFrame(rows)
+
+                fmt = {
                     "Required Budget":"{:,.2f}",
                     "Target KPI Achieved":"{:,.2f}",
                     "Impressions":"{:,.2f}",
                     "Views":"{:,.2f}",
                     "Engagement":"{:,.2f}",
-                    "Total KPI (Imp+View+Eng)":"{:,.2f}",
-                }), hide_index=True, use_container_width=True)
+                    "Share":"{:,.2f}",
+                    "CPE":"{:,.2f}",
+                    "CPShare":"{:,.2f}",
+                }
+                # Highlight maxima for KPI columns only (not for budget/target fields)
+                highlight_cols = ["Impressions","Views","Engagement","Share","CPE","CPShare","Target KPI Achieved"]
+                st.dataframe(
+                    kpi_df.style
+                    .format(fmt)
+                    .apply(_highlight_max, subset=highlight_cols),
+                    hide_index=True, use_container_width=True
+                )
 
 # elif st.session_state.page == "Optimized Budget":
 #     # ---------- Compatibility rerun wrapper ----------

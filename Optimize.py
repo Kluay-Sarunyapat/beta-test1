@@ -1307,216 +1307,216 @@ if st.session_state.page == "Influencer Performance":
 
 
 
-    # ---------- GOOGLE SHEETS ----------
-    sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
-    sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
-    sheet_url_full = "https://docs.google.com/spreadsheets/d/1f7x4teD3iBeFfhmpObHqcj8wl_DkipLwa_JxAO5sYp8/gviz/tq?tqx=out:csv"
+    # # ---------- GOOGLE SHEETS ----------
+    # sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
+    # sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
+    # sheet_url_full = "https://docs.google.com/spreadsheets/d/1f7x4teD3iBeFfhmpObHqcj8wl_DkipLwa_JxAO5sYp8/gviz/tq?tqx=out:csv"
 
-    @st.cache_data
-    def load_google_sheets(url):
-        df = pd.read_csv(url)
-        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-        return df
-    if st.button('🔄 Refresh Data'):
-        st.cache_data.clear()
+    # @st.cache_data
+    # def load_google_sheets(url):
+    #     df = pd.read_csv(url)
+    #     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    #     return df
+    # if st.button('🔄 Refresh Data'):
+    #     st.cache_data.clear()
 
-    df = load_google_sheets(sheet_url_raw)
-    df_coff = load_google_sheets(sheet_url_off)
-    df_full = load_google_sheets(sheet_url_full)
+    # df = load_google_sheets(sheet_url_raw)
+    # df_coff = load_google_sheets(sheet_url_off)
+    # df_full = load_google_sheets(sheet_url_full)
 
-    st.title("💰 Influencer Performance")
+    # st.title("💰 Influencer Performance")
 
-    st.write("🧾 Available columns:", df_full.columns.tolist())
+    # st.write("🧾 Available columns:", df_full.columns.tolist())
 
-    st.subheader("📋 Influencer Data from Google Sheets")
-    st.dataframe(df_full)
+    # st.subheader("📋 Influencer Data from Google Sheets")
+    # st.dataframe(df_full)
 
-    # --- Tier selection with exclusive 'All' ---
-    all_tiers = ['All', 'VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano']
+    # # --- Tier selection with exclusive 'All' ---
+    # all_tiers = ['All', 'VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano']
 
-    if 'tier_selection' not in st.session_state:
-        st.session_state.tier_selection = ['All']
+    # if 'tier_selection' not in st.session_state:
+    #     st.session_state.tier_selection = ['All']
 
-    def update_tiers():
-        selected = st.session_state['tier_multiselect']
-        if 'All' in selected and len(selected) > 1:
-            st.session_state.tier_selection = ['All']
-        elif 'All' in selected and len(selected) == 1:
-            st.session_state.tier_selection = ['All']
-        else:
-            if 'All' in selected:
-                selected.remove('All')
-            st.session_state.tier_selection = selected
+    # def update_tiers():
+    #     selected = st.session_state['tier_multiselect']
+    #     if 'All' in selected and len(selected) > 1:
+    #         st.session_state.tier_selection = ['All']
+    #     elif 'All' in selected and len(selected) == 1:
+    #         st.session_state.tier_selection = ['All']
+    #     else:
+    #         if 'All' in selected:
+    #             selected.remove('All')
+    #         st.session_state.tier_selection = selected
 
-    tier_selection = st.multiselect(
-        "🏷️ Tier Selection",
-        options=all_tiers,
-        default=st.session_state.tier_selection,
-        key='tier_multiselect',
-        on_change=update_tiers
-    )
+    # tier_selection = st.multiselect(
+    #     "🏷️ Tier Selection",
+    #     options=all_tiers,
+    #     default=st.session_state.tier_selection,
+    #     key='tier_multiselect',
+    #     on_change=update_tiers
+    # )
 
-    # Filter tiers for selection function
-    if 'All' in st.session_state.tier_selection:
-        filtered_tiers = None  # means no filter on tiers
-    else:
-        filtered_tiers = [tier.lower() for tier in st.session_state.tier_selection]
+    # # Filter tiers for selection function
+    # if 'All' in st.session_state.tier_selection:
+    #     filtered_tiers = None  # means no filter on tiers
+    # else:
+    #     filtered_tiers = [tier.lower() for tier in st.session_state.tier_selection]
 
-    def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
-        df = df.copy()
+    # def select_kols(df, budget, num_kols, kpi='total_impression', allowed_tiers=None):
+    #     df = df.copy()
 
-        # Note: Your columns are 'cost', 'impression', 'engagement', 'view' — adjust accordingly
-        cost_col = 'cost'
-        kpi_col = kpi  # e.g., 'total_impression' doesn't exist, map to correct columns
-        # Map user KPI to actual column names
-        kpi_map = {
-            'total_impression': 'impression',
-            'total_engagement': 'engagement',
-            'total_view': 'view',
-        }
-        if kpi in kpi_map:
-            kpi_col = kpi_map[kpi]
+    #     # Note: Your columns are 'cost', 'impression', 'engagement', 'view' — adjust accordingly
+    #     cost_col = 'cost'
+    #     kpi_col = kpi  # e.g., 'total_impression' doesn't exist, map to correct columns
+    #     # Map user KPI to actual column names
+    #     kpi_map = {
+    #         'total_impression': 'impression',
+    #         'total_engagement': 'engagement',
+    #         'total_view': 'view',
+    #     }
+    #     if kpi in kpi_map:
+    #         kpi_col = kpi_map[kpi]
 
-        # Remove rows without valid cost or KPI
-        df = df[df[cost_col].notna() & (df[cost_col] > 0)]
-        df = df[df[kpi_col].notna()]
+    #     # Remove rows without valid cost or KPI
+    #     df = df[df[cost_col].notna() & (df[cost_col] > 0)]
+    #     df = df[df[kpi_col].notna()]
 
-        # Filter tiers if any specified
-        if allowed_tiers is not None:
-            df = df[df['tier'].str.lower().isin(allowed_tiers)]
+    #     # Filter tiers if any specified
+    #     if allowed_tiers is not None:
+    #         df = df[df['tier'].str.lower().isin(allowed_tiers)]
 
-        # Calculate score = KPI per cost
-        df['score'] = df[kpi_col] / df[cost_col]
+    #     # Calculate score = KPI per cost
+    #     df['score'] = df[kpi_col] / df[cost_col]
 
-        df = df.sort_values(by='score', ascending=False)
+    #     df = df.sort_values(by='score', ascending=False)
 
-        selected = []
-        total_cost = 0
+    #     selected = []
+    #     total_cost = 0
 
-        for _, row in df.iterrows():
-            if len(selected) >= num_kols:
-                break
-            if total_cost + row[cost_col] <= budget:
-                selected.append(row)
-                total_cost += row[cost_col]
+    #     for _, row in df.iterrows():
+    #         if len(selected) >= num_kols:
+    #             break
+    #         if total_cost + row[cost_col] <= budget:
+    #             selected.append(row)
+    #             total_cost += row[cost_col]
 
-        selected_df = pd.DataFrame(selected)
+    #     selected_df = pd.DataFrame(selected)
 
-        if not selected_df.empty:
-            summary = {
-                'kol_name': 'TOTAL',
-                'platform': '',
-                'cost': selected_df[cost_col].sum(),
-                'impression': selected_df['impression'].sum(),
-                'engagement': selected_df['engagement'].sum(),
-                'view': selected_df['view'].sum(),
-                'followers': '',
-                'tier': '',
-                'score': ''
-            }
-            selected_df = pd.concat([selected_df, pd.DataFrame([summary])], ignore_index=True)
+    #     if not selected_df.empty:
+    #         summary = {
+    #             'kol_name': 'TOTAL',
+    #             'platform': '',
+    #             'cost': selected_df[cost_col].sum(),
+    #             'impression': selected_df['impression'].sum(),
+    #             'engagement': selected_df['engagement'].sum(),
+    #             'view': selected_df['view'].sum(),
+    #             'followers': '',
+    #             'tier': '',
+    #             'score': ''
+    #         }
+    #         selected_df = pd.concat([selected_df, pd.DataFrame([summary])], ignore_index=True)
 
-        return selected_df
+    #     return selected_df
 
-        st.title("🎯 KOL Selection Optimizer")
+    #     st.title("🎯 KOL Selection Optimizer")
     
-        budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
-        num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
-        kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
+    #     budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
+    #     num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
+    #     kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
     
-        if st.button("🚀 Run Selection"):
-            result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
-            st.success("✅ KOL selection complete!")
-            st.dataframe(result_df)
+    #     if st.button("🚀 Run Selection"):
+    #         result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
+    #         st.success("✅ KOL selection complete!")
+    #         st.dataframe(result_df)
     
-        with st.expander("🔍 Show Raw Data"):
-            st.dataframe(df_full)
+    #     with st.expander("🔍 Show Raw Data"):
+    #         st.dataframe(df_full)
     
-        ##Add New
-        def optimize_kols_lp(df, budget, num_kols, kpi='impression', allowed_tiers=None):
-            from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
-            import pandas as pd
+    #     ##Add New
+    #     def optimize_kols_lp(df, budget, num_kols, kpi='impression', allowed_tiers=None):
+    #         from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
+    #         import pandas as pd
         
-            df = df.copy()
+    #         df = df.copy()
         
-            # Clean input
-            df = df[df['cost'].notna() & (df['cost'] > 0)]
-            df = df[df[kpi].notna()]
+    #         # Clean input
+    #         df = df[df['cost'].notna() & (df['cost'] > 0)]
+    #         df = df[df[kpi].notna()]
         
-            # Tier filter if applicable
-            if allowed_tiers:
-                df = df[df['tier'].str.lower().isin(allowed_tiers)]
+    #         # Tier filter if applicable
+    #         if allowed_tiers:
+    #             df = df[df['tier'].str.lower().isin(allowed_tiers)]
         
-            df = df.reset_index(drop=True)
+    #         df = df.reset_index(drop=True)
         
-            # Limit to 100 rows to keep solver fast
-            if len(df) > 100:
-                df = df.nlargest(100, kpi)
+    #         # Limit to 100 rows to keep solver fast
+    #         if len(df) > 100:
+    #             df = df.nlargest(100, kpi)
         
-            # Define LP problem
-            prob = LpProblem("KOL_Selection", LpMaximize)
-            x = [LpVariable(f"x_{i}", cat=LpBinary) for i in range(len(df))]
+    #         # Define LP problem
+    #         prob = LpProblem("KOL_Selection", LpMaximize)
+    #         x = [LpVariable(f"x_{i}", cat=LpBinary) for i in range(len(df))]
         
-            # Objective: maximize KPI
-            prob += lpSum(df.loc[i, kpi] * x[i] for i in range(len(df)))
+    #         # Objective: maximize KPI
+    #         prob += lpSum(df.loc[i, kpi] * x[i] for i in range(len(df)))
         
-            # Constraints
-            prob += lpSum(df.loc[i, 'cost'] * x[i] for i in range(len(df))) <= budget
-            prob += lpSum(x[i] for i in range(len(df))) <= num_kols
+    #         # Constraints
+    #         prob += lpSum(df.loc[i, 'cost'] * x[i] for i in range(len(df))) <= budget
+    #         prob += lpSum(x[i] for i in range(len(df))) <= num_kols
         
-            # Solve
-            prob.solve()
+    #         # Solve
+    #         prob.solve()
         
-            selected_rows = []
-            for i in range(len(df)):
-                if x[i].varValue == 1:
-                    selected_rows.append(df.loc[i])
+    #         selected_rows = []
+    #         for i in range(len(df)):
+    #             if x[i].varValue == 1:
+    #                 selected_rows.append(df.loc[i])
         
-            result_df = pd.DataFrame(selected_rows)
+    #         result_df = pd.DataFrame(selected_rows)
         
-            if not result_df.empty:
-                summary = {
-                    'kol_name': 'TOTAL',
-                    'platform': '',
-                    'cost': result_df["cost"].sum(),
-                    'impression': result_df["impression"].sum(),
-                    'engagement': result_df["engagement"].sum(),
-                    'view': result_df["view"].sum(),
-                    'followers': '',
-                    'tier': '',
-                    'score': ''
-                }
-                result_df = pd.concat([result_df, pd.DataFrame([summary])], ignore_index=True)
+    #         if not result_df.empty:
+    #             summary = {
+    #                 'kol_name': 'TOTAL',
+    #                 'platform': '',
+    #                 'cost': result_df["cost"].sum(),
+    #                 'impression': result_df["impression"].sum(),
+    #                 'engagement': result_df["engagement"].sum(),
+    #                 'view': result_df["view"].sum(),
+    #                 'followers': '',
+    #                 'tier': '',
+    #                 'score': ''
+    #             }
+    #             result_df = pd.concat([result_df, pd.DataFrame([summary])], ignore_index=True)
         
-            return result_df
+    #         return result_df
 
     
-    st.title("🎯 KOL Selection Optimizer")
+    # st.title("🎯 KOL Selection Optimizer")
     
-    selection_mode = st.radio("🔀 Optimization Method", ["Greedy", "Linear Programming"])
+    # selection_mode = st.radio("🔀 Optimization Method", ["Greedy", "Linear Programming"])
     
-    budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
-    num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
-    kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
+    # budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
+    # num_kols = st.number_input("🔢 Number of KOLs", min_value=1, value=5, step=1)
+    # kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view'])
     
-    kpi_map = {
-        'total_impression': 'impression',
-        'total_engagement': 'engagement',
-        'total_view': 'view',
-    }
-    kpi_col = kpi_map[kpi_option]
+    # kpi_map = {
+    #     'total_impression': 'impression',
+    #     'total_engagement': 'engagement',
+    #     'total_view': 'view',
+    # }
+    # kpi_col = kpi_map[kpi_option]
     
-    if st.button("🚀 Run Optimization"):
-        if selection_mode == "Greedy":
-            result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
-        elif selection_mode == "Linear Programming":
-            result_df = optimize_kols_lp(df_full, budget, num_kols, kpi=kpi_col, allowed_tiers=filtered_tiers)
+    # if st.button("🚀 Run Optimization"):
+    #     if selection_mode == "Greedy":
+    #         result_df = select_kols(df_full, budget, num_kols, kpi=kpi_option, allowed_tiers=filtered_tiers)
+    #     elif selection_mode == "Linear Programming":
+    #         result_df = optimize_kols_lp(df_full, budget, num_kols, kpi=kpi_col, allowed_tiers=filtered_tiers)
     
-        if not result_df.empty:
-            st.success("✅ Optimization complete!")
-            st.dataframe(result_df)
-        else:
-            st.warning("⚠️ No KOLs selected based on criteria.")
+    #     if not result_df.empty:
+    #         st.success("✅ Optimization complete!")
+    #         st.dataframe(result_df)
+    #     else:
+    #         st.warning("⚠️ No KOLs selected based on criteria.")
     
     # # # --- 1️⃣ Platform Selection and KOL Selection on Same Row ---
     # # col1, col2, col3 = st.columns(3)

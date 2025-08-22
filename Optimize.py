@@ -145,9 +145,137 @@ st.markdown(
 )
 
 # ---------- TOP NAVIGATION BUTTONS ----------
-st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, = st.columns([1, 1, 1])  # Equal column widths
-#col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
+st.set_page_config(page_title="MBCS Optimize Tool", page_icon="📁", layout="wide")
+
+# Init session state
+if "page" not in st.session_state:
+    st.session_state.page = "Home"
+if "prev_page" not in st.session_state:
+    st.session_state.prev_page = None
+
+def change_page(name: str):
+    st.session_state.prev_page = st.session_state.page
+    st.session_state.page = name
+
+# Global styles + Effects
+st.markdown(
+    """
+    <style>
+    :root{
+      --p1:#6a5acd; --p2:#00e5ff; --p3:#ff7bd5; --p4:#8affc1;
+      --bg1:#0e1022; --bg2:#171a35; --glass:rgba(255,255,255,.08);
+    }
+    /* App background */
+    [data-testid="stAppViewContainer"]{
+      background: radial-gradient(1200px 500px at 10% 0%, rgba(0,229,255,.06), transparent),
+                  radial-gradient(1200px 500px at 90% 0%, rgba(255,123,213,.06), transparent),
+                  linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+      color: #e9ecff;
+      padding-top: 1.2rem;
+    }
+
+    /* Header card */
+    .app-header{
+      position: relative; overflow: hidden; padding: 28px 28px 22px;
+      border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35), inset 0 0 40px rgba(255,255,255,.02);
+      margin-bottom: 18px;
+    }
+    .app-header:before{
+      content:""; position:absolute; inset:-2px;
+      background: conic-gradient(from 0deg, var(--p1), var(--p2), var(--p3), var(--p1));
+      filter: blur(28px); opacity:.35; animation: spin 8s linear infinite;
+    }
+    .headline{
+      font-size: clamp(26px, 4.2vw, 44px); font-weight: 900; letter-spacing:.4px;
+      background: linear-gradient(90deg, #fff, #cfe9ff, #ffffff);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 0 18px rgba(0,229,255,.25);
+    }
+    .subline{
+      margin-top: 6px; color:#c9d4ff; opacity:.9; font-size: clamp(12px, 1.6vw, 14px);
+    }
+    .shine{
+      position:absolute; inset:1px; border-radius:16px;
+      background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 30%, transparent 70%, rgba(255,255,255,.22));
+      background-size: 220% 100%; animation: shine 3.6s linear infinite;
+      pointer-events:none;
+    }
+
+    /* Buttons */
+    div.stButton > button{
+      width: 100%;
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      border: 1px solid rgba(255,255,255,.18);
+      color: #fff; font-weight: 800; letter-spacing:.2px;
+      background: linear-gradient(135deg, rgba(106,90,205,.85), rgba(0,229,255,.55));
+      box-shadow: 0 12px 28px rgba(68,144,255,.28), inset 0 0 18px rgba(255,255,255,.06);
+      transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+      backdrop-filter: blur(6px);
+    }
+    div.stButton > button:hover{
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 18px 36px rgba(68,144,255,.38);
+      filter: brightness(1.05);
+      cursor: pointer;
+    }
+    div.stButton > button:active{
+      transform: translateY(0) scale(.98);
+    }
+
+    /* Current page pill */
+    .page-pill{
+      display: inline-flex; align-items: center; gap:10px;
+      padding: 10px 16px; margin-top: 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(106,90,205,.4), rgba(0,229,255,.25));
+      border: 1px solid rgba(255,255,255,.18);
+      color: #f4f7ff; font-weight: 700;
+      box-shadow: 0 0 0 0 rgba(106,90,205,.45);
+      animation: pulse 2.4s infinite;
+      position: relative; overflow: hidden;
+    }
+    .page-pill .dot{
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--p4); box-shadow: 0 0 12px var(--p4);
+    }
+    .page-pill .glowline{
+      position:absolute; inset:1px; border-radius:999px;
+      background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 40%, transparent 60%, rgba(255,255,255,.22));
+      background-size: 200% 100%; animation: shine 3.2s linear infinite;
+      pointer-events:none;
+    }
+
+    @keyframes shine{
+      0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; }
+    }
+    @keyframes pulse{
+      0%{ box-shadow: 0 0 0 0 rgba(106,90,205,.45); }
+      70%{ box-shadow: 0 0 0 14px rgba(106,90,205,0); }
+      100%{ box-shadow: 0 0 0 0 rgba(106,90,205,0); }
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Fancy header
+st.markdown(
+    """
+    <div class="app-header">
+      <div class="shine"></div>
+      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
+      <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+# Navigation
+col1, col2, col3 = st.columns([1, 1, 1])
 
 with col1:
     if st.button("📂 Simulation Budget"):
@@ -161,15 +289,63 @@ with col3:
     if st.button("📋 Optimized Budget"):
         change_page("Optimized Budget")
 
-# with col4:
-#     if st.button("🤖 GEN AI"):
-#         change_page("GEN AI")
+# Animated Current Page pill
+curr = st.session_state.page
+st.markdown(
+    f"""
+    <div class="page-pill">
+      <span class="dot"></span>
+      <span>Current Page: <strong>{curr}</strong></span>
+      <div class="glowline"></div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-# with col5:
-#     if st.button("📊 Dashboard"):
-#         change_page("Dashboard")
+# Optional: subtle toast when page changes
+if st.session_state.prev_page and st.session_state.prev_page != st.session_state.page:
+    st.toast(f"Switched to: {st.session_state.page}", icon="✨")
 
-st.write(f"Current Page: {st.session_state.page}")
+# Example content area (optional)
+st.write("")
+if curr == "Simulation Budget":
+    st.subheader("Simulation Budget")
+    st.write("ใส่พารามิเตอร์งบประมาณและรันจำลองที่นี่")
+elif curr == "Influencer Performance":
+    st.subheader("Influencer Performance")
+    st.write("อัปโหลด/ดูผลลัพธ์ของอินฟลูเอนเซอร์ที่นี่")
+elif curr == "Optimized Budget":
+    st.subheader("Optimized Budget")
+    st.write("ดูงบประมาณที่ถูก Optimize แล้วที่นี่")
+else:
+    st.subheader("Home")
+    st.write("เลือกเมนูด้านบนเพื่อเริ่มต้น")
+
+# st.markdown("### 📁 Welcome To MBCS Optimize Tool")
+# col1, col2, col3, = st.columns([1, 1, 1])  # Equal column widths
+# #col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
+
+# with col1:
+#     if st.button("📂 Simulation Budget"):
+#         change_page("Simulation Budget")
+
+# with col2:
+#     if st.button("💰 Influencer Performance"):
+#         change_page("Influencer Performance")
+
+# with col3:
+#     if st.button("📋 Optimized Budget"):
+#         change_page("Optimized Budget")
+
+# # with col4:
+# #     if st.button("🤖 GEN AI"):
+# #         change_page("GEN AI")
+
+# # with col5:
+# #     if st.button("📊 Dashboard"):
+# #         change_page("Dashboard")
+
+# st.write(f"Current Page: {st.session_state.page}")
 
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------

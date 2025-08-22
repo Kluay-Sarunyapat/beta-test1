@@ -15,7 +15,7 @@ from textwrap import dedent
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(layout="wide")
 
-# คุมความกว้างหลัก (ลบได้ถ้าไม่ต้องการ)
+# Optional width control (remove if not needed)
 st.markdown(
     """
     <style>
@@ -42,11 +42,11 @@ valid_users = {
 }
 
 # -------------------- OPTIONS --------------------
-SHOW_TAGLINE = False          # เปิด/ปิดคำโปรยใต้โลโก้
+SHOW_TAGLINE = False  # small chip under logo
 TAGLINE_TEXT = "Smart solutions for budget optimization"
 
-SHOW_TICKER = True            # เปิด/ปิดตัวอักษรวิ่งด้านบน
-TICKER_TEXT = "✨ MBCS AI Optimization Tool ✨  •  Smart budget simulation • Influencer optimization"
+SHOW_TICKER = True    # marquee at the top
+TICKER_TEXT = "MBCS AI Optimization Tool  •  Smart budget simulation  •  Influencer optimization"
 
 # -------------------- CSS PLACEHOLDER --------------------
 login_css = st.empty()
@@ -60,7 +60,7 @@ def inject_login_css():
           --ink:#0f172a; --muted:#475569;
         }
 
-        /* BG Aurora เฉพาะหน้า Login */
+        /* BG Aurora (only while not authenticated) */
         [data-testid="stAppViewContainer"]{
           background:
             radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.14), transparent 60%),
@@ -69,11 +69,11 @@ def inject_login_css():
           padding-top: 2vh;
         }
 
-        /* ซ่อนแถบเก่าที่ตกค้าง */
+        /* Hide any legacy top bars on login page */
         .glow, .soft-glow, .top-pill { display:none !important; }
         .block-container > div:first-of-type:not(:has(#login-scope)) { display:none !important; }
 
-        /* Aurora ลอย */
+        /* Aurora float */
         #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
         #login-aurora:before, #login-aurora:after{
           content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
@@ -90,43 +90,43 @@ def inject_login_css():
         }
         @keyframes floaty{ 0%{ transform: translateY(0) scale(1); } 100%{ transform: translateY(40px) scale(1.04); } }
 
-        /* Mask กลบด้านบน (กันบาร์เดิม) */
+        /* Mask the very top gradient area (in case any unknown element remains) */
         #login-top-mask{
           position:fixed; left:0; right:0; top:0; height:120px;
           background:linear-gradient(180deg,#f6f8fc 0%,rgba(246,248,252,0) 100%);
           pointer-events:none; z-index:3;
         }
 
-        /* Ticker ตัวอักษรวิ่ง */
+        /* ========== TOP TICKER (guaranteed visible) ========== */
         #login-ticker{
-          position:fixed; left:50%; top:14px; transform:translateX(-50%);
-          z-index:6; pointer-events:none;  /* ไม่บังการคลิก */
-          width:min(92vw, 760px);
+          position:fixed; left:0; right:0; top:14px;
+          display:flex; justify-content:center; z-index:9999;
+          pointer-events:none; /* never blocks clicks */
         }
         #login-ticker .pill{
-          position:relative;
-          padding: 10px 14px; border-radius:999px;
-          background: rgba(255,255,255,.85);
+          width:min(92vw, 760px);
+          border-radius:999px; padding:10px 14px;
+          background: rgba(255,255,255,.92);
           border: 1px solid rgba(17,24,39,.12);
-          backdrop-filter: blur(8px);
-          box-shadow: 0 12px 28px rgba(17,24,39,.10);
-          overflow: hidden;
+          box-shadow: 0 12px 28px rgba(17,24,39,.12);
+          overflow:hidden; position:relative;
         }
         #login-ticker .pill:after{
           content:""; position:absolute; inset:0;
           background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
           background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35;
         }
-        #login-ticker .marquee{
-          display:flex; align-items:center; gap:40px;
-          white-space:nowrap;
-          animation: tickerSlide 18s linear infinite;
+        /* track is 2x width and scrolls left */
+        #login-ticker .track{
+          display:inline-flex; gap:48px; white-space:nowrap; align-items:center;
+          will-change: transform;
+          animation: tickerSlide 16s linear infinite;
         }
-        #login-ticker .marquee span{
-          font-weight:900; color:#0f172a; letter-spacing:.25px;
+        #login-ticker .msg{
+          color:#0f172a; font-weight:900; letter-spacing:.25px; font-size:16px;
           text-shadow: 0 1px 0 rgba(255,255,255,.6);
         }
-        @keyframes tickerSlide { 0%{ transform: translateX(0); } 100%{ transform: translateX(-50%); } }
+        @keyframes tickerSlide{ 0%{ transform: translateX(0);} 100%{ transform: translateX(-50%);} }
         @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
 
         /* Login card */
@@ -159,24 +159,13 @@ def inject_login_css():
         .tagline-slim .dot{ width:8px; height:8px; border-radius:50%; background: var(--p2); box-shadow:0 0 10px var(--p2); }
 
         .logo-wrap{ width:120px; height:120px; margin: 6px auto 12px auto; position:relative; }
-        .logo-ring{
-          position:absolute; inset:-8px; border-radius:50%;
-          background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
-          filter: blur(8px); opacity:.55; animation: spin 8s linear infinite;
-        }
-        .logo{
-          position:relative; width:120px; height:120px; border-radius:50%;
-          object-fit: cover; border: 3px solid rgba(255,255,255,.9);
-          box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff;
-        }
+        .logo-ring{ position:absolute; inset:-8px; border-radius:50%; background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1)); filter: blur(8px); opacity:.55; animation: spin 8s linear infinite; }
+        .logo{ position:relative; width:120px; height:120px; border-radius:50%; object-fit: cover; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff; }
 
-        .title{
-          font-size: clamp(28px, 4.2vw, 44px);
-          font-weight: 900; text-align:center; margin: 6px 0 6px 0;
-          background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
-          -webkit-background-clip: text; background-clip: text; color: transparent;
-          background-size: 220% 100%; animation: wave 7s ease-in-out infinite;
-        }
+        .title{ font-size: clamp(28px, 4.2vw, 44px); font-weight: 900; text-align:center; margin: 6px 0 6px 0;
+                background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
+                -webkit-background-clip: text; background-clip: text; color: transparent;
+                background-size: 220% 100%; animation: wave 7s ease-in-out infinite; }
         .subtitle{ text-align:center; color:#475569; font-size:14px; margin-bottom: 12px; }
 
         #login-scope .stTextInput > div > div > input,
@@ -226,16 +215,15 @@ if not st.session_state.authenticated:
     st.markdown("<div id='login-top-mask'></div>", unsafe_allow_html=True)
     st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
 
-    # Ticker ด้านบน (ตัวอักษรวิ่ง)
+    # Ticker (two copies of message to make infinite scroll)
     if SHOW_TICKER:
-        # ใส่ 2 span เพื่อให้เลื่อนต่อเนื่อง
         st.markdown(
             f"""
             <div id="login-ticker">
               <div class="pill">
-                <div class="marquee">
-                  <span>{TICKER_TEXT}</span>
-                  <span aria-hidden="true">{TICKER_TEXT}</span>
+                <div class="track">
+                  <span class="msg">{TICKER_TEXT}</span>
+                  <span class="msg" aria-hidden="true">{TICKER_TEXT}</span>
                 </div>
               </div>
             </div>
@@ -243,6 +231,7 @@ if not st.session_state.authenticated:
             unsafe_allow_html=True
         )
 
+    # Centered login card
     left, mid, right = st.columns([1, 2, 1])
     with mid:
         st.markdown("<div id='login-scope' class='login-card'><div class='inner'>", unsafe_allow_html=True)
@@ -273,7 +262,7 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.session_state.invalid_login = False
                 st.toast("✅ Login successful", icon="✨")
-                login_css.empty()  # remove CSS to avoid affecting other pages
+                login_css.empty()   # remove CSS after login so it won't affect other pages
                 st.rerun()
             else:
                 st.session_state.invalid_login = True

@@ -249,9 +249,9 @@ if not st.session_state.welcome_shown:
 #     else:
 #         st.image(logo_url, width=width)
 
-# After login, show main content
-show_logo(centered=True, width=150)
-st.write("🎉 Welcome! You are now logged in.")
+# # After login, show main content
+# show_logo(centered=True, width=150)
+# st.write("🎉 Welcome! You are now logged in.")
 
 # ---------- SESSION STATE FOR DATA SHARING ----------
 if 'inputs' not in st.session_state:

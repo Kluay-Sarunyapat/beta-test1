@@ -135,16 +135,6 @@ if not st.session_state.authenticated:
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()  # Stop execution if not logged in
 
-# After login, show main content (unchanged)
-def show_logo(centered=True, width=200):
-    logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-    if centered:
-        st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='{width}'></div>", unsafe_allow_html=True)
-    else:
-        st.image(logo_url, width=width)
-
-show_logo(centered=True, width=150)
-st.write("🎉 Welcome! You are now logged in.")
 
 # # Set Streamlit to wide layout
 # st.set_page_config(layout="wide")

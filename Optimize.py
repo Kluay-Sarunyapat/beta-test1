@@ -684,8 +684,8 @@ weights_df = load_weights(csv_url)
 
 if st.session_state.page == "Simulation Budget":
 
-# ========== TITLE ==========
-st.title("📊 Simulation Budget")
+    # ========== TITLE ==========
+    st.title("📊 Simulation Budget")
 
     # ========== CHECK weights_df ==========
     if "weights_df" not in globals():

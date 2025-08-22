@@ -46,6 +46,7 @@ SHOW_TAGLINE = False
 TAGLINE_TEXT = "Smart solutions for budget optimization"
 
 SHOW_TICKER = True
+# แก้ข้อความได้เลย ถ้าอยากเป็น Platform ก็เปลี่ยน Tool -> Platform
 TICKER_TEXT = "MBCS AI Optimization Tool  •  Smart budget simulation  •  Influencer optimization"
 
 # -------------------- CSS PLACEHOLDER --------------------
@@ -59,7 +60,8 @@ def inject_login_css():
           --p1:#6366f1; --p2:#22d3ee; --p3:#a78bfa; --p4:#10b981;
           --ink:#0f172a; --muted:#475569;
         }
-        /* BG Aurora */
+
+        /* BG Aurora (เฉพาะหน้า Login) */
         [data-testid="stAppViewContainer"]{
           background:
             radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.14), transparent 60%),
@@ -67,7 +69,7 @@ def inject_login_css():
             linear-gradient(180deg, #f6f8fc 0%, #eef2ff 100%);
           padding-top: 2vh;
         }
-        /* ซ่อนแถบเก่าทั้งหมด */
+        /* ซ่อนแถบเดิม */
         .glow, .soft-glow, .top-pill { display:none !important; }
 
         /* Aurora ลอยด้านหลัง */
@@ -104,39 +106,52 @@ def inject_login_css():
         }
         .login-card .inner{ position:relative; z-index:1; }
 
-        /* Ticker (inline แบบแสดงแน่นอน) */
+        /* Ticker (inline; centered; no overflow; symmetric) */
         .ticker{
+          position:relative;
           width:min(92vw, 760px);
-          margin: 6px auto 8px auto;
+          margin: 6px auto 10px auto;
           border-radius:999px;
           background: rgba(255,255,255,.92);
           border: 1px solid rgba(17,24,39,.12);
           box-shadow: 0 12px 28px rgba(17,24,39,.12);
-          overflow: hidden;
-          position: relative;
+          overflow:hidden;
         }
-        .ticker:after{
-          content:""; position:absolute; inset:0;
+        /* fade-left/right edges เพื่อซ่อนรอยต่อขอบให้ดูกลม */
+        .ticker .fadeL, .ticker .fadeR{
+          position:absolute; top:0; bottom:0; width:28px; z-index:3;
+          pointer-events:none;
+        }
+        .ticker .fadeL{ left:0;  background: linear-gradient(90deg, rgba(255,255,255,.95), rgba(255,255,255,0)); }
+        .ticker .fadeR{ right:0; background: linear-gradient(270deg, rgba(255,255,255,.95), rgba(255,255,255,0)); }
+
+        /* shine overlay เบาๆ */
+        .ticker .shine{
+          position:absolute; inset:0; z-index:2; pointer-events:none;
           background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
-          background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35; pointer-events:none;
+          background-size:200% 100%; animation: shine 4s linear infinite; opacity:.35;
         }
-        .ticker-track{
-          white-space: nowrap;
-          display: inline-block;
-          padding-left: 0;
-          animation: ticker 16s linear infinite;
+
+        /* track 2 กลุ่มความยาวเท่ากัน -> ขยับ -50% = เลื่อนไป 1 กลุ่มพอดี */
+        .ticker .track{
+          display:flex; gap:0; width:max-content; z-index:1; position:relative;
+          animation: scrollLoop 16s linear infinite;
           will-change: transform;
         }
-        .ticker-item{
-          display: inline-block; margin: 0 40px;
+        .ticker .group{
+          flex:0 0 auto; display:inline-flex; align-items:center; gap:40px;
+          padding: 8px 40px 8px 0; white-space:nowrap;
+        }
+        .ticker .item{
           color:#0f172a; font-weight:900; letter-spacing:.25px; font-size:16px;
           text-shadow: 0 1px 0 rgba(255,255,255,.6);
         }
-        @keyframes ticker{ 0%{ transform: translateX(0);} 100%{ transform: translateX(-50%);} }
+
+        @keyframes scrollLoop{ 0%{ transform:translateX(0);} 100%{ transform:translateX(-50%);} }
         @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
         @keyframes spin{ to{ transform: rotate(360deg);} }
 
-        /* Tagline slim */
+        /* Tagline slim (optional) */
         .tagline-slim{
           display:inline-flex; align-items:center; gap:10px;
           padding:6px 12px; border-radius:999px;
@@ -151,12 +166,8 @@ def inject_login_css():
 
         /* Logo + ring */
         .logo-wrap{ width:120px; height:120px; margin: 6px auto 12px auto; position:relative; }
-        .logo-ring{ position:absolute; inset:-8px; border-radius:50%;
-                    background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
-                    filter: blur(8px); opacity:.55; animation: spin 8s linear infinite; }
-        .logo{ position:relative; width:120px; height:120px; border-radius:50%;
-               object-fit: cover; border: 3px solid rgba(255,255,255,.9);
-               box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff; }
+        .logo-ring{ position:absolute; inset:-8px; border-radius:50%; background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1)); filter: blur(8px); opacity:.55; animation: spin 8s linear infinite; }
+        .logo{ position:relative; width:120px; height:120px; border-radius:50%; object-fit: cover; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff; }
 
         .title{ font-size: clamp(28px, 4.2vw, 44px); font-weight: 900; text-align:center; margin: 6px 0 6px 0;
                 background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
@@ -205,30 +216,31 @@ def inject_login_css():
 # -------------------- LOGIN UI --------------------
 if not st.session_state.authenticated:
     inject_login_css()
-
-    # Aurora
     st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
 
     left, mid, right = st.columns([1, 2, 1])
     with mid:
 
-        # Ticker แสดงแน่นอน (inline)
+        # Ticker inline (เหนือโลโก้) – สมมาตรและไม่ล้น
         if SHOW_TICKER:
             st.markdown(
                 f"""
                 <div class="ticker">
-                  <div class="ticker-track">
-                    <span class="ticker-item">{TICKER_TEXT}</span>
-                    <span class="ticker-item" aria-hidden="true">{TICKER_TEXT}</span>
-                    <span class="ticker-item" aria-hidden="true">{TICKER_TEXT}</span>
-                    <span class="ticker-item" aria-hidden="true">{TICKER_TEXT}</span>
+                  <div class="shine"></div>
+                  <div class="fadeL"></div><div class="fadeR"></div>
+                  <div class="track">
+                    <div class="group">
+                      <span class="item">{TICKER_TEXT}</span>
+                    </div>
+                    <div class="group" aria-hidden="true">
+                      <span class="item">{TICKER_TEXT}</span>
+                    </div>
                   </div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-        # Card
         st.markdown("<div id='login-scope' class='login-card'><div class='inner'>", unsafe_allow_html=True)
 
         if SHOW_TAGLINE:
@@ -257,7 +269,7 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.session_state.invalid_login = False
                 st.toast("✅ Login successful", icon="✨")
-                login_css.empty()  # remove CSS after login
+                login_css.empty()
                 st.rerun()
             else:
                 st.session_state.invalid_login = True

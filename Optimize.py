@@ -684,14 +684,17 @@ weights_df = load_weights(csv_url)
 
 if st.session_state.page == "Simulation Budget":
 
-    # ---------- Title ----------
-    st.title("📊 Simulation Budget")
+# ========== TITLE ==========
+st.title("📊 Simulation Budget")
+
+    # ========== CHECK weights_df ==========
+    if "weights_df" not in globals():
+        st.error("weights_df is not defined. Please load it before this page. Required cols: Category, Tier, Platform, KPI, Weights")
+        st.stop()
     
-    # ---------- Config ----------
-    TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
-    ALLOWED_KPIS = {"Impression", "View", "Engagement", "Share"}  # ไม่มี CPE/CPShare ใน weights แล้ว
+    # Only these KPIs are read from sheet (CPE/CPShare are derived, not weighted)
+    ALLOWED_KPIS = {"Impression", "View", "Engagement", "Share"}
     
-    # ---------- Validate weights_df ----------
     required_cols = {'Category', 'Tier', 'Platform', 'KPI', 'Weights'}
     missing_cols = required_cols - set(weights_df.columns)
     if missing_cols:
@@ -705,13 +708,18 @@ if st.session_state.page == "Simulation Budget":
     
     unknown_kpis = set(weights_df['KPI'].unique()) - ALLOWED_KPIS
     if unknown_kpis:
-        st.warning(f"Ignored KPIs in weights_df: {sorted(list(unknown_kpis))}")
+        st.warning(f"Ignored KPIs in weights_df (not used): {sorted(list(unknown_kpis))}")
     
-    # ---------- Session State ----------
-    def zero_inputs(): return dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
+    # ========== SESSION STATE ==========
+    def zero_inputs():
+        return dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
     
-    for k in ['inputs_a', 'inputs_b', 'inputs_c']:
-        if k not in st.session_state: st.session_state[k] = zero_inputs()
+    if 'inputs_a' not in st.session_state:
+        st.session_state.inputs_a = zero_inputs()
+    if 'inputs_b' not in st.session_state:
+        st.session_state.inputs_b = zero_inputs()
+    if 'inputs_c' not in st.session_state:
+        st.session_state.inputs_c = zero_inputs()
     
     available_categories = sorted(weights_df['Category'].dropna().unique().tolist())
     if not available_categories:
@@ -719,8 +727,10 @@ if st.session_state.page == "Simulation Budget":
         st.stop()
     
     for k in ['category_a', 'category_b', 'category_c']:
-        if k not in st.session_state: st.session_state[k] = available_categories[0]
+        if k not in st.session_state:
+            st.session_state[k] = available_categories[0]
     
+    # ========== HELPERS ==========
     def platforms_for_category(cat):
         return sorted(weights_df.loc[weights_df['Category'] == cat, 'Platform'].dropna().unique().tolist())
     
@@ -740,19 +750,25 @@ if st.session_state.page == "Simulation Budget":
         sub = weights_df.loc[
             (weights_df['Category'] == category) &
             (weights_df['Platform'] == platform) &
-            (weights_df['KPI'] == kpi), ['Tier', 'Weights']
+            (weights_df['KPI'] == kpi),
+            ['Tier', 'Weights']
         ].copy()
-        if sub.empty: return {}
+        if sub.empty:
+            return {}
         sub['Weights'] = pd.to_numeric(sub['Weights'], errors='coerce')
-        return {r['Tier']: 0.0 if pd.isna(r['Weights']) else float(r['Weights']) for _, r in sub.iterrows()}
+        return {r['Tier']: (0.0 if pd.isna(r['Weights']) else float(r['Weights'])) for _, r in sub.iterrows()}
     
     def colored_percentage(p):
-        if p >= 40:   return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
-        elif p >= 20: return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
-        elif p > 0:   return f"<span style='color:#009688;'>{p:.1f}%</span>"
-        else:         return "<span style='color:#aaa;'>0.0%</span>"
+        if p >= 40:
+            return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
+        elif p >= 20:
+            return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
+        elif p > 0:
+            return f"<span style='color:#009688;'>{p:.1f}%</span>"
+        else:
+            return "<span style='color:#aaa;'>0.0%</span>"
     
-    # ---------- Input Panels ----------
+    # ========== INPUT PANELS ==========
     st.subheader("📊 Budget Simulation Comparison")
     col_input_a, col_input_b, col_input_c = st.columns(3)
     
@@ -770,14 +786,15 @@ if st.session_state.page == "Simulation Budget":
             plats = platforms_for_category(st.session_state[cat_key])
             options = plats if plats else ['(None)']
             current = st.session_state.get(plat_key, options[0])
-            if current not in options: current = options[0]
-            sel = st.selectbox(
+            if current not in options:
+                current = options[0]
+            selected = st.selectbox(
                 f"Simulation {sim_key.upper()} - Platform:",
                 options,
                 key=f"plat_{sim_key}",
                 index=options.index(current)
             )
-            st.session_state[plat_key] = None if sel == '(None)' else sel
+            st.session_state[plat_key] = None if selected == '(None)' else selected
     
             new_inputs = {}
             for t in st.session_state[inputs_key]:
@@ -792,8 +809,7 @@ if st.session_state.page == "Simulation Budget":
             total_final = sum(new_inputs.values())
             st.markdown(
                 f"""
-                <div style="background:{bg_color};padding:14px 0;border-radius:12px;text-align:center;
-                            box-shadow:0 2px 5px #00000022;">
+                <div style="background:{bg_color};padding:14px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #00000022;">
                     <div style="font-size:2.2rem;font-weight:900;color:{title_color};">{total_final:,}</div>
                     <div style="font-size:1.1rem;">💰 Total Budget {sim_key.upper()}</div>
                 </div>
@@ -805,17 +821,17 @@ if st.session_state.page == "Simulation Budget":
     inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
     inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
     
-    # ---------- Simulation (no CPE/CPShare weights) ----------
+    # ========== SIMULATION (Impression/View/Engagement/Share only) ==========
     def calc_metrics(inputs, category, platform):
-        w_imp  = get_weights(category, platform, "Impression")
-        w_view = get_weights(category, platform, "View")
-        w_eng  = get_weights(category, platform, "Engagement")
-        w_share= get_weights(category, platform, "Share")
+        w_imp   = get_weights(category, platform, "Impression")
+        w_view  = get_weights(category, platform, "View")
+        w_eng   = get_weights(category, platform, "Engagement")
+        w_share = get_weights(category, platform, "Share")
     
-        tot_imp  = sum(inputs.get(k,0) * w_imp.get(k,0)   for k in inputs)
-        tot_view = sum(inputs.get(k,0) * w_view.get(k,0)  for k in inputs)
-        tot_eng  = sum(inputs.get(k,0) * w_eng.get(k,0)   for k in inputs)
-        tot_share= sum(inputs.get(k,0) * w_share.get(k,0) for k in inputs)
+        tot_imp   = sum(inputs.get(k, 0) * w_imp.get(k, 0)   for k in inputs)
+        tot_view  = sum(inputs.get(k, 0) * w_view.get(k, 0)  for k in inputs)
+        tot_eng   = sum(inputs.get(k, 0) * w_eng.get(k, 0)   for k in inputs)
+        tot_share = sum(inputs.get(k, 0) * w_share.get(k, 0) for k in inputs)
         return tot_imp, tot_view, tot_eng, tot_share
     
     imp_a, view_a, eng_a, share_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a, st.session_state.platform_a)
@@ -827,22 +843,27 @@ if st.session_state.page == "Simulation Budget":
     budget_c = sum(st.session_state.inputs_c.values())
     
     def safe_div(n, d): return (n / d) if d not in (0, None) else 0.0
-    cpe_a, cpe_b, cpe_c           = safe_div(budget_a, eng_a), safe_div(budget_b, eng_b), safe_div(budget_c, eng_c)
+    
+    # Derived KPIs after simulation (no weights)
+    cpe_a, cpe_b, cpe_c             = safe_div(budget_a, eng_a), safe_div(budget_b, eng_b), safe_div(budget_c, eng_c)
     cpshare_a, cpshare_b, cpshare_c = safe_div(budget_a, share_a), safe_div(budget_b, share_b), safe_div(budget_c, share_c)
     
-    # ---------- Fancy styled table (scoped) ----------
+    # ========== RESULTS TABLE (with effects; scoped CSS) ==========
     st.markdown("---")
     st.subheader("📈 Simulation Results Comparison")
     
-    # CSS effects scoped only to #sim-res
-    st.markdown("""
+    # Colors for sims
+    colA, colB, colC = "#0277bd", "#8e24aa", "#2e7d32"
+    
+    # CSS (scoped only to #sim-res to avoid impacting other pages)
+    st.markdown(dedent("""
     <style>
     #sim-res { margin-top:4px; }
-    #sim-res table{width:96%;margin:6px auto 14px auto;border-collapse:separate;border-spacing:0 6px;}
-    #sim-res thead th{
-      padding:12px 12px;color:#0f172a;text-align:center;font-weight:900;
+    #sim-res table { width:96%; margin:6px auto 14px auto; border-collapse:separate; border-spacing:0 6px; }
+    #sim-res thead th {
+      padding:12px 12px; color:#0f172a; text-align:center; font-weight:900;
       background: linear-gradient(90deg, #f7faff, #eef2ff);
-      border-top-left-radius:12px;border-top-right-radius:12px;
+      border-top-left-radius:12px; border-top-right-radius:12px;
       position:relative; overflow:hidden;
     }
     #sim-res thead th.simA{ color:#0277bd; }
@@ -853,38 +874,35 @@ if st.session_state.page == "Simulation Budget":
       background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 30%, transparent 70%, rgba(255,255,255,.7));
       background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35; pointer-events:none;
     }
-    #sim-res tbody td, #sim-res tbody th{
-      background:#ffffff;border:1px solid #eaeef5; padding:8px 10px; color:#334155;
+    #sim-res tbody td, #sim-res tbody th {
+      background:#ffffff; border:1px solid #eaeef5; padding:8px 10px; color:#334155;
     }
-    #sim-res tbody th{ width:22%; font-weight:800; border-right:none; border-radius:10px 0 0 10px; }
-    #sim-res tbody td{ border-left:none; border-radius:0 10px 10px 0; position:relative; }
+    #sim-res tbody th { width:22%; font-weight:800; border-right:none; border-radius:10px 0 0 10px; }
+    #sim-res tbody td { border-left:none; border-radius:0 10px 10px 0; position:relative; }
     
-    #sim-res .cell{ position:relative; padding: 6px 10px; }
-    #sim-res .cell .bar{
+    #sim-res .cell { position:relative; padding: 6px 10px; }
+    #sim-res .cell .bar {
       position:absolute; left:8px; top:50%; height:70%; transform:translateY(-50%);
       width: calc(var(--w, 0) * 1%); border-radius:10px;
       background: linear-gradient(90deg, var(--c), rgba(255,255,255,0));
-      opacity: .20; filter: saturate(1.2);
-      overflow:hidden;
+      opacity:.20; filter:saturate(1.2); overflow:hidden;
     }
     #sim-res .cell .bar::after{
       content:""; position:absolute; inset:0;
       background: linear-gradient(120deg, rgba(255,255,255,.75), rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,.75));
       background-size:200% 100%; animation: shine 3.6s linear infinite; opacity:.45;
     }
-    #sim-res .cell .val{ position:relative; z-index:1; font-weight:700; }
-    #sim-res .cell.best .val{ color: var(--c); text-shadow: 0 0 10px var(--c); }
-    #sim-res .cell.tie  .val{ color:#1e88e5; }
-    #sim-res .cell .led{
-      width:8px;height:8px;border-radius:50%;background:var(--c); box-shadow:0 0 10px var(--c);
-      display:inline-block;margin-right:6px; vertical-align:middle; visibility:hidden;
+    #sim-res .cell .val { position:relative; z-index:1; font-weight:700; }
+    #sim-res .cell.best .val { color: var(--c); text-shadow: 0 0 10px var(--c); }
+    #sim-res .cell.tie  .val { color:#1e88e5; }
+    #sim-res .cell .led {
+      width:8px; height:8px; border-radius:50%; background:var(--c); box-shadow:0 0 10px var(--c);
+      display:inline-block; margin-right:6px; vertical-align:middle; visibility:hidden;
     }
-    #sim-res .cell.best .led{ visibility:visible; }
-    @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
+    #sim-res .cell.best .led { visibility:visible; }
+    @keyframes shine { 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
     </style>
-    """, unsafe_allow_html=True)
-    
-    colA, colB, colC = "#0277bd", "#8e24aa", "#2e7d32"
+    """), unsafe_allow_html=True)
     
     def cells_with_effect(values, colors, decimals=0, low_better=False):
         a, b, c = values
@@ -897,80 +915,74 @@ if st.session_state.page == "Simulation Budget":
             else:
                 pcts = [(v - vmin) / (vmax - vmin) * 100 for v in values]
         fmt = f"{{:,.{decimals}f}}"
-        # Determine best/tie classes
+    
         if low_better:
-            best_val = vmin
-            best_count = [a,b,c].count(best_val)
-            def cls(v):
-                if v == best_val and best_count >= 2: return "cell tie"
-                if v == best_val: return "cell best"
-                return "cell"
+            best_val, cnt = vmin, [a, b, c].count(vmin)
+            def klass(v): return "cell tie" if (v == best_val and cnt >= 2) else ("cell best" if v == best_val else "cell")
         else:
-            best_val = vmax
-            best_count = [a,b,c].count(best_val)
-            def cls(v):
-                if v == best_val and best_count >= 2: return "cell tie"
-                if v == best_val: return "cell best"
-                return "cell"
+            best_val, cnt = vmax, [a, b, c].count(vmax)
+            def klass(v): return "cell tie" if (v == best_val and cnt >= 2) else ("cell best" if v == best_val else "cell")
+    
         cells = []
-        for v, pct, col in zip([a,b,c], pcts, colors):
+        for v, pct, col in zip([a, b, c], pcts, colors):
             disp = fmt.format(v)
             cells.append(
-                f"<div class='{cls(v)}' style='--w:{pct:.1f};--c:{col};'><div class='bar'></div><span class='led'></span><span class='val'>{disp}</span></div>"
+                f"<div class='{klass(v)}' style='--w:{pct:.1f};--c:{col};'><div class='bar'></div><span class='led'></span><span class='val'>{disp}</span></div>"
             )
         return tuple(cells)
     
-    # Build rows
-    row_budget      = cells_with_effect((budget_a, budget_b, budget_c), (colA, colB, colC), decimals=0, low_better=False)
-    row_imp         = cells_with_effect((imp_a,    imp_b,    imp_c   ), (colA, colB, colC), decimals=0, low_better=False)
-    row_view        = cells_with_effect((view_a,   view_b,   view_c  ), (colA, colB, colC), decimals=0, low_better=False)
-    row_eng         = cells_with_effect((eng_a,    eng_b,    eng_c   ), (colA, colB, colC), decimals=0, low_better=False)
-    row_share       = cells_with_effect((share_a,  share_b,  share_c ), (colA, colB, colC), decimals=0, low_better=False)
-    row_cpe         = cells_with_effect((cpe_a,    cpe_b,    cpe_c   ), (colA, colB, colC), decimals=2, low_better=True)
-    row_cpshare     = cells_with_effect((cpshare_a,cpshare_b,cpshare_c), (colA, colB, colC), decimals=2, low_better=True)
+    # Prepare rows
+    colA, colB, colC = "#0277bd", "#8e24aa", "#2e7d32"
+    row_budget   = cells_with_effect((budget_a, budget_b, budget_c), (colA, colB, colC), decimals=0)
+    row_imp      = cells_with_effect((imp_a,    imp_b,    imp_c   ), (colA, colB, colC), decimals=0)
+    row_view     = cells_with_effect((view_a,   view_b,   view_c  ), (colA, colB, colC), decimals=0)
+    row_eng      = cells_with_effect((eng_a,    eng_b,    eng_c   ), (colA, colB, colC), decimals=0)
+    row_share    = cells_with_effect((share_a,  share_b,  share_c ), (colA, colB, colC), decimals=0)
+    row_cpe      = cells_with_effect((cpe_a,    cpe_b,    cpe_c   ), (colA, colB, colC), decimals=2, low_better=True)
+    row_cpshare  = cells_with_effect((cpshare_a,cpshare_b,cpshare_c), (colA, colB, colC), decimals=2, low_better=True)
     
-    html_table = f"""
+    # Build HTML (dedent ป้องกัน markdown แปลงเป็น code block)
+    html_table = dedent(f"""
     <div id="sim-res">
-      <table>
-        <thead>
-          <tr>
-            <th></th>
-            <th class="simA">Simulation A</th>
-            <th class="simB">Simulation B</th>
-            <th class="simC">Simulation C</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <th>Category</th>
-            <td>{st.session_state.category_a}</td>
-            <td>{st.session_state.category_b}</td>
-            <td>{st.session_state.category_c}</td>
-          </tr>
-          <tr>
-            <th>Platform</th>
-            <td>{st.session_state.platform_a if st.session_state.platform_a is not None else '-'}</td>
-            <td>{st.session_state.platform_b if st.session_state.platform_b is not None else '-'}</td>
-            <td>{st.session_state.platform_c if st.session_state.platform_c is not None else '-'}</td>
-          </tr>
-    
-          <tr><th>Budget</th>        <td>{row_budget[0]}</td>   <td>{row_budget[1]}</td>   <td>{row_budget[2]}</td></tr>
-          <tr><th>Impressions</th>   <td>{row_imp[0]}</td>      <td>{row_imp[1]}</td>      <td>{row_imp[2]}</td></tr>
-          <tr><th>Views</th>         <td>{row_view[0]}</td>     <td>{row_view[1]}</td>     <td>{row_view[2]}</td></tr>
-          <tr><th>Engagements</th>   <td>{row_eng[0]}</td>      <td>{row_eng[1]}</td>      <td>{row_eng[2]}</td></tr>
-          <tr><th>Shares</th>        <td>{row_share[0]}</td>    <td>{row_share[1]}</td>    <td>{row_share[2]}</td></tr>
-    
-          <tr><th>CPE</th>           <td>{row_cpe[0]}</td>      <td>{row_cpe[1]}</td>      <td>{row_cpe[2]}</td></tr>
-          <tr><th>CPShare</th>       <td>{row_cpshare[0]}</td>  <td>{row_cpshare[1]}</td>  <td>{row_cpshare[2]}</td></tr>
-        </tbody>
-      </table>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th class="simA">Simulation A</th>
+          <th class="simB">Simulation B</th>
+          <th class="simC">Simulation C</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th>Category</th>
+          <td>{st.session_state.category_a}</td>
+          <td>{st.session_state.category_b}</td>
+          <td>{st.session_state.category_c}</td>
+        </tr>
+        <tr>
+          <th>Platform</th>
+          <td>{st.session_state.platform_a if st.session_state.platform_a is not None else '-'}</td>
+          <td>{st.session_state.platform_b if st.session_state.platform_b is not None else '-'}</td>
+          <td>{st.session_state.platform_c if st.session_state.platform_c is not None else '-'}</td>
+        </tr>
+        <tr><th>Budget</th>        <td>{row_budget[0]}</td>   <td>{row_budget[1]}</td>   <td>{row_budget[2]}</td></tr>
+        <tr><th>Impressions</th>   <td>{row_imp[0]}</td>      <td>{row_imp[1]}</td>      <td>{row_imp[2]}</td></tr>
+        <tr><th>Views</th>         <td>{row_view[0]}</td>     <td>{row_view[1]}</td>     <td>{row_view[2]}</td></tr>
+        <tr><th>Engagements</th>   <td>{row_eng[0]}</td>      <td>{row_eng[1]}</td>      <td>{row_eng[2]}</td></tr>
+        <tr><th>Shares</th>        <td>{row_share[0]}</td>    <td>{row_share[1]}</td>    <td>{row_share[2]}</td></tr>
+        <tr><th>CPE</th>           <td>{row_cpe[0]}</td>      <td>{row_cpe[1]}</td>      <td>{row_cpe[2]}</td></tr>
+        <tr><th>CPShare</th>       <td>{row_cpshare[0]}</td>  <td>{row_cpshare[1]}</td>  <td>{row_cpshare[2]}</td></tr>
+      </tbody>
+    </table>
     </div>
-    """
+    """)
     st.markdown(html_table, unsafe_allow_html=True)
     
-    # ---------- Charts (interactive, flashy but within theme) ----------
+    # ========== CHARTS ==========
     st.markdown("#### ✨ Visual Comparison")
     
+    # Grouped bar for Budget/Impressions/Views/Engagements/Shares
     metric_order = ["Budget", "Impressions", "Views", "Engagements", "Shares"]
     bar_df = pd.DataFrame([
         {"Simulation":"A","Metric":"Budget","Value":budget_a},
@@ -992,26 +1004,29 @@ if st.session_state.page == "Simulation Budget":
     colors = {"A":"#0277bd","B":"#8e24aa","C":"#2e7d32"}
     
     sel = alt.selection_multi(fields=['Simulation'], bind='legend')
-    bar = alt.Chart(bar_df, height=330).mark_bar(cornerRadius=5).encode(
-        x=alt.X('Metric:N', sort=metric_order, axis=alt.Axis(labelAngle=0)),
-        y=alt.Y('Value:Q', title=''),
-        color=alt.Color('Simulation:N', scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())),
-                        legend=alt.Legend(title="Sim")),
-        opacity=alt.condition(sel, alt.value(1), alt.value(0.35)),
-        tooltip=[alt.Tooltip('Simulation:N'), alt.Tooltip('Metric:N'), alt.Tooltip('Value:Q', format=',')]
-    ).add_selection(sel)
     
-    text = alt.Chart(bar_df).mark_text(dy=-6, color='#334155', fontWeight='bold').encode(
-        x=alt.X('Metric:N', sort=metric_order),
-        y='Value:Q',
-        detail='Simulation:N',
-        text=alt.condition(alt.datum.Value > 0, alt.Text('Value:Q', format=',.0f'), alt.value('')),
-        color=alt.Color('Simulation:N', scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())), legend=None)
+    bar = (
+        alt.Chart(bar_df, height=330)
+        .mark_bar(cornerRadius=5)
+        .encode(
+            x=alt.X('Metric:N', sort=metric_order, axis=alt.Axis(labelAngle=0)),
+            y=alt.Y('Value:Q', title=''),
+            color=alt.Color('Simulation:N',
+                            scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())),
+                            legend=alt.Legend(title="Sim")),
+            opacity=alt.condition(sel, alt.value(1), alt.value(0.35)),
+            tooltip=[alt.Tooltip('Simulation:N'), alt.Tooltip('Metric:N'), alt.Tooltip('Value:Q', format=',')]
+        )
+        .add_selection(sel)
+    )
+    
+    text = bar.mark_text(dy=-6, color='#334155', fontWeight='bold').encode(
+        text=alt.condition(alt.datum.Value > 0, alt.Text('Value:Q', format=',.0f'), alt.value(''))
     )
     
     st.altair_chart(bar + text, use_container_width=True)
     
-    # Scatter: CPE vs CPShare (size by Budget)
+    # Scatter for CPE vs CPShare (size by budget)
     scatter_df = pd.DataFrame({
         "Simulation": ["A","B","C"],
         "CPE": [cpe_a, cpe_b, cpe_c],
@@ -1020,24 +1035,31 @@ if st.session_state.page == "Simulation Budget":
     })
     hover = alt.selection_single(on='mouseover', empty='all', fields=['Simulation'])
     
-    scatter = alt.Chart(scatter_df, height=330).mark_circle(opacity=0.9).encode(
-        x=alt.X('CPE:Q', title='CPE (Budget / Engagements)'),
-        y=alt.Y('CPShare:Q', title='CPShare (Budget / Shares)'),
-        size=alt.Size('Budget:Q', legend=None, scale=alt.Scale(range=[60, 800])),
-        color=alt.Color('Simulation:N', scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())),
-                        legend=alt.Legend(title="Sim")),
-        opacity=alt.condition(hover, alt.value(1), alt.value(0.6)),
-        tooltip=[
-            alt.Tooltip('Simulation:N'),
-            alt.Tooltip('Budget:Q', format=','),
-            alt.Tooltip('CPE:Q', format=',.2f'),
-            alt.Tooltip('CPShare:Q', format=',.2f'),
-        ]
-    ).add_selection(hover)
+    scatter = (
+        alt.Chart(scatter_df, height=330)
+        .mark_circle(opacity=0.9)
+        .encode(
+            x=alt.X('CPE:Q', title='CPE (Budget / Engagements)'),
+            y=alt.Y('CPShare:Q', title='CPShare (Budget / Shares)'),
+            size=alt.Size('Budget:Q', legend=None, scale=alt.Scale(range=[60, 800])),
+            color=alt.Color('Simulation:N',
+                            scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())),
+                            legend=alt.Legend(title="Sim")),
+            opacity=alt.condition(hover, alt.value(1), alt.value(0.6)),
+            tooltip=[
+                alt.Tooltip('Simulation:N'),
+                alt.Tooltip('Budget:Q', format=','),
+                alt.Tooltip('CPE:Q', format=',.2f'),
+                alt.Tooltip('CPShare:Q', format=',.2f'),
+            ]
+        )
+        .add_selection(hover)
+    )
     
     labels = alt.Chart(scatter_df).mark_text(dy=-10, fontWeight='bold').encode(
         x='CPE:Q', y='CPShare:Q', text='Simulation',
-        color=alt.Color('Simulation:N', scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())), legend=None)
+        color=alt.Color('Simulation:N',
+                        scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())), legend=None)
     )
     
     st.altair_chart(scatter + labels, use_container_width=True)

@@ -27,54 +27,86 @@ valid_users = {
     "admin": "adminpass"
 }
 
-# -------------------- LOGIN PAGE (EFFECT ONLY ON THIS PAGE) --------------------
+# Placeholder สำหรับ CSS ของหน้า Login (จะถูกลบเมื่อ login แล้ว)
+css_ph = st.empty()
+
+# -------------------- LOGIN --------------------
 if not st.session_state.authenticated:
-    # CSS + Overlay เฉพาะตอนยังไม่ล็อกอิน
-    st.markdown(
+    # Inject CSS เฉพาะตอนยังไม่ล็อกอิน (ไม่ไปยุ่งขนาด/เลย์เอาต์)
+    css_ph.markdown(
         """
         <style>
         :root{
-          --p1:#6366f1; /* indigo */
-          --p2:#22d3ee; /* cyan */
-          --p3:#a78bfa; /* violet */
-          --txt:#0f172a; /* slate-900 */
-          --muted:#475569; /* slate-600 */
-          --card:#ffffff;
+          --p1:#6366f1; --p2:#22d3ee; --p3:#a78bfa; --txt:#0f172a; --muted:#475569;
         }
-
-        /* Fullscreen overlay for login only (no global container touched) */
-        #login-portal{
-          position: fixed; inset: 0; z-index: 99999;
-          display: grid; place-items: center;
+        /* พื้นหลังแบบสว่าง อ่านง่าย */
+        [data-testid="stAppViewContainer"]{
           background:
-            radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.12), transparent 60%),
-            radial-gradient(900px 320px at 88% 12%, rgba(34,211,238,.10), transparent 60%),
+            radial-gradient(850px 300px at 8% 10%, rgba(99,102,241,.14), transparent 60%),
+            radial-gradient(850px 300px at 92% 8%, rgba(34,211,238,.12), transparent 60%),
             linear-gradient(180deg, #f9fafb 0%, #eef2ff 100%);
+          padding-top: 2vh;
         }
 
-        /* Card */
+        /* Card ฟอร์ม (ไม่แตะขนาด container หลัก) */
         .login-card{
-          width: 520px; max-width: 92vw;
           position: relative; overflow: hidden;
-          border-radius: 18px;
-          background: var(--card);
-          border: 1px solid rgba(17,24,39,.08);
+          background: #ffffff; border: 1px solid rgba(17,24,39,.08);
+          border-radius: 18px; padding: 26px 22px 20px;
           box-shadow: 0 20px 50px rgba(2,132,199,.12);
-          padding: 26px 22px 20px;
         }
-        .login-card::before{
-          content:""; position:absolute; inset:-2px; pointer-events: none;
+        .login-card:before{
+          content:""; position:absolute; inset:-2px; pointer-events:none;
           background: conic-gradient(from 0deg, var(--p1), var(--p2), var(--p3), var(--p1));
-          filter: blur(28px); opacity:.18; animation: spin 9s linear infinite;
+          filter: blur(28px); opacity:.18; animation: spin 10s linear infinite;
         }
         .login-shine{
-          position:absolute; inset:1px; border-radius:16px;
+          position:absolute; inset:1px; border-radius:16px; pointer-events:none;
           background: linear-gradient(120deg, rgba(255,255,255,.35), transparent 40%, transparent 60%, rgba(255,255,255,.35));
           background-size: 220% 100%; animation: shine 4s linear infinite;
-          pointer-events:none;
         }
 
-        /* Logo ring */
+        .login-title{
+          font-size: clamp(26px, 4.2vw, 40px); font-weight: 900; text-align:center; margin: 6px 0 2px 0;
+          background: linear-gradient(90deg, #0f172a, #1f2937, #0f172a);
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .login-sub{ text-align:center; color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+
+        /* Inputs (โทนสว่าง อ่านง่าย) */
+        .stTextInput > div > div > input,
+        .stPassword > div > div > input{
+          background: #ffffff; color: var(--txt);
+          border: 1px solid rgba(17,24,39,.12);
+          border-radius: 12px; padding: 0.75rem 0.9rem;
+          box-shadow: 0 8px 20px rgba(17,24,39,.06);
+          transition: box-shadow .2s ease, transform .12s ease, border-color .2s ease;
+        }
+        .stTextInput > div > div > input:focus,
+        .stPassword > div > div > input:focus{
+          border-color: rgba(99,102,241,.45);
+          box-shadow: 0 10px 26px rgba(99,102,241,.18);
+          transform: translateY(-1px);
+          outline: none;
+        }
+
+        /* ปุ่ม submit ของฟอร์ม login เท่านั้น */
+        button[kind="formSubmit"]{
+          width: 100%; border-radius: 12px; padding: 0.9rem 1rem;
+          border: 1px solid rgba(17,24,39,.08); color: #ffffff; font-weight: 800;
+          background: linear-gradient(135deg, var(--p1), var(--p2));
+          box-shadow: 0 10px 22px rgba(2,132,199,.20), inset 0 0 12px rgba(255,255,255,.12);
+          transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+          margin-top: 10px;
+        }
+        button[kind="formSubmit"]:hover{
+          transform: translateY(-2px) scale(1.01);
+          box-shadow: 0 16px 30px rgba(2,132,199,.25);
+          filter: brightness(1.03);
+        }
+        button[kind="formSubmit"]:active{ transform: translateY(0) scale(.98); }
+
+        /* โลโก้แบบวงแหวน */
         .logo-ring{
           width:120px; height:120px; margin: 0 auto 10px auto; border-radius:50%;
           position:relative; overflow: visible; box-shadow: 0 12px 50px rgba(2,132,199,.18);
@@ -89,110 +121,51 @@ if not st.session_state.authenticated:
           border: 3px solid rgba(255,255,255,.85); background: #fff;
         }
 
-        /* Title */
-        .login-title{
-          font-size: clamp(26px, 4.2vw, 40px);
-          font-weight: 900; letter-spacing:.4px; text-align: center; margin: 6px 0 2px 0;
-          background: linear-gradient(90deg, #0f172a, #1f2937, #0f172a);
-          -webkit-background-clip: text; background-clip: text; color: transparent;
-        }
-        .login-sub{ text-align:center; color: var(--muted); font-size: 14px; margin-bottom: 12px; }
-
-        /* Scope inputs & button under #login-portal only */
-        #login-portal .stTextInput > div > div > input,
-        #login-portal .stPassword > div > div > input{
-          background: #ffffff;
-          color: var(--txt);
-          border: 1px solid rgba(17,24,39,.12);
-          border-radius: 12px;
-          padding: 0.75rem 0.9rem;
-          box-shadow: 0 8px 20px rgba(17,24,39,.06);
-          transition: box-shadow .2s ease, transform .12s ease, border-color .2s ease;
-        }
-        #login-portal .stTextInput > div > div > input:focus,
-        #login-portal .stPassword > div > div > input:focus{
-          border-color: rgba(99,102,241,.45);
-          box-shadow: 0 10px 26px rgba(99,102,241,.18);
-          outline: none; transform: translateY(-1px);
-        }
-        #login-portal .login-label{
-          color: #334155; font-weight: 700; margin: 10px 0 6px 4px; display:block;
-        }
-
-        #login-portal button[kind="formSubmit"]{
-          width: 100%;
-          border-radius: 12px;
-          padding: 0.9rem 1rem;
-          border: 1px solid rgba(17,24,39,.08);
-          color: #ffffff; font-weight: 800; letter-spacing:.2px;
-          background: linear-gradient(135deg, var(--p1), var(--p2));
-          box-shadow: 0 10px 22px rgba(2,132,199,.20), inset 0 0 12px rgba(255,255,255,.12);
-          transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
-          margin-top: 8px;
-        }
-        #login-portal button[kind="formSubmit"]:hover{
-          transform: translateY(-2px) scale(1.01);
-          box-shadow: 0 16px 30px rgba(2,132,199,.25);
-          filter: brightness(1.03);
-          cursor: pointer;
-        }
-        #login-portal button[kind="formSubmit"]:active{ transform: translateY(0) scale(.98); }
-
-        /* Shake only the card on wrong login */
-        .shake{ animation: shake .35s ease-in-out 0s 1; }
-
         @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
         @keyframes spin{ to{ transform: rotate(360deg);} }
-        @keyframes shake{
-          0%,100%{ transform: translateX(0); }
-          20%{ transform: translateX(-6px); }
-          40%{ transform: translateX(6px); }
-          60%{ transform: translateX(-4px); }
-          80%{ transform: translateX(4px); }
-        }
         </style>
         """,
         unsafe_allow_html=True
     )
 
-    # เปิด overlay + card (ทุกอย่างภายในจะถูก scope ใต้ #login-portal)
-    card_class = "login-card shake" if st.session_state.invalid_login else "login-card"
-    st.markdown(f'<div id="login-portal"><div class="{card_class}"><div class="login-shine"></div>', unsafe_allow_html=True)
+    # จัดวางให้กึ่งกลาง (ไม่ยุ่ง container หลัก)
+    left, mid, right = st.columns([1, 2, 1])
+    with mid:
+        st.markdown('<div class="login-card"><div class="login-shine"></div>', unsafe_allow_html=True)
 
-    # Header
-    st.markdown(
-        """
-        <div class="logo-ring"><img src="https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg" alt="NEST"></div>
-        <div class="login-title">🔒 WELCOME TO NEST OPTIMIZED TOOL</div>
-        <div class="login-sub">Secure access • Smart budget simulation • Influencer optimization</div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            """
+            <div class="logo-ring"><img src="https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg" alt="NEST"></div>
+            <div class="login-title">🔒 WELCOME TO NEST OPTIMIZED TOOL</div>
+            <div class="login-sub">Secure access • Smart budget simulation • Influencer optimization</div>
+            """,
+            unsafe_allow_html=True
+        )
 
-    # Form
-    with st.form("login_form", clear_on_submit=False):
-        st.markdown('<span class="login-label">Username</span>', unsafe_allow_html=True)
-        username = st.text_input(label="", placeholder="Enter username", key="login_username")
-        st.markdown('<span class="login-label">Password</span>', unsafe_allow_html=True)
-        password = st.text_input(label="", placeholder="Enter password", type="password", key="login_password")
-        submit = st.form_submit_button("Login", use_container_width=True)
+        # ฟอร์ม Streamlit ปกติ (คลิกได้ ชัวร์)
+        with st.form("login_form", clear_on_submit=False):
+            username = st.text_input("Username", key="login_username")
+            password = st.text_input("Password", type="password", key="login_password")
+            submit = st.form_submit_button("Login", use_container_width=True)
 
-    # ปิด overlay
-    st.markdown('</div></div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    if submit:
-        if username in valid_users and password == valid_users[username]:
-            st.session_state.authenticated = True
-            st.session_state.invalid_login = False
-            st.rerun()
-        else:
-            st.session_state.invalid_login = True
-            st.error("❌ Incorrect username or password. Please try again.")
+        if submit:
+            if username in valid_users and password == valid_users[username]:
+                st.session_state.authenticated = True
+                st.session_state.invalid_login = False
+                # ลบ CSS login ออกจากหน้าเพื่อไม่ให้กระทบส่วนอื่น
+                css_ph.empty()
+                st.toast("✅ Login successful", icon="✨")
+                st.rerun()
+            else:
+                st.session_state.invalid_login = True
+                st.error("❌ Incorrect username or password. Please try again.")
 
-    st.stop()  # หยุด render ส่วนอื่นเมื่อยังไม่ล็อกอิน
+    st.stop()
 
 # -------------------- AFTER LOGIN --------------------
-# ไม่มี CSS/Overlay จากหน้า Login เหลืออยู่แล้ว => หน้าอื่นจะไม่ถูกเปลี่ยนขนาด/ธีม
+# มาถึงตรงนี้ CSS login ถูกลบไปแล้ว จึงไม่กระทบหน้าอื่น
 st.success("🎉 Welcome! You are now logged in.")
 
 # # Set Streamlit to wide layout

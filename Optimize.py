@@ -46,7 +46,6 @@ SHOW_TAGLINE = False
 TAGLINE_TEXT = "Smart solutions for budget optimization"
 
 SHOW_TICKER = True
-# แก้ข้อความได้เลย ถ้าอยากเป็น Platform ก็เปลี่ยน Tool -> Platform
 TICKER_TEXT = "MBCS AI Optimization Tool  •  Smart budget simulation  •  Influencer optimization"
 
 # -------------------- CSS PLACEHOLDER --------------------
@@ -60,8 +59,7 @@ def inject_login_css():
           --p1:#6366f1; --p2:#22d3ee; --p3:#a78bfa; --p4:#10b981;
           --ink:#0f172a; --muted:#475569;
         }
-
-        /* BG Aurora (เฉพาะหน้า Login) */
+        /* BG Aurora */
         [data-testid="stAppViewContainer"]{
           background:
             radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.14), transparent 60%),
@@ -69,10 +67,12 @@ def inject_login_css():
             linear-gradient(180deg, #f6f8fc 0%, #eef2ff 100%);
           padding-top: 2vh;
         }
-        /* ซ่อนแถบเดิม */
-        .glow, .soft-glow, .top-pill { display:none !important; }
 
-        /* Aurora ลอยด้านหลัง */
+        /* ซ่อนบาร์/ท็อปพิลเก่า และ top-mask/ticker แบบ fixed ที่เคยแทรกไว้ */
+        .glow, .soft-glow, .top-pill,
+        #login-top-mask, #login-ticker { display:none !important; }
+
+        /* Aurora float (back layer) */
         #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
         #login-aurora:before, #login-aurora:after{
           content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
@@ -87,9 +87,9 @@ def inject_login_css():
           background: radial-gradient(circle at 60% 20%, rgba(34,211,238,.75), rgba(34,211,238,0) 60%);
           animation-delay: -3s;
         }
-        @keyframes floaty{ 0%{ transform: translateY(0) scale(1); } 100%{ transform: translateY(40px) scale(1.04); } }
+        @keyframes floaty{ 0%{ transform: translateY(0) scale(1);} 100%{ transform: translateY(40px) scale(1.04);} }
 
-        /* Login card (glass) */
+        /* Login card */
         .login-card{
           position: relative; z-index:1;
           max-width: 520px; margin: 5vh auto 6vh; padding: 24px 20px 22px;
@@ -106,7 +106,7 @@ def inject_login_css():
         }
         .login-card .inner{ position:relative; z-index:1; }
 
-        /* Ticker (inline; centered; no overflow; symmetric) */
+        /* Ticker (inline centered, symmetric, no overflow) */
         .ticker{
           position:relative;
           width:min(92vw, 760px);
@@ -117,62 +117,45 @@ def inject_login_css():
           box-shadow: 0 12px 28px rgba(17,24,39,.12);
           overflow:hidden;
         }
-        /* fade-left/right edges เพื่อซ่อนรอยต่อขอบให้ดูกลม */
         .ticker .fadeL, .ticker .fadeR{
-          position:absolute; top:0; bottom:0; width:28px; z-index:3;
-          pointer-events:none;
+          position:absolute; top:0; bottom:0; width:28px; z-index:3; pointer-events:none;
         }
         .ticker .fadeL{ left:0;  background: linear-gradient(90deg, rgba(255,255,255,.95), rgba(255,255,255,0)); }
         .ticker .fadeR{ right:0; background: linear-gradient(270deg, rgba(255,255,255,.95), rgba(255,255,255,0)); }
-
-        /* shine overlay เบาๆ */
         .ticker .shine{
           position:absolute; inset:0; z-index:2; pointer-events:none;
           background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
           background-size:200% 100%; animation: shine 4s linear infinite; opacity:.35;
         }
-
-        /* track 2 กลุ่มความยาวเท่ากัน -> ขยับ -50% = เลื่อนไป 1 กลุ่มพอดี */
         .ticker .track{
-          display:flex; gap:0; width:max-content; z-index:1; position:relative;
+          display:flex; width:200%; /* สองกลุ่มรวมกันพอดี */
           animation: scrollLoop 16s linear infinite;
           will-change: transform;
         }
         .ticker .group{
-          flex:0 0 auto; display:inline-flex; align-items:center; gap:40px;
-          padding: 8px 40px 8px 0; white-space:nowrap;
+          flex:0 0 50%; /* แต่ละกลุ่ม = 50% ของแทร็ค = เท่ากับความกว้าง container */
+          display:flex; justify-content:center; align-items:center; gap:40px;
+          white-space:nowrap; padding:8px 0;
         }
         .ticker .item{
           color:#0f172a; font-weight:900; letter-spacing:.25px; font-size:16px;
           text-shadow: 0 1px 0 rgba(255,255,255,.6);
         }
-
         @keyframes scrollLoop{ 0%{ transform:translateX(0);} 100%{ transform:translateX(-50%);} }
-        @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
+        @keyframes shine{ 0%{ background-position:200% 0;} 100%{ background-position:-200% 0;} }
         @keyframes spin{ to{ transform: rotate(360deg);} }
-
-        /* Tagline slim (optional) */
-        .tagline-slim{
-          display:inline-flex; align-items:center; gap:10px;
-          padding:6px 12px; border-radius:999px;
-          background: rgba(255,255,255,.55);
-          border: 1px solid rgba(17,24,39,.08);
-          backdrop-filter: blur(6px);
-          color:#0f172a; font-weight:800; letter-spacing:.2px;
-          margin: 0 auto 10px auto; width:max-content; position:relative;
-          box-shadow: 0 6px 18px rgba(17,24,39,.08);
-        }
-        .tagline-slim .dot{ width:8px; height:8px; border-radius:50%; background: var(--p2); box-shadow:0 0 10px var(--p2); }
 
         /* Logo + ring */
         .logo-wrap{ width:120px; height:120px; margin: 6px auto 12px auto; position:relative; }
         .logo-ring{ position:absolute; inset:-8px; border-radius:50%; background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1)); filter: blur(8px); opacity:.55; animation: spin 8s linear infinite; }
         .logo{ position:relative; width:120px; height:120px; border-radius:50%; object-fit: cover; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff; }
 
-        .title{ font-size: clamp(28px, 4.2vw, 44px); font-weight: 900; text-align:center; margin: 6px 0 6px 0;
-                background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
-                -webkit-background-clip: text; background-clip: text; color: transparent;
-                background-size: 220% 100%; animation: wave 7s ease-in-out infinite; }
+        .title{
+          font-size: clamp(28px, 4.2vw, 44px); font-weight: 900; text-align:center; margin: 6px 0 6px 0;
+          background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+          background-size: 220% 100%; animation: wave 7s ease-in-out infinite;
+        }
         .subtitle{ text-align:center; color:#475569; font-size:14px; margin-bottom: 12px; }
 
         #login-scope .stTextInput > div > div > input,
@@ -216,25 +199,23 @@ def inject_login_css():
 # -------------------- LOGIN UI --------------------
 if not st.session_state.authenticated:
     inject_login_css()
+
     st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
 
     left, mid, right = st.columns([1, 2, 1])
     with mid:
 
-        # Ticker inline (เหนือโลโก้) – สมมาตรและไม่ล้น
+        # Ticker inline (สมมาตร ไม่ล้น)
         if SHOW_TICKER:
             st.markdown(
                 f"""
                 <div class="ticker">
                   <div class="shine"></div>
-                  <div class="fadeL"></div><div class="fadeR"></div>
+                  <div class="fadeL"></div>
+                  <div class="fadeR"></div>
                   <div class="track">
-                    <div class="group">
-                      <span class="item">{TICKER_TEXT}</span>
-                    </div>
-                    <div class="group" aria-hidden="true">
-                      <span class="item">{TICKER_TEXT}</span>
-                    </div>
+                    <div class="group"><span class="item">{TICKER_TEXT}</span></div>
+                    <div class="group" aria-hidden="true"><span class="item">{TICKER_TEXT}</span></div>
                   </div>
                 </div>
                 """,
@@ -283,6 +264,7 @@ if not st.session_state.authenticated:
 if not st.session_state.welcome_shown:
     st.success("🎉 Welcome! You are now logged in.")
     st.session_state.welcome_shown = True
+
 
 
 #Ver3

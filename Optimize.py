@@ -3225,6 +3225,7 @@ if st.session_state.page == "Influencer Performance":
 
 # ---------- PAGE 3: SUMMARY BUDGET ----------
 elif st.session_state.page == "Optimized Budget":
+
     # ---------- Compatibility rerun wrapper ----------
     def _rerun():
         if hasattr(st, "rerun"):
@@ -3404,7 +3405,9 @@ elif st.session_state.page == "Optimized Budget":
             total_b = float(np.sum(list(alloc.values())))
             cpe = (total_b / scores['Engagement']) if scores['Engagement'] else 0.0
             cps = (total_b / scores['Share']) if scores['Share'] else 0.0
-            scores_derived = dict(scores); scores_derived['CPE'] = cpe; scores_derived['CPShare'] = cps
+            scores_derived = dict(scores)
+            scores_derived['CPE'] = cpe
+            scores_derived['CPShare'] = cps
             return dict(
                 label=label,
                 allocation=alloc,
@@ -3416,14 +3419,17 @@ elif st.session_state.page == "Optimized Budget":
     
         # diversify within 1.5% tolerance
         eps_abs = abs(z_star) * 0.015
-        A_ub = [-weights_vec]; b_ub = [-(z_star - eps_abs)]
+        A_ub = [-weights_vec]
+        b_ub = [-(z_star - eps_abs)]
         for i, t in enumerate(TIERS):
-            c = np.zeros(len(TIERS)); c[i] = -1.0
+            c = np.zeros(len(TIERS))
+            c[i] = -1.0
             res = _solve_lp(c, total_budget, min_alloc, max_alloc, A_ub=A_ub, b_ub=b_ub)
             if res.success:
                 scenarios.append(pack(f"Near-optimal (emphasize {t})", res.x))
     
-        def key(s): return tuple(round(s['allocation'][t], 2) for t in TIERS)
+        def key(s):
+            return tuple(round(s['allocation'][t], 2) for t in TIERS)
         uniq = {}
         for s in scenarios:
             uniq.setdefault(key(s), s)
@@ -3451,7 +3457,8 @@ elif st.session_state.page == "Optimized Budget":
             raise NotEnoughDataError(f"KPI '{kpi_type}' is not available for targeting.")
     
         w_map, warn, ok = _get_weights_for_kpi_lenient(df, category, kpi_key)
-        if warn: warnings.append(warn)
+        if warn:
+            warnings.append(warn)
         if not ok:
             raise NotEnoughDataError(warn or f"No usable weights for KPI='{kpi_key}' in Category='{category}'.")
     
@@ -3481,7 +3488,9 @@ elif st.session_state.page == "Optimized Budget":
             total_b = float(np.sum(list(alloc.values())))
             cpe = (total_b / scores['Engagement']) if scores['Engagement'] else 0.0
             cps = (total_b / scores['Share']) if scores['Share'] else 0.0
-            scores_derived = dict(scores); scores_derived['CPE'] = cpe; scores_derived['CPShare'] = cps
+            scores_derived = dict(scores)
+            scores_derived['CPE'] = cpe
+            scores_derived['CPShare'] = cps
             achieved_target_kpi = float(sum(x[i] * w_map.get(TIERS[i], 0.0) for i in range(n)))
             return dict(
                 label=label,
@@ -3498,12 +3507,14 @@ elif st.session_state.page == "Optimized Budget":
         A_ub2 = [np.array([-w_map[t] for t in TIERS], float), np.ones(n, float)]
         b_ub2 = [-float(target_value), float(B_cap)]
         for i, t in enumerate(TIERS):
-            c2 = np.zeros(n, float); c2[i] = -1.0
+            c2 = np.zeros(n, float)
+            c2[i] = -1.0
             res2 = _solve_lp_general(c2, A_ub=A_ub2, b_ub=b_ub2, bounds=bounds)
             if res2.success:
                 scenarios.append(pack(f"Near-min (emphasize {t})", res2.x))
     
-        def key(s): return tuple(round(s['allocation'][t], 2) for t in TIERS)
+        def key(s):
+            return tuple(round(s['allocation'][t], 2) for t in TIERS)
         uniq = {}
         for s in scenarios:
             uniq.setdefault(key(s), s)
@@ -3516,17 +3527,17 @@ elif st.session_state.page == "Optimized Budget":
         try:
             mx = s.max()
             return ['background-color: #d9fbe2; font-weight: 700' if v == mx else '' for v in s]
-        except:
+        except Exception:
             return [''] * len(s)
     
     def _highlight_min(s):
         try:
             mn = s.min()
             return ['background-color: #fff3d6; font-weight: 700' if v == mn else '' for v in s]
-        except:
+        except Exception:
             return [''] * len(s)
     
-    def _style_header(styler: pd.io.formats.style.Styler):
+    def _style_header(styler):
         # Add gradient + subtle shine animation on header only (uses global keyframes dfShine)
         return styler.set_table_styles([
             {"selector": "th.col_heading",
@@ -3575,7 +3586,7 @@ elif st.session_state.page == "Optimized Budget":
     default_idx = cats.index("Total IPG") if "Total IPG" in cats else 0
     category = st.selectbox("Select Category:", options=cats, index=default_idx)
     
-    # ---------- Render (only the original chart + table with subtle effects) ----------
+    # ---------- Render (stacked bar + results table) ----------
     def render_outputs(scenarios, scenario_ids, show_target_cols=False):
         # 1) Stacked bar: Allocation by Tier with vibrant colors and highlight via legend
         recs = []
@@ -3585,9 +3596,8 @@ elif st.session_state.page == "Optimized Budget":
         chart_df = pd.DataFrame(recs)
         chart_df["TierOrder"] = chart_df["Tier"].map({t: i for i, t in enumerate(DISPLAY_ORDER)})
     
-        # Vibrant palette (consistent ordering)
-        tier_colors = ["#60a5fa", "#34d399", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]  # blue/green/amber/violet/red/cyan
-        sel = alt.selection_multi(fields=['Tier'], bind='legend')  # click legend to highlight a tier
+        tier_colors = ["#60a5fa", "#34d399", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]
+        sel = alt.selection_multi(fields=['Tier'], bind='legend')
     
         chart = (
             alt.Chart(chart_df)
@@ -3595,10 +3605,15 @@ elif st.session_state.page == "Optimized Budget":
             .encode(
                 x=alt.X("Scenario:N", sort=scenario_ids, axis=alt.Axis(title=None)),
                 y=alt.Y("Allocation:Q", stack="zero", title="Allocation (Budget)"),
-                color=alt.Color("Tier:N", sort=DISPLAY_ORDER, scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors), legend=alt.Legend(title="Tier")),
+                color=alt.Color("Tier:N",
+                                sort=DISPLAY_ORDER,
+                                scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
+                                legend=alt.Legend(title="Tier")),
                 order=alt.Order("TierOrder:Q"),
                 opacity=alt.condition(sel, alt.value(1), alt.value(0.35)),
-                tooltip=[alt.Tooltip("Scenario:N"), alt.Tooltip("Tier:N"), alt.Tooltip("Allocation:Q", format=",.2f")]
+                tooltip=[alt.Tooltip("Scenario:N"),
+                         alt.Tooltip("Tier:N"),
+                         alt.Tooltip("Allocation:Q", format=",.2f")]
             )
             .add_selection(sel)
             .properties(height=420)
@@ -3674,9 +3689,11 @@ elif st.session_state.page == "Optimized Budget":
     
         if st.button("Generate 5 scenarios", key="run_max"):
             if any(min_alloc[t] > max_alloc[t] for t in TIERS):
-                st.error("Infeasible: some Min > Max."); st.stop()
+                st.error("Infeasible: some Min > Max.")
+                st.stop()
             if sum(min_alloc[t] for t in TIERS) > total_budget:
-                st.error("Infeasible: sum of minimums exceeds total budget."); st.stop()
+                st.error("Infeasible: sum of minimums exceeds total budget.")
+                st.stop()
     
             try:
                 scenarios, warns = get_five_budget_scenarios(
@@ -3687,11 +3704,14 @@ elif st.session_state.page == "Optimized Budget":
                     priority=priority,
                     category=category
                 )
-                for w in (warns or []): st.warning(w)
+                for w in (warns or []):
+                    st.warning(w)
             except NotEnoughDataError as e:
-                st.warning("We don't have enough data to optimize for this selection. " + str(e)); st.stop()
+                st.warning("We don't have enough data to optimize for this selection. " + str(e))
+                st.stop()
             except Exception as e:
-                st.exception(e); st.stop()
+                st.exception(e)
+                st.stop()
     
             if not scenarios:
                 st.error("No feasible scenarios.")
@@ -3729,11 +3749,14 @@ elif st.session_state.page == "Optimized Budget":
                     min_alloc=min_alloc, max_alloc=max_alloc,
                     category=category
                 )
-                for w in (warns or []): st.warning(w)
+                for w in (warns or []):
+                    st.warning(w)
             except NotEnoughDataError as e:
-                st.warning("We don't have enough data to optimize for this selection. " + str(e)); st.stop()
+                st.warning("We don't have enough data to optimize for this selection. " + str(e))
+                st.stop()
             except Exception as e:
-                st.exception(e); st.stop()
+                st.exception(e)
+                st.stop()
     
             if not scenarios:
                 st.error("No feasible scenarios for the given target and constraints.")

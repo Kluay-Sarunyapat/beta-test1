@@ -10,6 +10,7 @@ import time
 from scipy.optimize import linprog
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 import altair as alt
+from textwrap import dedent
 
 
 # -------------------- PAGE CONFIG --------------------
@@ -684,16 +685,22 @@ weights_df = load_weights(csv_url)
 
 if st.session_state.page == "Simulation Budget":
 
-    # ========== TITLE ==========
+    # ===================== TITLE =====================
     st.title("📊 Simulation Budget")
-
-    # ========== CHECK weights_df ==========
-    if "weights_df" not in globals():
-        st.error("weights_df is not defined. Please load it before this page. Required cols: Category, Tier, Platform, KPI, Weights")
+    
+    # ===================== LOAD weights_df =====================
+    # Expect weights_df to be prepared elsewhere. We support both globals() and st.session_state.
+    if "weights_df" in st.session_state:
+        weights_df = st.session_state["weights_df"]
+    elif "weights_df" in globals():
+        weights_df = globals()["weights_df"]
+    else:
+        st.error("weights_df is not defined. Please load it before this page. Required columns: Category, Tier, Platform, KPI, Weights")
         st.stop()
     
-    # Only these KPIs are read from sheet (CPE/CPShare are derived, not weighted)
+    # Only these KPIs are taken from the sheet. CPE/CPShare are derived after simulate.
     ALLOWED_KPIS = {"Impression", "View", "Engagement", "Share"}
+    TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     
     required_cols = {'Category', 'Tier', 'Platform', 'KPI', 'Weights'}
     missing_cols = required_cols - set(weights_df.columns)
@@ -708,11 +715,11 @@ if st.session_state.page == "Simulation Budget":
     
     unknown_kpis = set(weights_df['KPI'].unique()) - ALLOWED_KPIS
     if unknown_kpis:
-        st.warning(f"Ignored KPIs in weights_df (not used): {sorted(list(unknown_kpis))}")
+        st.warning(f"Ignored KPIs in weights_df (not used anymore): {sorted(list(unknown_kpis))}")
     
-    # ========== SESSION STATE ==========
+    # ===================== SESSION STATE =====================
     def zero_inputs():
-        return dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
+        return {t: 0 for t in TIERS}
     
     if 'inputs_a' not in st.session_state:
         st.session_state.inputs_a = zero_inputs()
@@ -730,20 +737,20 @@ if st.session_state.page == "Simulation Budget":
         if k not in st.session_state:
             st.session_state[k] = available_categories[0]
     
-    # ========== HELPERS ==========
     def platforms_for_category(cat):
         return sorted(weights_df.loc[weights_df['Category'] == cat, 'Platform'].dropna().unique().tolist())
     
     if 'platform_a' not in st.session_state:
-        pa = platforms_for_category(st.session_state.category_a)
-        st.session_state.platform_a = pa[0] if pa else None
+        ps = platforms_for_category(st.session_state.category_a)
+        st.session_state.platform_a = ps[0] if ps else None
     if 'platform_b' not in st.session_state:
-        pb = platforms_for_category(st.session_state.category_b)
-        st.session_state.platform_b = pb[0] if pb else None
+        ps = platforms_for_category(st.session_state.category_b)
+        st.session_state.platform_b = ps[0] if ps else None
     if 'platform_c' not in st.session_state:
-        pc = platforms_for_category(st.session_state.category_c)
-        st.session_state.platform_c = pc[0] if pc else None
+        ps = platforms_for_category(st.session_state.category_c)
+        st.session_state.platform_c = ps[0] if ps else None
     
+    # ===================== HELPERS =====================
     def get_weights(category, platform, kpi):
         if platform is None or kpi not in ALLOWED_KPIS:
             return {}
@@ -756,7 +763,7 @@ if st.session_state.page == "Simulation Budget":
         if sub.empty:
             return {}
         sub['Weights'] = pd.to_numeric(sub['Weights'], errors='coerce')
-        return {r['Tier']: (0.0 if pd.isna(r['Weights']) else float(r['Weights'])) for _, r in sub.iterrows()}
+        return {row['Tier']: 0.0 if pd.isna(row['Weights']) else float(row['Weights']) for _, row in sub.iterrows()}
     
     def colored_percentage(p):
         if p >= 40:
@@ -768,7 +775,10 @@ if st.session_state.page == "Simulation Budget":
         else:
             return "<span style='color:#aaa;'>0.0%</span>"
     
-    # ========== INPUT PANELS ==========
+    def safe_div(n, d):
+        return (n / d) if d not in (0, None) else 0.0
+    
+    # ===================== INPUT PANELS =====================
     st.subheader("📊 Budget Simulation Comparison")
     col_input_a, col_input_b, col_input_c = st.columns(3)
     
@@ -797,13 +807,15 @@ if st.session_state.page == "Simulation Budget":
             st.session_state[plat_key] = None if selected == '(None)' else selected
     
             new_inputs = {}
-            for t in st.session_state[inputs_key]:
+            # Keep tier order stable
+            for t in TIERS:
                 c1, c2 = st.columns([3, 2])
                 val = c1.number_input(f"{t}", min_value=0, value=st.session_state[inputs_key][t], key=f"{sim_key}_{t}")
                 new_inputs[t] = val
                 total_new = sum(new_inputs.values())
                 percent = (val / total_new) * 100 if total_new > 0 else 0
                 c2.markdown(colored_percentage(percent), unsafe_allow_html=True)
+    
             st.session_state[inputs_key] = new_inputs
     
             total_final = sum(new_inputs.values())
@@ -821,7 +833,7 @@ if st.session_state.page == "Simulation Budget":
     inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
     inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
     
-    # ========== SIMULATION (Impression/View/Engagement/Share only) ==========
+    # ===================== SIMULATION (Impression/View/Engagement/Share only) =====================
     def calc_metrics(inputs, category, platform):
         w_imp   = get_weights(category, platform, "Impression")
         w_view  = get_weights(category, platform, "View")
@@ -842,20 +854,16 @@ if st.session_state.page == "Simulation Budget":
     budget_b = sum(st.session_state.inputs_b.values())
     budget_c = sum(st.session_state.inputs_c.values())
     
-    def safe_div(n, d): return (n / d) if d not in (0, None) else 0.0
+    # Derived KPIs after simulate
+    cpe_a, cpe_b, cpe_c               = safe_div(budget_a, eng_a), safe_div(budget_b, eng_b), safe_div(budget_c, eng_c)
+    cpshare_a, cpshare_b, cpshare_c   = safe_div(budget_a, share_a), safe_div(budget_b, share_b), safe_div(budget_c, share_c)
     
-    # Derived KPIs after simulation (no weights)
-    cpe_a, cpe_b, cpe_c             = safe_div(budget_a, eng_a), safe_div(budget_b, eng_b), safe_div(budget_c, eng_c)
-    cpshare_a, cpshare_b, cpshare_c = safe_div(budget_a, share_a), safe_div(budget_b, share_b), safe_div(budget_c, share_c)
-    
-    # ========== RESULTS TABLE (with effects; scoped CSS) ==========
+    # ===================== RESULTS TABLE (effects, scoped CSS) =====================
     st.markdown("---")
     st.subheader("📈 Simulation Results Comparison")
     
-    # Colors for sims
     colA, colB, colC = "#0277bd", "#8e24aa", "#2e7d32"
     
-    # CSS (scoped only to #sim-res to avoid impacting other pages)
     st.markdown(dedent("""
     <style>
     #sim-res { margin-top:4px; }
@@ -931,8 +939,6 @@ if st.session_state.page == "Simulation Budget":
             )
         return tuple(cells)
     
-    # Prepare rows
-    colA, colB, colC = "#0277bd", "#8e24aa", "#2e7d32"
     row_budget   = cells_with_effect((budget_a, budget_b, budget_c), (colA, colB, colC), decimals=0)
     row_imp      = cells_with_effect((imp_a,    imp_b,    imp_c   ), (colA, colB, colC), decimals=0)
     row_view     = cells_with_effect((view_a,   view_b,   view_c  ), (colA, colB, colC), decimals=0)
@@ -941,7 +947,6 @@ if st.session_state.page == "Simulation Budget":
     row_cpe      = cells_with_effect((cpe_a,    cpe_b,    cpe_c   ), (colA, colB, colC), decimals=2, low_better=True)
     row_cpshare  = cells_with_effect((cpshare_a,cpshare_b,cpshare_c), (colA, colB, colC), decimals=2, low_better=True)
     
-    # Build HTML (dedent ป้องกัน markdown แปลงเป็น code block)
     html_table = dedent(f"""
     <div id="sim-res">
     <table>
@@ -979,10 +984,9 @@ if st.session_state.page == "Simulation Budget":
     """)
     st.markdown(html_table, unsafe_allow_html=True)
     
-    # ========== CHARTS ==========
+    # ===================== CHARTS =====================
     st.markdown("#### ✨ Visual Comparison")
     
-    # Grouped bar for Budget/Impressions/Views/Engagements/Shares
     metric_order = ["Budget", "Impressions", "Views", "Engagements", "Shares"]
     bar_df = pd.DataFrame([
         {"Simulation":"A","Metric":"Budget","Value":budget_a},
@@ -1004,7 +1008,6 @@ if st.session_state.page == "Simulation Budget":
     colors = {"A":"#0277bd","B":"#8e24aa","C":"#2e7d32"}
     
     sel = alt.selection_multi(fields=['Simulation'], bind='legend')
-    
     bar = (
         alt.Chart(bar_df, height=330)
         .mark_bar(cornerRadius=5)
@@ -1019,14 +1022,11 @@ if st.session_state.page == "Simulation Budget":
         )
         .add_selection(sel)
     )
-    
     text = bar.mark_text(dy=-6, color='#334155', fontWeight='bold').encode(
         text=alt.condition(alt.datum.Value > 0, alt.Text('Value:Q', format=',.0f'), alt.value(''))
     )
-    
     st.altair_chart(bar + text, use_container_width=True)
     
-    # Scatter for CPE vs CPShare (size by budget)
     scatter_df = pd.DataFrame({
         "Simulation": ["A","B","C"],
         "CPE": [cpe_a, cpe_b, cpe_c],
@@ -1034,7 +1034,6 @@ if st.session_state.page == "Simulation Budget":
         "Budget": [budget_a, budget_b, budget_c]
     })
     hover = alt.selection_single(on='mouseover', empty='all', fields=['Simulation'])
-    
     scatter = (
         alt.Chart(scatter_df, height=330)
         .mark_circle(opacity=0.9)
@@ -1055,13 +1054,11 @@ if st.session_state.page == "Simulation Budget":
         )
         .add_selection(hover)
     )
-    
     labels = alt.Chart(scatter_df).mark_text(dy=-10, fontWeight='bold').encode(
         x='CPE:Q', y='CPShare:Q', text='Simulation',
         color=alt.Color('Simulation:N',
                         scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())), legend=None)
     )
-    
     st.altair_chart(scatter + labels, use_container_width=True)
     
 #SimVer2

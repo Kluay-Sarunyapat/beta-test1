@@ -17,7 +17,7 @@ from textwrap import dedent
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(layout="wide")
 
-# Optional: คุมความกว้างหลัก (ลบได้ถ้าไม่ต้องการ)
+# Optional: กำหนดความกว้างกลาง (ลบ 4 บรรทัดนี้ได้ถ้าไม่ต้องการ)
 st.markdown(
     """
     <style>
@@ -44,14 +44,14 @@ valid_users = {
 }
 
 # -------------------- OPTIONS --------------------
-SHOW_TAGLINE = True  # ตั้ง False เพื่อซ่อนแคปซูลคำโปรย
+# ปิด Tagline เริ่มต้น (ถ้าอยากมี ให้เปลี่ยนเป็น True)
+SHOW_TAGLINE = False
 TAGLINE_TEXT = "Smart solutions for budget optimization"
 
-# -------------------- CSS PLACEHOLDER (remove after login) --------------------
+# -------------------- CSS PLACEHOLDER --------------------
 login_css = st.empty()
 
 def inject_login_css():
-    # ไม่ใช้ f-string เพื่อหลีกเลี่ยงปัญหา { } ใน CSS
     login_css.markdown(
         """
         <style>
@@ -60,7 +60,7 @@ def inject_login_css():
           --ink:#0f172a; --muted:#475569;
         }
 
-        /* พื้นหลัง Aurora เฉพาะตอนยังไม่ล็อกอิน */
+        /* BG Aurora เฉพาะหน้า Login */
         [data-testid="stAppViewContainer"]{
           background:
             radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.14), transparent 60%),
@@ -69,7 +69,10 @@ def inject_login_css():
           padding-top: 2vh;
         }
 
-        /* ชั้น Aurora (ไม่บังการคลิก) */
+        /* ซ่อนแถบขาวเก่าทั้งหมด (เฉพาะหน้า Login) */
+        .glow, .soft-glow, .top-pill { display:none !important; }
+
+        /* ชั้น Aurora */
         #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
         #login-aurora:before, #login-aurora:after{
           content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
@@ -86,7 +89,7 @@ def inject_login_css():
         }
         @keyframes floaty{ 0%{ transform: translateY(0) scale(1); } 100%{ transform: translateY(40px) scale(1.04); } }
 
-        /* การ์ด login แบบ glass + gradient border */
+        /* Login card (glass + gradient border) */
         .login-card{
           position: relative; z-index:1;
           max-width: 520px; margin: 5vh auto 6vh; padding: 24px 20px 22px;
@@ -103,24 +106,20 @@ def inject_login_css():
         }
         .login-card .inner{ position:relative; z-index:1; }
 
-        /* แคปซูลคำโปรย (Tagline) */
-        .tagline{
+        /* Tagline แบบบาง (ถ้าต้องการ) */
+        .tagline-slim{
           display:inline-flex; align-items:center; gap:10px;
-          padding:10px 18px; border-radius:999px; 
-          background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(34,211,238,.12));
-          border: 1px solid rgba(17,24,39,.08); color:#0f172a; font-weight:800; 
-          margin: 0 auto 14px auto; width: max-content; position:relative; overflow:hidden;
-          box-shadow: 0 10px 22px rgba(17,24,39,.08);
+          padding:6px 12px; border-radius:999px;
+          background: rgba(255,255,255,.55);
+          border: 1px solid rgba(17,24,39,.08);
+          backdrop-filter: blur(6px);
+          color:#0f172a; font-weight:800; letter-spacing:.2px;
+          margin: 0 auto 10px auto; width:max-content; position:relative;
+          box-shadow: 0 6px 18px rgba(17,24,39,.08);
         }
-        .tagline:after{
-          content:""; position:absolute; inset:0;
-          background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
-          background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35;
-        }
-        .tagline .dot{ width:10px; height:10px; border-radius:50%; background: var(--p2); box-shadow:0 0 10px var(--p2); }
-        .tagline .txt{ position:relative; z-index:1; letter-spacing:.2px; }
+        .tagline-slim .dot{ width:8px; height:8px; border-radius:50%; background: var(--p2); box-shadow:0 0 10px var(--p2); }
 
-        /* โลโก้ + วงแหวนไล่สี */
+        /* Logo + ring */
         .logo-wrap{ width:120px; height:120px; margin: 6px auto 12px auto; position:relative; }
         .logo-ring{
           position:absolute; inset:-8px; border-radius:50%;
@@ -178,19 +177,9 @@ def inject_login_css():
           cursor: pointer;
         }
 
-        /* shake เมื่อ login ผิด */
-        .shake{ animation: shake .35s ease-in-out 0s 1; }
-
+        /* Animations */
         @keyframes wave{ 0%{background-position:0 0} 50%{background-position:100% 0} 100%{background-position:0 0} }
         @keyframes spin{ to{ transform: rotate(360deg);} }
-        @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
-        @keyframes shake{
-          0%,100%{ transform: translateX(0); }
-          20%{ transform: translateX(-6px); }
-          40%{ transform: translateX(6px); }
-          60%{ transform: translateX(-4px); }
-          80%{ transform: translateX(4px); }
-        }
         </style>
         """,
         unsafe_allow_html=True
@@ -208,14 +197,14 @@ if not st.session_state.authenticated:
         card_class = "login-card" + (" shake" if st.session_state.invalid_login else "")
         st.markdown(f"<div id='login-scope' class='{card_class}'><div class='inner'>", unsafe_allow_html=True)
 
-        # Tagline (ใช้ inline style เพื่อหลีกเลี่ยง f-string ใน CSS)
-        tag_style = "" if SHOW_TAGLINE else "style='display:none'"
-        st.markdown(
-            f"<div class='tagline' {tag_style}><span class='dot'></span><span class='txt'>{TAGLINE_TEXT}</span></div>",
-            unsafe_allow_html=True
-        )
+        # Tagline (ปิดไว้แล้ว ถ้าอยากเปิดตั้ง SHOW_TAGLINE=True)
+        if SHOW_TAGLINE:
+            st.markdown(
+                f"<div class='tagline-slim'><span class='dot'></span>{TAGLINE_TEXT}</div>",
+                unsafe_allow_html=True
+            )
 
-        # Logo + Title + Subtitle
+        # Logo + Title
         logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
         st.markdown(
             f"""
@@ -240,7 +229,7 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.session_state.invalid_login = False
                 st.toast("✅ Login successful", icon="✨")
-                # Remove CSS (so it won't affect other pages)
+                # remove CSS so other pages won't be affected
                 login_css.empty()
                 st.rerun()
             else:

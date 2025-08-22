@@ -146,7 +146,8 @@ st.markdown(
 
 # ---------- TOP NAVIGATION BUTTONS ----------
 st.markdown("### 📁 Welcome To MBCS Optimize Tool")
-col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
+col1, col2, col3, = st.columns([1, 1, 1])  # Equal column widths
+#col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 1])  # Equal column widths
 
 with col1:
     if st.button("📂 Simulation Budget"):
@@ -160,13 +161,13 @@ with col3:
     if st.button("📋 Optimized Budget"):
         change_page("Optimized Budget")
 
-with col4:
-    if st.button("🤖 GEN AI"):
-        change_page("GEN AI")
+# with col4:
+#     if st.button("🤖 GEN AI"):
+#         change_page("GEN AI")
 
-with col5:
-    if st.button("📊 Dashboard"):
-        change_page("Dashboard")
+# with col5:
+#     if st.button("📊 Dashboard"):
+#         change_page("Dashboard")
 
 st.write(f"Current Page: {st.session_state.page}")
 
@@ -184,462 +185,6 @@ weights_df = load_weights(csv_url)
 # ---------- PAGE 1: Initialize session state ----------
 
 if st.session_state.page == "Simulation Budget":
-    # st.title("📊 Simulation Budget")
-    
-    # # Initialize session state for simulations
-    # if 'inputs_a' not in st.session_state:
-    #     st.session_state.inputs_a = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
-    # if 'inputs_b' not in st.session_state:
-    #     st.session_state.inputs_b = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
-    # if 'inputs_c' not in st.session_state:
-    #     st.session_state.inputs_c = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
-    
-    # available_categories = sorted(weights_df['Category'].unique())
-    # if len(available_categories) == 0:
-    #     st.error("No categories found in weights_df.")
-    #     st.stop()
-    
-    # if 'category_a' not in st.session_state:
-    #     st.session_state.category_a = available_categories[0]
-    # if 'category_b' not in st.session_state:
-    #     st.session_state.category_b = available_categories[0]
-    # if 'category_c' not in st.session_state:
-    #     st.session_state.category_c = available_categories[0]
-    
-    # st.subheader("📊 Budget Simulation Comparison")
-    
-    # col_input_a, col_input_b, col_input_c = st.columns(3)
-    
-    # # Helpers
-    # def get_weights(category, kpi):
-    #     filtered = weights_df[(weights_df['Category'] == category) & (weights_df['KPI'] == kpi)]
-    #     return {row['Tier']: row['Weights'] for _, row in filtered.iterrows()}
-    
-    # def colored_percentage(p):
-    #     if p >= 40:
-    #         return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
-    #     elif p >= 20:
-    #         return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
-    #     elif p > 0:
-    #         return f"<span style='color:#009688;'>{p:.1f}%</span>"
-    #     else:
-    #         return "<span style='color:#aaa;'>0.0%</span>"
-    
-    # # Simulation A
-    # with col_input_a:
-    #     st.subheader("Simulation A")
-    #     st.session_state.category_a = st.selectbox(
-    #         "Simulation A - Category:",
-    #         available_categories,
-    #         key="cat_a",
-    #         index=available_categories.index(st.session_state.category_a)
-    #     )
-    #     new_inputs_a = {}
-    #     for t in st.session_state.inputs_a:
-    #         cols = st.columns([3, 2])
-    #         val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_a[t], key=f"a_{t}")
-    #         new_inputs_a[t] = val
-    #         total_a_new = sum(new_inputs_a.values())
-    #         percent = (val / total_a_new) * 100 if total_a_new > 0 else 0
-    #         cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-    #     st.session_state.inputs_a = new_inputs_a
-    #     total_a_final = sum(new_inputs_a.values())
-    #     st.markdown(
-    #         f"""
-    #         <div style="background-color:#e0f7fa;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #0288d180;">
-    #             <div style="font-size:2.3rem;font-weight:bold;color:#0277bd;">{total_a_final:,}</div>
-    #             <div style="font-size:1.2rem;">💰 Total Budget A</div>
-    #         </div>
-    #         """, unsafe_allow_html=True
-    #     )
-    
-    # # Simulation B
-    # with col_input_b:
-    #     st.subheader("Simulation B")
-    #     st.session_state.category_b = st.selectbox(
-    #         "Simulation B - Category:",
-    #         available_categories,
-    #         key="cat_b",
-    #         index=available_categories.index(st.session_state.category_b)
-    #     )
-    #     new_inputs_b = {}
-    #     for t in st.session_state.inputs_b:
-    #         cols = st.columns([3, 2])
-    #         val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_b[t], key=f"b_{t}")
-    #         new_inputs_b[t] = val
-    #         total_b_new = sum(new_inputs_b.values())
-    #         percent = (val / total_b_new) * 100 if total_b_new > 0 else 0
-    #         cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-    #     st.session_state.inputs_b = new_inputs_b
-    #     total_b_final = sum(new_inputs_b.values())
-    #     st.markdown(
-    #         f"""
-    #         <div style="background-color:#f3e5f5;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #a26ad1;">
-    #             <div style="font-size:2.3rem;font-weight:bold;color:#8e24aa;">{total_b_final:,}</div>
-    #             <div style="font-size:1.2rem;">💰 Total Budget B</div>
-    #         </div>
-    #         """, unsafe_allow_html=True
-    #     )
-    
-    # # Simulation C
-    # with col_input_c:
-    #     st.subheader("Simulation C")
-    #     st.session_state.category_c = st.selectbox(
-    #         "Simulation C - Category:",
-    #         available_categories,
-    #         key="cat_c",
-    #         index=available_categories.index(st.session_state.category_c)
-    #     )
-    #     new_inputs_c = {}
-    #     for t in st.session_state.inputs_c:
-    #         cols = st.columns([3, 2])
-    #         val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state.inputs_c[t], key=f"c_{t}")
-    #         new_inputs_c[t] = val
-    #         total_c_new = sum(new_inputs_c.values())
-    #         percent = (val / total_c_new) * 100 if total_c_new > 0 else 0
-    #         cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-    #     st.session_state.inputs_c = new_inputs_c
-    #     total_c_final = sum(new_inputs_c.values())
-    #     st.markdown(
-    #         f"""
-    #         <div style="background-color:#e8f5e9;padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #66bb6a80;">
-    #             <div style="font-size:2.3rem;font-weight:bold;color:#2e7d32;">{total_c_final:,}</div>
-    #             <div style="font-size:1.2rem;">💰 Total Budget C</div>
-    #         </div>
-    #         """, unsafe_allow_html=True
-    #     )
-    
-    # # Metric calculations
-    # def calc_metrics(inputs, category):
-    #     impression_weights = get_weights(category, "Impression")
-    #     view_weights = get_weights(category, "View")
-    #     engagement_weights = get_weights(category, "Engagement")
-    #     total_impressions = sum(inputs.get(k, 0) * impression_weights.get(k, 0) for k in inputs)
-    #     total_views = sum(inputs.get(k, 0) * view_weights.get(k, 0) for k in inputs)
-    #     total_engagement = sum(inputs.get(k, 0) * engagement_weights.get(k, 0) for k in inputs)
-    #     return total_impressions, total_views, total_engagement
-    
-    # imp_a, view_a, eng_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a)
-    # imp_b, view_b, eng_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b)
-    # imp_c, view_c, eng_c = calc_metrics(st.session_state.inputs_c, st.session_state.category_c)
-    
-    # budget_a = sum(st.session_state.inputs_a.values())
-    # budget_b = sum(st.session_state.inputs_b.values())
-    # budget_c = sum(st.session_state.inputs_c.values())
-    
-    # def highlight3(a, b, c):
-    #     vals = [a, b, c]
-    #     maxv = max(vals)
-    #     top_count = vals.count(maxv)
-    #     styled = []
-    #     for v in vals:
-    #         if v == maxv and top_count >= 2:
-    #             # tie for top
-    #             styled.append(f"<span style='color:#1e88e5;font-weight:bold;font-size:1.2em'>{v:,.0f}</span>")
-    #         elif v == maxv:
-    #             # single winner
-    #             styled.append(f"<span style='color:#388e3c;font-weight:bold;font-size:1.25em'>{v:,.0f}</span>")
-    #         else:
-    #             styled.append(f"<span style='color:#aaa;font-size:1.08em'>{v:,.0f}</span>")
-    #     return tuple(styled)
-    
-    # imp_a_html, imp_b_html, imp_c_html = highlight3(imp_a, imp_b, imp_c)
-    # view_a_html, view_b_html, view_c_html = highlight3(view_a, view_b, view_c)
-    # eng_a_html, eng_b_html, eng_c_html = highlight3(eng_a, eng_b, eng_c)
-    # budget_a_html, budget_b_html, budget_c_html = highlight3(budget_a, budget_b, budget_c)
-    
-    # st.markdown("---")
-    # st.subheader("📈 Simulation Results Comparison")
-    
-    # st.markdown(
-    #     f"""
-    #     <table style="width:92%;margin:auto;border-collapse:collapse;font-size:1.17em;">
-    #         <tr style="background-color:#f0f2f6;">
-    #             <th style="width:20%"></th>
-    #             <th style="color:#0277bd;">Simulation A</th>
-    #             <th style="color:#8e24aa;">Simulation B</th>
-    #             <th style="color:#2e7d32;">Simulation C</th>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Category</td>
-    #             <td>{st.session_state.category_a}</td>
-    #             <td>{st.session_state.category_b}</td>
-    #             <td>{st.session_state.category_c}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Budget</td>
-    #             <td>{budget_a_html}</td>
-    #             <td>{budget_b_html}</td>
-    #             <td>{budget_c_html}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Impressions</td>
-    #             <td>{imp_a_html}</td>
-    #             <td>{imp_b_html}</td>
-    #             <td>{imp_c_html}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Views</td>
-    #             <td>{view_a_html}</td>
-    #             <td>{view_b_html}</td>
-    #             <td>{view_c_html}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Engagements</td>
-    #             <td>{eng_a_html}</td>
-    #             <td>{eng_b_html}</td>
-    #             <td>{eng_c_html}</td>
-    #         </tr>
-    #     </table>
-    #     """,
-    #     unsafe_allow_html=True
-    # )
-
-    # # ---------- Title ----------
-    # st.title("📊 Simulation Budget")
-    
-    
-    # # ---------- Config ----------
-    # TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
-    
-    
-    # # ---------- Validate weights_df ----------
-    # # try:
-    # #     weights_df
-    # # except NameError:
-    # #     if 'weights_df' in st.session_state:
-    # #         weights_df = st.session_state.weights_df
-    # #     else:
-    # #         st.error("weights_df is not defined. Please load a DataFrame with columns: Category, Tier, Platform, KPI, Weights")
-    # #         st.stop()
-    
-    # required_cols = {'Category', 'Tier', 'Platform', 'KPI', 'Weights'}
-    # missing_cols = required_cols - set(weights_df.columns)
-    # if missing_cols:
-    #     st.error(f"weights_df missing columns: {missing_cols}")
-    #     st.stop()
-    
-    # weights_df = weights_df.copy()
-    # for c in ['Category', 'Tier', 'Platform', 'KPI']:
-    #     weights_df[c] = weights_df[c].astype(str).str.strip()
-    # weights_df['Weights'] = pd.to_numeric(weights_df['Weights'], errors='coerce')
-    
-    
-    # # ---------- Initialize Session State ----------
-    # if 'inputs_a' not in st.session_state:
-    #     st.session_state.inputs_a = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
-    # if 'inputs_b' not in st.session_state:
-    #     st.session_state.inputs_b = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
-    # if 'inputs_c' not in st.session_state:
-    #     st.session_state.inputs_c = dict(VIP=0, Mega=0, Macro=0, Mid=0, Micro=0, Nano=0)
-    
-    # available_categories = sorted(weights_df['Category'].dropna().unique().tolist())
-    # if len(available_categories) == 0:
-    #     st.error("No categories found in weights_df.")
-    #     st.stop()
-    
-    # if 'category_a' not in st.session_state:
-    #     st.session_state.category_a = available_categories[0]
-    # if 'category_b' not in st.session_state:
-    #     st.session_state.category_b = available_categories[0]
-    # if 'category_c' not in st.session_state:
-    #     st.session_state.category_c = available_categories[0]
-    
-    
-    # # ---------- Helpers ----------
-    # def platforms_for_category(cat):
-    #     return sorted(
-    #         weights_df.loc[weights_df['Category'] == cat, 'Platform']
-    #         .dropna().unique().tolist()
-    #     )
-    
-    # if 'platform_a' not in st.session_state:
-    #     pa = platforms_for_category(st.session_state.category_a)
-    #     st.session_state.platform_a = pa[0] if pa else None
-    # if 'platform_b' not in st.session_state:
-    #     pb = platforms_for_category(st.session_state.category_b)
-    #     st.session_state.platform_b = pb[0] if pb else None
-    # if 'platform_c' not in st.session_state:
-    #     pc = platforms_for_category(st.session_state.category_c)
-    #     st.session_state.platform_c = pc[0] if pc else None
-    
-    # def get_weights(category, platform, kpi):
-    #     if platform is None:
-    #         return {}
-    #     filt = (
-    #         (weights_df['Category'] == category) &
-    #         (weights_df['Platform'] == platform) &
-    #         (weights_df['KPI'] == kpi)
-    #     )
-    #     sub = weights_df.loc[filt, ['Tier', 'Weights']].copy()
-    #     if sub.empty:
-    #         return {}
-    #     sub['Weights'] = pd.to_numeric(sub['Weights'], errors='coerce')
-    #     return {row['Tier']: (0.0 if pd.isna(row['Weights']) else float(row['Weights'])) for _, row in sub.iterrows()}
-    
-    # def colored_percentage(p):
-    #     if p >= 40:
-    #         return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
-    #     elif p >= 20:
-    #         return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
-    #     elif p > 0:
-    #         return f"<span style='color:#009688;'>{p:.1f}%</span>"
-    #     else:
-    #         return "<span style='color:#aaa;'>0.0%</span>"
-    
-    
-    # # ---------- Panels ----------
-    # st.subheader("📊 Budget Simulation Comparison")
-    # col_input_a, col_input_b, col_input_c = st.columns(3)
-    
-    # def inputs_panel(col, sim_key, cat_key, plat_key, inputs_key, bg_color, title_color):
-    #     with col:
-    #         st.subheader(f"Simulation {sim_key.upper()}")
-    
-    #         # Category
-    #         st.session_state[cat_key] = st.selectbox(
-    #             f"Simulation {sim_key.upper()} - Category:",
-    #             available_categories,
-    #             key=f"cat_{sim_key}",
-    #             index=available_categories.index(st.session_state[cat_key])
-    #         )
-    
-    #         # Platform under selected category
-    #         plats = platforms_for_category(st.session_state[cat_key])
-    #         # Safe selection even if no platforms
-    #         display_options = plats if plats else ['(None)']
-    #         current = st.session_state.get(plat_key, display_options[0])
-    #         if current not in display_options:
-    #             current = display_options[0]
-    #         sel = st.selectbox(
-    #             f"Simulation {sim_key.upper()} - Platform:",
-    #             display_options,
-    #             key=f"plat_{sim_key}",
-    #             index=display_options.index(current)
-    #         )
-    #         st.session_state[plat_key] = None if sel == '(None)' else sel
-    
-    #         # Budget inputs by Tier
-    #         new_inputs = {}
-    #         for t in st.session_state[inputs_key]:
-    #             cols = st.columns([3, 2])
-    #             val = cols[0].number_input(f"{t}", min_value=0, value=st.session_state[inputs_key][t], key=f"{sim_key}_{t}")
-    #             new_inputs[t] = val
-    #             total_new = sum(new_inputs.values())
-    #             percent = (val / total_new) * 100 if total_new > 0 else 0
-    #             cols[1].markdown(colored_percentage(percent), unsafe_allow_html=True)
-    #         st.session_state[inputs_key] = new_inputs
-    
-    #         total_final = sum(new_inputs.values())
-    #         st.markdown(
-    #             f"""
-    #             <div style="background-color:{bg_color};padding:15px 0 15px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #00000022;">
-    #                 <div style="font-size:2.3rem;font-weight:bold;color:{title_color};">{total_final:,}</div>
-    #                 <div style="font-size:1.2rem;">💰 Total Budget {sim_key.upper()}</div>
-    #             </div>
-    #             """, unsafe_allow_html=True
-    #         )
-    
-    # inputs_panel(col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', '#e0f7fa', '#0277bd')
-    # inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
-    # inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
-    
-    
-    # # ---------- Metric calculations ----------
-    # def calc_metrics(inputs, category, platform):
-    #     impression_weights = get_weights(category, platform, "Impression")
-    #     view_weights = get_weights(category, platform, "View")
-    #     engagement_weights = get_weights(category, platform, "Engagement")
-    
-    #     total_impressions = sum(inputs.get(k, 0) * impression_weights.get(k, 0) for k in inputs)
-    #     total_views       = sum(inputs.get(k, 0) * view_weights.get(k, 0)       for k in inputs)
-    #     total_engagement  = sum(inputs.get(k, 0) * engagement_weights.get(k, 0) for k in inputs)
-    
-    #     return total_impressions, total_views, total_engagement
-    
-    # imp_a, view_a, eng_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a, st.session_state.platform_a)
-    # imp_b, view_b, eng_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b, st.session_state.platform_b)
-    # imp_c, view_c, eng_c = calc_metrics(st.session_state.inputs_c, st.session_state.category_c, st.session_state.platform_c)
-    
-    # budget_a = sum(st.session_state.inputs_a.values())
-    # budget_b = sum(st.session_state.inputs_b.values())
-    # budget_c = sum(st.session_state.inputs_c.values())
-    
-    
-    # # ---------- Highlight (max) ----------
-    # def highlight3(a, b, c):
-    #     vals = [a, b, c]
-    #     maxv = max(vals)
-    #     top_count = vals.count(maxv)
-    #     styled = []
-    #     for v in vals:
-    #         if v == maxv and top_count >= 2:
-    #             styled.append(f"<span style='color:#1e88e5;font-weight:bold;font-size:1.2em'>{v:,.0f}</span>")
-    #         elif v == maxv:
-    #             styled.append(f"<span style='color:#388e3c;font-weight:bold;font-size:1.25em'>{v:,.0f}</span>")
-    #         else:
-    #             styled.append(f"<span style='color:#aaa;font-size:1.08em'>{v:,.0f}</span>")
-    #     return tuple(styled)
-    
-    # imp_a_html,  imp_b_html,  imp_c_html  = highlight3(imp_a,  imp_b,  imp_c)
-    # view_a_html, view_b_html, view_c_html = highlight3(view_a, view_b, view_c)
-    # eng_a_html,  eng_b_html,  eng_c_html  = highlight3(eng_a,  eng_b,  eng_c)
-    # budget_a_html, budget_b_html, budget_c_html = highlight3(budget_a, budget_b, budget_c)
-    
-    
-    # # ---------- Results ----------
-    # st.markdown("---")
-    # st.subheader("📈 Simulation Results Comparison")
-    
-    # st.markdown(
-    #     f"""
-    #     <table style="width:92%;margin:auto;border-collapse:collapse;font-size:1.17em;">
-    #         <tr style="background-color:#f0f2f6;">
-    #             <th style="width:20%"></th>
-    #             <th style="color:#0277bd;">Simulation A</th>
-    #             <th style="color:#8e24aa;">Simulation B</th>
-    #             <th style="color:#2e7d32;">Simulation C</th>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Category</td>
-    #             <td>{st.session_state.category_a}</td>
-    #             <td>{st.session_state.category_b}</td>
-    #             <td>{st.session_state.category_c}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Platform</td>
-    #             <td>{st.session_state.platform_a if st.session_state.platform_a is not None else '-'}</td>
-    #             <td>{st.session_state.platform_b if st.session_state.platform_b is not None else '-'}</td>
-    #             <td>{st.session_state.platform_c if st.session_state.platform_c is not None else '-'}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Budget</td>
-    #             <td>{budget_a_html}</td>
-    #             <td>{budget_b_html}</td>
-    #             <td>{budget_c_html}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Impressions</td>
-    #             <td>{imp_a_html}</td>
-    #             <td>{imp_b_html}</td>
-    #             <td>{imp_c_html}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Views</td>
-    #             <td>{view_a_html}</td>
-    #             <td>{view_b_html}</td>
-    #             <td>{view_c_html}</td>
-    #         </tr>
-    #         <tr>
-    #             <td style="font-weight:bold">Engagements</td>
-    #             <td>{eng_a_html}</td>
-    #             <td>{eng_b_html}</td>
-    #             <td>{eng_c_html}</td>
-    #         </tr>
-    #     </table>
-    #     """,
-    #     unsafe_allow_html=True
-    # )
 
     # ---------- Title ----------
     st.title("📊 Simulation Budget")
@@ -2708,116 +2253,116 @@ elif st.session_state.page == "Optimized Budget":
 #                     "Total KPI":"{:,.2f}",
 #                 }), hide_index=True, use_container_width=True)
     
-#Page4
-if st.session_state.page == "GEN AI":
-    st.title(" COMMING SOON...")
-    # import pydata_google_auth
-    
-    # SCOPES = [
-    #     'https://www.googleapis.com/auth/cloud-platform',
-    #     'https://www.googleapis.com/auth/drive',
-    # ]
-    
-    # credentials = pydata_google_auth.get_user_credentials(
-    #     SCOPES,
-    #     auth_local_webserver=True,
-    # )
-    
-    # query = """
-    # SELECT * FROM `pj-allclient-4d2mru.view.industry_norm_fbgg_category_stats_view`
-    # """
-    # df = pd.read_gbq(query=query, project_id = "pj-newnestle-vmtifr", credentials=credentials, dialect = 'standard')
-    
-    # # Show the data in Streamlit
-    # st.dataframe(df)
-# # Page 4: GEN AI with PandasAI (Free Hugging Face Model, No API Key + Clear Chat)
-
+# #Page4
 # if st.session_state.page == "GEN AI":
-#     import streamlit as st
-#     import pandas as pd
-#     from pandasai import SmartDataframe
-#     from transformers import pipeline
-#     from pandasai.llm.base import LLM
+#     st.title(" COMMING SOON...")
+#     # import pydata_google_auth
+    
+#     # SCOPES = [
+#     #     'https://www.googleapis.com/auth/cloud-platform',
+#     #     'https://www.googleapis.com/auth/drive',
+#     # ]
+    
+#     # credentials = pydata_google_auth.get_user_credentials(
+#     #     SCOPES,
+#     #     auth_local_webserver=True,
+#     # )
+    
+#     # query = """
+#     # SELECT * FROM `pj-allclient-4d2mru.view.industry_norm_fbgg_category_stats_view`
+#     # """
+#     # df = pd.read_gbq(query=query, project_id = "pj-newnestle-vmtifr", credentials=credentials, dialect = 'standard')
+    
+#     # # Show the data in Streamlit
+#     # st.dataframe(df)
+# # # Page 4: GEN AI with PandasAI (Free Hugging Face Model, No API Key + Clear Chat)
 
-#     # Local model wrapper
-#     class LocalHuggingFaceLLM(LLM):
-#         def __init__(self, model_name="google/flan-t5-base"):
-#             self.model_name = model_name
-#             self.generator = pipeline("text2text-generation", model=model_name)
+# # if st.session_state.page == "GEN AI":
+# #     import streamlit as st
+# #     import pandas as pd
+# #     from pandasai import SmartDataframe
+# #     from transformers import pipeline
+# #     from pandasai.llm.base import LLM
 
-#         def call(self, prompt: str, *args, **kwargs) -> str:
-#             result = self.generator(prompt, max_length=256, do_sample=True)[0]["generated_text"]
-#             return result
+# #     # Local model wrapper
+# #     class LocalHuggingFaceLLM(LLM):
+# #         def __init__(self, model_name="google/flan-t5-base"):
+# #             self.model_name = model_name
+# #             self.generator = pipeline("text2text-generation", model=model_name)
 
-#         @property
-#         def type(self):
-#             return "local-huggingface"
+# #         def call(self, prompt: str, *args, **kwargs) -> str:
+# #             result = self.generator(prompt, max_length=256, do_sample=True)[0]["generated_text"]
+# #             return result
 
-#     st.title("📊 GEN AI: Chat with Your Data (No API Key)")
+# #         @property
+# #         def type(self):
+# #             return "local-huggingface"
 
-#     # Session state for chat
-#     if "chat_prompt" not in st.session_state:
-#         st.session_state.chat_prompt = ""
-#     if "chat_response" not in st.session_state:
-#         st.session_state.chat_response = ""
+# #     st.title("📊 GEN AI: Chat with Your Data (No API Key)")
 
-#     uploaded_file = st.file_uploader("📎 Upload a CSV file", type=["csv"])
-#     if uploaded_file:
-#         df = pd.read_csv(uploaded_file)
-#         st.write("🧾 Data Preview:", df.head())
+# #     # Session state for chat
+# #     if "chat_prompt" not in st.session_state:
+# #         st.session_state.chat_prompt = ""
+# #     if "chat_response" not in st.session_state:
+# #         st.session_state.chat_response = ""
 
-#         llm = LocalHuggingFaceLLM()
+# #     uploaded_file = st.file_uploader("📎 Upload a CSV file", type=["csv"])
+# #     if uploaded_file:
+# #         df = pd.read_csv(uploaded_file)
+# #         st.write("🧾 Data Preview:", df.head())
 
-#         sdf = SmartDataframe(
-#             df,
-#             config={
-#                 "llm": llm,
-#                 "enable_cache": False,
-#                 "enable_memory": True,
-#                 "verbose": True,
-#             },
-#         )
+# #         llm = LocalHuggingFaceLLM()
 
-#         # Input + buttons
-#         col1, col2 = st.columns([3, 1])
-#         with col1:
-#             st.session_state.chat_prompt = st.text_input(
-#                 "💬 Ask a question about your data (e.g. 'Which category has the lowest CPM?')",
-#                 value=st.session_state.chat_prompt,
-#                 key="prompt_input"
-#             )
+# #         sdf = SmartDataframe(
+# #             df,
+# #             config={
+# #                 "llm": llm,
+# #                 "enable_cache": False,
+# #                 "enable_memory": True,
+# #                 "verbose": True,
+# #             },
+# #         )
 
-#         with col2:
-#             if st.button("🧹 Clear Chat"):
-#                 st.session_state.chat_prompt = ""
-#                 st.session_state.chat_response = ""
+# #         # Input + buttons
+# #         col1, col2 = st.columns([3, 1])
+# #         with col1:
+# #             st.session_state.chat_prompt = st.text_input(
+# #                 "💬 Ask a question about your data (e.g. 'Which category has the lowest CPM?')",
+# #                 value=st.session_state.chat_prompt,
+# #                 key="prompt_input"
+# #             )
 
-#         # Handle question
-#         if st.session_state.chat_prompt:
-#             with st.spinner("🤖 Thinking..."):
-#                 try:
-#                     st.session_state.chat_response = sdf.chat(st.session_state.chat_prompt)
-#                 except Exception as e:
-#                     st.session_state.chat_response = f"❌ Error: {e}"
+# #         with col2:
+# #             if st.button("🧹 Clear Chat"):
+# #                 st.session_state.chat_prompt = ""
+# #                 st.session_state.chat_response = ""
 
-#         # Show response
-#         if st.session_state.chat_response:
-#             st.write("✅ Response:", st.session_state.chat_response)
+# #         # Handle question
+# #         if st.session_state.chat_prompt:
+# #             with st.spinner("🤖 Thinking..."):
+# #                 try:
+# #                     st.session_state.chat_response = sdf.chat(st.session_state.chat_prompt)
+# #                 except Exception as e:
+# #                     st.session_state.chat_response = f"❌ Error: {e}"
 
-# ---------- Page 5: Embedded Looker Studio Dashboard ----------
-if st.session_state.page == "Dashboard":
-    st.title("📊 Live Dashboard")
-    st.markdown("Click below to view your dashboard in a new tab:")
+# #         # Show response
+# #         if st.session_state.chat_response:
+# #             st.write("✅ Response:", st.session_state.chat_response)
 
-    # # Display an image or icon (optional)
-    # st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Google_Data_Studio_Logo.svg/512px-Google_Data_Studio_Logo.svg.png", width=100)
+# # ---------- Page 5: Embedded Looker Studio Dashboard ----------
+# if st.session_state.page == "Dashboard":
+#     st.title("📊 Live Dashboard")
+#     st.markdown("Click below to view your dashboard in a new tab:")
 
-    # Add a button to open the Looker Studio link
-    dashboard_url = "https://lookerstudio.google.com/reporting/2612a10a-44a2-4b2d-866d-58b4cd13023e/page/bIqhE"
-    st.markdown(f"""
-        <a href="{dashboard_url}" target="_blank">
-            <button style="background-color:#4285F4;color:white;padding:10px 20px;border:none;border-radius:8px;font-size:16px;">
-                🔗 Open Dashboard
-            </button>
-        </a>
-    """, unsafe_allow_html=True)
+#     # # Display an image or icon (optional)
+#     # st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Google_Data_Studio_Logo.svg/512px-Google_Data_Studio_Logo.svg.png", width=100)
+
+#     # Add a button to open the Looker Studio link
+#     dashboard_url = "https://lookerstudio.google.com/reporting/2612a10a-44a2-4b2d-866d-58b4cd13023e/page/bIqhE"
+#     st.markdown(f"""
+#         <a href="{dashboard_url}" target="_blank">
+#             <button style="background-color:#4285F4;color:white;padding:10px 20px;border:none;border-radius:8px;font-size:16px;">
+#                 🔗 Open Dashboard
+#             </button>
+#         </a>
+#     """, unsafe_allow_html=True)

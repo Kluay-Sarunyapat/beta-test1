@@ -17,7 +17,7 @@ from textwrap import dedent
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(layout="wide")
 
-# Optional: กำหนดความกว้างกลาง (ลบ 4 บรรทัดนี้ได้ถ้าไม่ต้องการ)
+# คุมความกว้างหลัก (ลบ 4 บรรทัดนี้ได้ถ้าไม่ต้องการ)
 st.markdown(
     """
     <style>
@@ -44,8 +44,7 @@ valid_users = {
 }
 
 # -------------------- OPTIONS --------------------
-# ปิด Tagline เริ่มต้น (ถ้าอยากมี ให้เปลี่ยนเป็น True)
-SHOW_TAGLINE = False
+SHOW_TAGLINE = False  # ตั้ง True ถ้าอยากมีคำโปรย
 TAGLINE_TEXT = "Smart solutions for budget optimization"
 
 # -------------------- CSS PLACEHOLDER --------------------
@@ -69,10 +68,7 @@ def inject_login_css():
           padding-top: 2vh;
         }
 
-        /* ซ่อนแถบขาวเก่าทั้งหมด (เฉพาะหน้า Login) */
-        .glow, .soft-glow, .top-pill { display:none !important; }
-
-        /* ชั้น Aurora */
+        /* ชั้น Aurora ลอย */
         #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
         #login-aurora:before, #login-aurora:after{
           content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
@@ -89,7 +85,14 @@ def inject_login_css():
         }
         @keyframes floaty{ 0%{ transform: translateY(0) scale(1); } 100%{ transform: translateY(40px) scale(1.04); } }
 
-        /* Login card (glass + gradient border) */
+        /* 1) ซ่อนแถบ/แคปซูลเก่าทาง CSS (ถ้าคลาสตรง) */
+        .glow, .soft-glow, .top-pill { display:none !important; }
+
+        /* 2) หากยังเหลือ block ว่าง/ไม่ใช่ login-scope อันดับต้น ให้ซ่อน (ทำงานในบราวเซอร์รุ่นใหม่) */
+        /* ถ้าเบราว์เซอร์รองรับ :has; จะซ่อนบล็อกแรกที่ไม่ได้มี #login-scope */
+        .block-container > div:first-of-type:not(:has(#login-scope)) { display:none !important; }
+
+        /* Login card */
         .login-card{
           position: relative; z-index:1;
           max-width: 520px; margin: 5vh auto 6vh; padding: 24px 20px 22px;
@@ -106,7 +109,7 @@ def inject_login_css():
         }
         .login-card .inner{ position:relative; z-index:1; }
 
-        /* Tagline แบบบาง (ถ้าต้องการ) */
+        /* Tagline slim */
         .tagline-slim{
           display:inline-flex; align-items:center; gap:10px;
           padding:6px 12px; border-radius:999px;
@@ -189,6 +192,17 @@ def inject_login_css():
 if not st.session_state.authenticated:
     inject_login_css()
 
+    # 3) Fallback overlay (mask) กลบด้านบนเผื่อบาร์ไหนยังรอด
+    st.markdown(
+        """
+        <div id="login-top-mask"
+             style="position:fixed;left:0;right:0;top:0;height:120px;
+                    background:linear-gradient(180deg,#f6f8fc 0%,rgba(246,248,252,0) 100%);
+                    pointer-events:none;z-index:3"></div>
+        """,
+        unsafe_allow_html=True
+    )
+
     # Aurora layer
     st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
 
@@ -197,7 +211,7 @@ if not st.session_state.authenticated:
         card_class = "login-card" + (" shake" if st.session_state.invalid_login else "")
         st.markdown(f"<div id='login-scope' class='{card_class}'><div class='inner'>", unsafe_allow_html=True)
 
-        # Tagline (ปิดไว้แล้ว ถ้าอยากเปิดตั้ง SHOW_TAGLINE=True)
+        # Tagline (ปิดไว้, เปิดได้โดยตั้ง SHOW_TAGLINE=True)
         if SHOW_TAGLINE:
             st.markdown(
                 f"<div class='tagline-slim'><span class='dot'></span>{TAGLINE_TEXT}</div>",

@@ -15,40 +15,86 @@ import altair as alt
 # Set Streamlit to wide layout
 st.set_page_config(layout="wide")
 
+# Keep your original width (no change of size/layout anywhere else)
 st.markdown(
     """
     <style>
-    .appview-container .main {
-        max-width: 1100px !important; /* Adjust width as needed */
-        margin: auto;
-    }
-    .block-container {
-        max-width: 1100px !important; /* Adjust width as needed */
-        margin: auto;
-    }
+    .appview-container .main { max-width: 1100px !important; margin: auto; }
+    .block-container { max-width: 1100px !important; margin: auto; }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Function to set black background with black font for login inputs
-def set_black_background():
-    bg_style = """
-    <style>
-    .stApp {
-        background-color: black;
-        color: white;
-    }
-    .stTextInput input, .stTextArea textarea {
-        color: black;
-        background-color: white;
-    }
-    .stButton>button {
-        color: black;
-    }
-    </style>
-    """
-    st.markdown(bg_style, unsafe_allow_html=True)
+# Minimal, modern effects only for the login area (no box, no global size change)
+def login_styles():
+    st.markdown(
+        """
+        <style>
+        /* Scope styles inside #login-scope only */
+        #login-scope .title{
+          font-size: clamp(28px, 4.2vw, 44px);
+          font-weight: 900; text-align:center; margin: 6px 0 4px 0;
+          background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+          background-size: 200% 100%; animation: titleWave 7s ease-in-out infinite;
+        }
+        #login-scope .subtitle{
+          text-align:center; color:#475569; font-size:14px; margin-bottom: 14px;
+        }
+        /* Small glow under the title (no container box) */
+        #login-scope .soft-glow{
+          height: 10px; margin: 0 auto 14px auto; max-width: 360px; border-radius: 999px;
+          background: radial-gradient(closest-side, rgba(99,102,241,.25), rgba(99,102,241,0));
+          filter: blur(2px);
+        }
+        /* Inputs (only inside login scope) */
+        #login-scope .stTextInput > div > div > input,
+        #login-scope .stPassword > div > div > input{
+          background: #ffffff; color: #0f172a;
+          border: 1px solid rgba(17,24,39,.12);
+          border-radius: 12px; padding: 0.75rem 0.9rem;
+          box-shadow: 0 6px 14px rgba(17,24,39,.05);
+          transition: box-shadow .2s ease, border-color .2s ease, transform .12s ease;
+        }
+        #login-scope .stTextInput > div > div > input:focus,
+        #login-scope .stPassword > div > div > input:focus{
+          border-color: rgba(99,102,241,.45);
+          box-shadow: 0 10px 22px rgba(99,102,241,.18);
+          transform: translateY(-1px);
+          outline: none;
+        }
+        /* Submit button (small gradient + hover) */
+        #login-scope .stButton > button{
+          width: 100%;
+          border-radius: 12px; padding: 0.85rem 1rem;
+          border: 1px solid rgba(17,24,39,.08);
+          color: #ffffff; font-weight: 800; letter-spacing:.2px;
+          background: linear-gradient(135deg, #6366f1, #22d3ee);
+          box-shadow: 0 10px 20px rgba(2,132,199,.18);
+          transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+        }
+        #login-scope .stButton > button:hover{
+          transform: translateY(-2px);
+          box-shadow: 0 16px 28px rgba(2,132,199,.24);
+          filter: brightness(1.03);
+          cursor: pointer;
+        }
+        /* Logo size only (no card/box) */
+        #login-scope .logo{
+          display:block; margin: 6px auto 8px auto; width:120px; height:120px;
+          border-radius:50%; object-fit:cover; border: 3px solid rgba(255,255,255,.85);
+          box-shadow: 0 10px 28px rgba(2,132,199,.15);
+        }
+        @keyframes titleWave{
+          0%{ background-position: 0% 0; }
+          50%{ background-position: 100% 0; }
+          100%{ background-position: 0% 0; }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
 # List of valid usernames and passwords
 valid_users = {
@@ -57,45 +103,133 @@ valid_users = {
     "admin": "adminpass"  # Add more users if needed
 }
 
-# If user is NOT logged in, show login page with black background
+# If user is NOT logged in, show login page
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    set_black_background()  # Set black background
-    
-    # Logo image (Google Drive direct link)
-    # logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
-    logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-    st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
+    login_styles()  # subtle effects only for this area
 
-    # Title with larger and bold text
-    st.markdown("<h1 style='text-align: center; color: white;'>🔒 WELCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
+    # Center layout without changing global sizes
+    left, mid, right = st.columns([1, 2, 1])
+    with mid:
+        logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+        st.markdown(f'<div id="login-scope">', unsafe_allow_html=True)
+        st.markdown(f"<img class='logo' src='{logo_url}' alt='NEST'>", unsafe_allow_html=True)
+        st.markdown("<div class='title'>🔒 WELCOME TO NEST OPTIMIZED TOOL</div>", unsafe_allow_html=True)
+        st.markdown("<div class='subtitle'>Secure access • Smart budget simulation • Influencer optimization</div>", unsafe_allow_html=True)
+        st.markdown("<div class='soft-glow'></div>", unsafe_allow_html=True)
 
-    # Bold and white color for the input labels
-    st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
-    username = st.text_input("", key="username")
-    
-    st.markdown("<h3 style='color: white; font-weight: bold;'>Password</h3>", unsafe_allow_html=True)
-    password = st.text_input("", type="password", key="password")
+        # Inputs
+        username = st.text_input("Username", key="username")
+        password = st.text_input("Password", type="password", key="password")
 
-    # Login button
-    if st.button("Login"):
-        if username in valid_users and password == valid_users[username]:
-            st.session_state.authenticated = True
-            st.success("✅ Login successful!")
-        else:
-            st.error("❌ Incorrect username or password. Please try again.")
-    
+        # Login button
+        if st.button("Login"):
+            if username in valid_users and password == valid_users[username]:
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("❌ Incorrect username or password. Please try again.")
+
+        st.markdown("</div>", unsafe_allow_html=True)
     st.stop()  # Stop execution if not logged in
 
-#function to add logo
+# After login, show main content (unchanged)
 def show_logo(centered=True, width=200):
     logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
     if centered:
         st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='{width}'></div>", unsafe_allow_html=True)
     else:
         st.image(logo_url, width=width)
+
+show_logo(centered=True, width=150)
+st.write("🎉 Welcome! You are now logged in.")
+
+# # Set Streamlit to wide layout
+# st.set_page_config(layout="wide")
+
+# st.markdown(
+#     """
+#     <style>
+#     .appview-container .main {
+#         max-width: 1100px !important; /* Adjust width as needed */
+#         margin: auto;
+#     }
+#     .block-container {
+#         max-width: 1100px !important; /* Adjust width as needed */
+#         margin: auto;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # Function to set black background with black font for login inputs
+# def set_black_background():
+#     bg_style = """
+#     <style>
+#     .stApp {
+#         background-color: black;
+#         color: white;
+#     }
+#     .stTextInput input, .stTextArea textarea {
+#         color: black;
+#         background-color: white;
+#     }
+#     .stButton>button {
+#         color: black;
+#     }
+#     </style>
+#     """
+#     st.markdown(bg_style, unsafe_allow_html=True)
+
+# # List of valid usernames and passwords
+# valid_users = {
+#     "mbcs": "1234",
+#     "mbcs1": "5678",
+#     "admin": "adminpass"  # Add more users if needed
+# }
+
+# # If user is NOT logged in, show login page with black background
+# if 'authenticated' not in st.session_state:
+#     st.session_state.authenticated = False
+
+# if not st.session_state.authenticated:
+#     set_black_background()  # Set black background
+    
+#     # Logo image (Google Drive direct link)
+#     # logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
+#     logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+#     st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
+
+#     # Title with larger and bold text
+#     st.markdown("<h1 style='text-align: center; color: white;'>🔒 WELCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
+
+#     # Bold and white color for the input labels
+#     st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
+#     username = st.text_input("", key="username")
+    
+#     st.markdown("<h3 style='color: white; font-weight: bold;'>Password</h3>", unsafe_allow_html=True)
+#     password = st.text_input("", type="password", key="password")
+
+#     # Login button
+#     if st.button("Login"):
+#         if username in valid_users and password == valid_users[username]:
+#             st.session_state.authenticated = True
+#             st.success("✅ Login successful!")
+#         else:
+#             st.error("❌ Incorrect username or password. Please try again.")
+    
+#     st.stop()  # Stop execution if not logged in
+
+# #function to add logo
+# def show_logo(centered=True, width=200):
+#     logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+#     if centered:
+#         st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='{width}'></div>", unsafe_allow_html=True)
+#     else:
+#         st.image(logo_url, width=width)
 
 # After login, show main content
 show_logo(centered=True, width=150)

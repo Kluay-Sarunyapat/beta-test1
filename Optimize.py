@@ -11,237 +11,95 @@ from scipy.optimize import linprog
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 import altair as alt
 
-# -------------------- PAGE CONFIG --------------------
+
+# Set Streamlit to wide layout
 st.set_page_config(layout="wide")
 
-# -------------------- SESSION STATE --------------------
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+st.markdown(
+    """
+    <style>
+    .appview-container .main {
+        max-width: 1100px !important; /* Adjust width as needed */
+        margin: auto;
+    }
+    .block-container {
+        max-width: 1100px !important; /* Adjust width as needed */
+        margin: auto;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-# -------------------- CREDENTIALS --------------------
+# Function to set black background with black font for login inputs
+def set_black_background():
+    bg_style = """
+    <style>
+    .stApp {
+        background-color: black;
+        color: white;
+    }
+    .stTextInput input, .stTextArea textarea {
+        color: black;
+        background-color: white;
+    }
+    .stButton>button {
+        color: black;
+    }
+    </style>
+    """
+    st.markdown(bg_style, unsafe_allow_html=True)
+
+# List of valid usernames and passwords
 valid_users = {
     "mbcs": "1234",
     "mbcs1": "5678",
-    "admin": "adminpass"
+    "admin": "adminpass"  # Add more users if needed
 }
 
-# -------------------- LOGIN (SCOPED, NO SIDE EFFECT) --------------------
+# If user is NOT logged in, show login page with black background
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
 if not st.session_state.authenticated:
-    # CSS ทั้งหมดถูกจำกัดใน #login-root เท่านั้น
-    st.markdown("""
-    <style>
-      :root{
-        --p1:#6366f1; /* indigo */
-        --p2:#22d3ee; /* cyan */
-        --p3:#a78bfa; /* violet */
-        --ink:#0f172a; /* text */
-        --muted:#475569;
-      }
+    set_black_background()  # Set black background
+    
+    # Logo image (Google Drive direct link)
+    # logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
+    logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+    st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
 
-      /* Wrapper ของหน้า Login เท่านั้น */
-      #login-root { width:100%; }
+    # Title with larger and bold text
+    st.markdown("<h1 style='text-align: center; color: white;'>🔒 WELCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
 
-      /* Card + gradient border (ไม่ยุ่งกับ container หลักของแอป) */
-      #login-root .card-shell{
-        max-width: 520px; margin: 5vh auto 4vh auto; padding: 1px; border-radius: 18px;
-        background: conic-gradient(from 0deg, var(--p1), var(--p2), var(--p3), var(--p1));
-        box-shadow: 0 18px 50px rgba(2,132,199,.12);
-      }
-      #login-root .card{
-        position: relative; overflow: hidden;
-        border-radius: 17px; background: #ffffff;
-        border: 1px solid rgba(17,24,39,.08);
-        padding: 26px 22px 20px;
-      }
-      #login-root .shine{
-        position:absolute; inset:1px; border-radius:16px; pointer-events:none;
-        background: linear-gradient(120deg, rgba(255,255,255,.35), transparent 40%, transparent 60%, rgba(255,255,255,.35));
-        background-size: 220% 100%; animation: shine 4s linear infinite;
-      }
+    # Bold and white color for the input labels
+    st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
+    username = st.text_input("", key="username")
+    
+    st.markdown("<h3 style='color: white; font-weight: bold;'>Password</h3>", unsafe_allow_html=True)
+    password = st.text_input("", type="password", key="password")
 
-      #login-root .title{
-        font-size: clamp(26px, 4.2vw, 40px); font-weight: 900; text-align:center; margin: 6px 0 2px 0;
-        background: linear-gradient(90deg, #0f172a, #1f2937, #0f172a);
-        -webkit-background-clip: text; background-clip: text; color: transparent;
-      }
-      #login-root .subtitle{
-        text-align:center; color: var(--muted); font-size: 14px; margin-bottom: 14px;
-      }
-
-      /* โลโก้วงแหวน (อยู่ใน login เท่านั้น) */
-      #login-root .logo-ring{
-        width:120px; height:120px; margin: 0 auto 10px auto; border-radius:50%;
-        position:relative; overflow: visible; box-shadow: 0 12px 50px rgba(2,132,199,.18);
-      }
-      #login-root .logo-ring:before{
-        content:""; position:absolute; inset:-6px; border-radius:50%;
-        background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
-        filter: blur(8px); opacity:.45; animation: spin 7s linear infinite; z-index:0;
-      }
-      #login-root .logo-ring img{
-        position:relative; z-index:1; width:100%; height:100%; object-fit: cover; border-radius:50%;
-        border: 3px solid rgba(255,255,255,.85); background: #fff;
-      }
-
-      /* Inputs และปุ่ม: จำกัดเฉพาะใน #login-root */
-      #login-root .stTextInput > div > div > input,
-      #login-root .stPassword > div > div > input{
-        background: #ffffff; color: var(--ink);
-        border: 1px solid rgba(17,24,39,.12);
-        border-radius: 12px; padding: 0.75rem 0.9rem;
-        box-shadow: 0 8px 20px rgba(17,24,39,.06);
-        transition: box-shadow .2s ease, transform .12s ease, border-color .2s ease;
-      }
-      #login-root .stTextInput > div > div > input:focus,
-      #login-root .stPassword > div > div > input:focus{
-        border-color: rgba(99,102,241,.45);
-        box-shadow: 0 10px 26px rgba(99,102,241,.18);
-        transform: translateY(-1px);
-        outline: none;
-      }
-
-      #login-root button[kind="formSubmit"]{
-        width: 100%; border-radius: 12px; padding: 0.9rem 1rem;
-        border: 1px solid rgba(17,24,39,.08); color: #ffffff; font-weight: 800;
-        background: linear-gradient(135deg, var(--p1), var(--p2));
-        box-shadow: 0 10px 22px rgba(2,132,199,.20), inset 0 0 12px rgba(255,255,255,.12);
-        transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
-        margin-top: 10px;
-      }
-      #login-root button[kind="formSubmit"]:hover{
-        transform: translateY(-2px) scale(1.01);
-        box-shadow: 0 16px 30px rgba(2,132,199,.25);
-        filter: brightness(1.03);
-      }
-
-      @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
-      @keyframes spin{ to{ transform: rotate(360deg);} }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # UI (ใช้คอมโพเนนต์ Streamlit ปกติทั้งหมด)
-    st.markdown('<div id="login-root">', unsafe_allow_html=True)
-
-    st.markdown('<div class="card-shell"><div class="card"><div class="shine"></div>', unsafe_allow_html=True)
-
-    st.markdown(
-        """
-        <div class="logo-ring"><img src="https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg" alt="NEST"></div>
-        <div class="title">🔒 WELCOME TO NEST OPTIMIZED TOOL</div>
-        <div class="subtitle">Secure access • Smart budget simulation • Influencer optimization</div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    with st.form("login_form", clear_on_submit=False):
-        username = st.text_input("Username", key="login_username")
-        password = st.text_input("Password", type="password", key="login_password")
-        submit = st.form_submit_button("Login", use_container_width=True)
-
-    st.markdown('</div></div>', unsafe_allow_html=True)  # close card + shell
-    st.markdown('</div>', unsafe_allow_html=True)        # close #login-root
-
-    if submit:
+    # Login button
+    if st.button("Login"):
         if username in valid_users and password == valid_users[username]:
             st.session_state.authenticated = True
-            st.toast("✅ Login successful", icon="✨")
-            st.rerun()
+            st.success("✅ Login successful!")
         else:
             st.error("❌ Incorrect username or password. Please try again.")
-    st.stop()
-
-# -------------------- AFTER LOGIN --------------------
-# มาถึงตรงนี้แล้ว ไม่มี CSS ใดๆ ที่แตะโครงสร้างหลักหรือขนาดหน้าอื่น
-st.success("🎉 Welcome! You are now logged in.")
-
-# # Set Streamlit to wide layout
-# st.set_page_config(layout="wide")
-
-# st.markdown(
-#     """
-#     <style>
-#     .appview-container .main {
-#         max-width: 1100px !important; /* Adjust width as needed */
-#         margin: auto;
-#     }
-#     .block-container {
-#         max-width: 1100px !important; /* Adjust width as needed */
-#         margin: auto;
-#     }
-#     </style>
-#     """,
-#     unsafe_allow_html=True
-# )
-
-# # Function to set black background with black font for login inputs
-# def set_black_background():
-#     bg_style = """
-#     <style>
-#     .stApp {
-#         background-color: black;
-#         color: white;
-#     }
-#     .stTextInput input, .stTextArea textarea {
-#         color: black;
-#         background-color: white;
-#     }
-#     .stButton>button {
-#         color: black;
-#     }
-#     </style>
-#     """
-#     st.markdown(bg_style, unsafe_allow_html=True)
-
-# # List of valid usernames and passwords
-# valid_users = {
-#     "mbcs": "1234",
-#     "mbcs1": "5678",
-#     "admin": "adminpass"  # Add more users if needed
-# }
-
-# # If user is NOT logged in, show login page with black background
-# if 'authenticated' not in st.session_state:
-#     st.session_state.authenticated = False
-
-# if not st.session_state.authenticated:
-#     set_black_background()  # Set black background
     
-#     # Logo image (Google Drive direct link)
-#     # logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
-#     logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-#     st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
+    st.stop()  # Stop execution if not logged in
 
-#     # Title with larger and bold text
-#     st.markdown("<h1 style='text-align: center; color: white;'>🔒 WELCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
+#function to add logo
+def show_logo(centered=True, width=200):
+    logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+    if centered:
+        st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='{width}'></div>", unsafe_allow_html=True)
+    else:
+        st.image(logo_url, width=width)
 
-#     # Bold and white color for the input labels
-#     st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
-#     username = st.text_input("", key="username")
-    
-#     st.markdown("<h3 style='color: white; font-weight: bold;'>Password</h3>", unsafe_allow_html=True)
-#     password = st.text_input("", type="password", key="password")
-
-#     # Login button
-#     if st.button("Login"):
-#         if username in valid_users and password == valid_users[username]:
-#             st.session_state.authenticated = True
-#             st.success("✅ Login successful!")
-#         else:
-#             st.error("❌ Incorrect username or password. Please try again.")
-    
-#     st.stop()  # Stop execution if not logged in
-
-# #function to add logo
-# def show_logo(centered=True, width=200):
-#     logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-#     if centered:
-#         st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='{width}'></div>", unsafe_allow_html=True)
-#     else:
-#         st.image(logo_url, width=width)
-
-# # After login, show main content
-# show_logo(centered=True, width=150)
-# st.write("🎉 Welcome! You are now logged in.")
+# After login, show main content
+show_logo(centered=True, width=150)
+st.write("🎉 Welcome! You are now logged in.")
 
 # ---------- SESSION STATE FOR DATA SHARING ----------
 if 'inputs' not in st.session_state:

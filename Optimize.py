@@ -15,7 +15,7 @@ from textwrap import dedent
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(layout="wide")
 
-# Optional width control (remove if not needed)
+# Optional width control
 st.markdown(
     """
     <style>
@@ -42,10 +42,10 @@ valid_users = {
 }
 
 # -------------------- OPTIONS --------------------
-SHOW_TAGLINE = False  # small chip under logo
+SHOW_TAGLINE = False
 TAGLINE_TEXT = "Smart solutions for budget optimization"
 
-SHOW_TICKER = True    # marquee at the top
+SHOW_TICKER = True
 TICKER_TEXT = "MBCS AI Optimization Tool  •  Smart budget simulation  •  Influencer optimization"
 
 # -------------------- CSS PLACEHOLDER --------------------
@@ -59,8 +59,7 @@ def inject_login_css():
           --p1:#6366f1; --p2:#22d3ee; --p3:#a78bfa; --p4:#10b981;
           --ink:#0f172a; --muted:#475569;
         }
-
-        /* BG Aurora (only while not authenticated) */
+        /* BG Aurora */
         [data-testid="stAppViewContainer"]{
           background:
             radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.14), transparent 60%),
@@ -68,12 +67,10 @@ def inject_login_css():
             linear-gradient(180deg, #f6f8fc 0%, #eef2ff 100%);
           padding-top: 2vh;
         }
-
-        /* Hide any legacy top bars on login page */
+        /* ซ่อนแถบเก่าทั้งหมด */
         .glow, .soft-glow, .top-pill { display:none !important; }
-        .block-container > div:first-of-type:not(:has(#login-scope)) { display:none !important; }
 
-        /* Aurora float */
+        /* Aurora ลอยด้านหลัง */
         #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
         #login-aurora:before, #login-aurora:after{
           content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
@@ -90,46 +87,7 @@ def inject_login_css():
         }
         @keyframes floaty{ 0%{ transform: translateY(0) scale(1); } 100%{ transform: translateY(40px) scale(1.04); } }
 
-        /* Mask the very top gradient area (in case any unknown element remains) */
-        #login-top-mask{
-          position:fixed; left:0; right:0; top:0; height:120px;
-          background:linear-gradient(180deg,#f6f8fc 0%,rgba(246,248,252,0) 100%);
-          pointer-events:none; z-index:3;
-        }
-
-        /* ========== TOP TICKER (guaranteed visible) ========== */
-        #login-ticker{
-          position:fixed; left:0; right:0; top:14px;
-          display:flex; justify-content:center; z-index:9999;
-          pointer-events:none; /* never blocks clicks */
-        }
-        #login-ticker .pill{
-          width:min(92vw, 760px);
-          border-radius:999px; padding:10px 14px;
-          background: rgba(255,255,255,.92);
-          border: 1px solid rgba(17,24,39,.12);
-          box-shadow: 0 12px 28px rgba(17,24,39,.12);
-          overflow:hidden; position:relative;
-        }
-        #login-ticker .pill:after{
-          content:""; position:absolute; inset:0;
-          background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
-          background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35;
-        }
-        /* track is 2x width and scrolls left */
-        #login-ticker .track{
-          display:inline-flex; gap:48px; white-space:nowrap; align-items:center;
-          will-change: transform;
-          animation: tickerSlide 16s linear infinite;
-        }
-        #login-ticker .msg{
-          color:#0f172a; font-weight:900; letter-spacing:.25px; font-size:16px;
-          text-shadow: 0 1px 0 rgba(255,255,255,.6);
-        }
-        @keyframes tickerSlide{ 0%{ transform: translateX(0);} 100%{ transform: translateX(-50%);} }
-        @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
-
-        /* Login card */
+        /* Login card (glass) */
         .login-card{
           position: relative; z-index:1;
           max-width: 520px; margin: 5vh auto 6vh; padding: 24px 20px 22px;
@@ -146,6 +104,39 @@ def inject_login_css():
         }
         .login-card .inner{ position:relative; z-index:1; }
 
+        /* Ticker (inline แบบแสดงแน่นอน) */
+        .ticker{
+          width:min(92vw, 760px);
+          margin: 6px auto 8px auto;
+          border-radius:999px;
+          background: rgba(255,255,255,.92);
+          border: 1px solid rgba(17,24,39,.12);
+          box-shadow: 0 12px 28px rgba(17,24,39,.12);
+          overflow: hidden;
+          position: relative;
+        }
+        .ticker:after{
+          content:""; position:absolute; inset:0;
+          background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
+          background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35; pointer-events:none;
+        }
+        .ticker-track{
+          white-space: nowrap;
+          display: inline-block;
+          padding-left: 0;
+          animation: ticker 16s linear infinite;
+          will-change: transform;
+        }
+        .ticker-item{
+          display: inline-block; margin: 0 40px;
+          color:#0f172a; font-weight:900; letter-spacing:.25px; font-size:16px;
+          text-shadow: 0 1px 0 rgba(255,255,255,.6);
+        }
+        @keyframes ticker{ 0%{ transform: translateX(0);} 100%{ transform: translateX(-50%);} }
+        @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
+        @keyframes spin{ to{ transform: rotate(360deg);} }
+
+        /* Tagline slim */
         .tagline-slim{
           display:inline-flex; align-items:center; gap:10px;
           padding:6px 12px; border-radius:999px;
@@ -158,9 +149,14 @@ def inject_login_css():
         }
         .tagline-slim .dot{ width:8px; height:8px; border-radius:50%; background: var(--p2); box-shadow:0 0 10px var(--p2); }
 
+        /* Logo + ring */
         .logo-wrap{ width:120px; height:120px; margin: 6px auto 12px auto; position:relative; }
-        .logo-ring{ position:absolute; inset:-8px; border-radius:50%; background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1)); filter: blur(8px); opacity:.55; animation: spin 8s linear infinite; }
-        .logo{ position:relative; width:120px; height:120px; border-radius:50%; object-fit: cover; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff; }
+        .logo-ring{ position:absolute; inset:-8px; border-radius:50%;
+                    background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
+                    filter: blur(8px); opacity:.55; animation: spin 8s linear infinite; }
+        .logo{ position:relative; width:120px; height:120px; border-radius:50%;
+               object-fit: cover; border: 3px solid rgba(255,255,255,.9);
+               box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff; }
 
         .title{ font-size: clamp(28px, 4.2vw, 44px); font-weight: 900; text-align:center; margin: 6px 0 6px 0;
                 background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
@@ -201,7 +197,6 @@ def inject_login_css():
         }
 
         @keyframes wave{ 0%{background-position:0 0} 50%{background-position:100% 0} 100%{background-position:0 0} }
-        @keyframes spin{ to{ transform: rotate(360deg);} }
         </style>
         """,
         unsafe_allow_html=True
@@ -211,29 +206,29 @@ def inject_login_css():
 if not st.session_state.authenticated:
     inject_login_css()
 
-    # Mask + Aurora
-    st.markdown("<div id='login-top-mask'></div>", unsafe_allow_html=True)
+    # Aurora
     st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
 
-    # Ticker (two copies of message to make infinite scroll)
-    if SHOW_TICKER:
-        st.markdown(
-            f"""
-            <div id="login-ticker">
-              <div class="pill">
-                <div class="track">
-                  <span class="msg">{TICKER_TEXT}</span>
-                  <span class="msg" aria-hidden="true">{TICKER_TEXT}</span>
-                </div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-    # Centered login card
     left, mid, right = st.columns([1, 2, 1])
     with mid:
+
+        # Ticker แสดงแน่นอน (inline)
+        if SHOW_TICKER:
+            st.markdown(
+                f"""
+                <div class="ticker">
+                  <div class="ticker-track">
+                    <span class="ticker-item">{TICKER_TEXT}</span>
+                    <span class="ticker-item" aria-hidden="true">{TICKER_TEXT}</span>
+                    <span class="ticker-item" aria-hidden="true">{TICKER_TEXT}</span>
+                    <span class="ticker-item" aria-hidden="true">{TICKER_TEXT}</span>
+                  </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        # Card
         st.markdown("<div id='login-scope' class='login-card'><div class='inner'>", unsafe_allow_html=True)
 
         if SHOW_TAGLINE:
@@ -262,7 +257,7 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.session_state.invalid_login = False
                 st.toast("✅ Login successful", icon="✨")
-                login_css.empty()   # remove CSS after login so it won't affect other pages
+                login_css.empty()  # remove CSS after login
                 st.rerun()
             else:
                 st.session_state.invalid_login = True

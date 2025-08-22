@@ -1747,21 +1747,186 @@ if st.session_state.page == "Influencer Performance":
     df = load_google_sheets(sheet_url_raw)
     df_coff = load_google_sheets(sheet_url_off)
     df_full = load_google_sheets(sheet_url_full)
+
+    # ==========================
+    # Guard: need df_full provided by your pipeline
+    # ==========================
+    if "df_full" in st.session_state:
+        df_full = st.session_state["df_full"]
+    elif "df_full" in globals():
+        df_full = globals()["df_full"]
+    else:
+        st.error("df_full not found. Please load a DataFrame named 'df_full' with columns: kol_name, platform, tier, category, followers, cost, impression, engagement, view, share")
+        st.stop()
     
-    st.title("💰 Influencer Performance")
+    # ==========================
+    # Effect CSS + Renderer (scoped)
+    # ==========================
+    st.markdown(dedent("""
+    <style>
+    #kol-res table{width:100%;border-collapse:separate;border-spacing:0 6px;margin:6px 0;}
+    #kol-res thead th{
+      padding:10px 10px; color:#0f172a; font-weight:900; text-align:left;
+      background: linear-gradient(90deg,#f7faff,#eef2ff,#f7faff);
+      background-size:200% 100%; animation: shine 7s linear infinite;
+      border-top-left-radius:12px; border-top-right-radius:12px; border-bottom:1px solid #eaeef5;
+    }
+    #kol-res tbody td, #kol-res tbody th{
+      background:#ffffff; border:1px solid #eaeef5; padding:8px 10px; color:#334155;
+    }
+    #kol-res tbody th{ width:16%; font-weight:800; border-right:none; border-radius:10px 0 0 10px; }
+    #kol-res tbody td{ border-left:none; border-radius:0 10px 10px 0; position:relative; }
+    #kol-res tbody tr:hover td, #kol-res tbody tr:hover th{ background:#f8fbff; }
     
-    # --------------------- Tier Selection ---------------------
+    #kol-res .cell{ position:relative; padding:4px 6px; }
+    #kol-res .cell .bar{
+      position:absolute; left:6px; top:50%; height:70%; transform:translateY(-50%);
+      width: calc(var(--w, 0) * 1%); border-radius:10px;
+      background: linear-gradient(90deg, var(--c), rgba(255,255,255,0));
+      opacity:.22; overflow:hidden; filter:saturate(1.05);
+    }
+    #kol-res .cell .bar::after{
+      content:""; position:absolute; inset:0;
+      background: linear-gradient(120deg, rgba(255,255,255,.75), rgba(255,255,255,0) 35%, rgba(255,255,255,0) 65%, rgba(255,255,255,.75));
+      background-size:200% 100%; animation: shine 3.2s linear infinite; opacity:.45;
+    }
+    #kol-res .cell .val{ position:relative; z-index:1; font-weight:700; }
+    #kol-res .best .val{ color: var(--c); text-shadow:0 0 10px var(--c); }
+    
+    #kol-res .total th, #kol-res .total td{
+      background: linear-gradient(90deg, #e8f7ff, #f7fff5);
+      border-color:#dbe7fb;
+    }
+    @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
+    </style>
+    """), unsafe_allow_html=True)
+    
+    def _fmt_num(x, dec=0):
+        try:
+            xv = float(x)
+            if dec <= 0: return f"{xv:,.0f}"
+            return f"{xv:,.{dec}f}"
+        except Exception:
+            return "-" if x in [None, "", "nan", "NaN"] else str(x)
+    
+    def _metric_color(col):
+        cmap = {
+            "cost": "#06b6d4",        # cyan
+            "impression": "#60a5fa",  # blue
+            "engagement": "#22c55e",  # green
+            "view": "#a78bfa",        # violet
+            "share": "#f59e0b",       # amber
+            "score": "#ef4444",       # red
+        }
+        return cmap.get(col.lower(), "#94a3b8")
+    
+    def render_kol_result(df_in: pd.DataFrame, kpi_col: str, title: str = None, show_chart: bool = True):
+        """
+        Scoped renderer with shine + bar-in-cell. Use instead of st.dataframe for results.
+        df_in columns expected: category, kol_name, tier, platform, followers, cost, impression, engagement, view, share, (score optional)
+        kpi_col: 'impression'|'engagement'|'view'|'share' (for chart and score if needed)
+        """
+        if df_in is None or df_in.empty:
+            st.info("No data to display.")
+            return
+    
+        df = df_in.copy()
+    
+        # Ensure score exists
+        if 'score' not in df.columns and all(c in df.columns for c in ['cost', kpi_col]):
+            with pd.option_context('mode.use_inf_as_na', True):
+                num_kpi = pd.to_numeric(df[kpi_col], errors='coerce')
+                num_cost = pd.to_numeric(df['cost'], errors='coerce')
+                df['score'] = num_kpi / num_cost
+    
+        display_cols = [c for c in ['category','kol_name','tier','platform','followers','cost','impression','engagement','view','share','score'] if c in df.columns]
+        num_cols = [c for c in ['cost','impression','engagement','view','share','score'] if c in df.columns]
+    
+        is_total = df.get('kol_name', pd.Series('', index=df.index)).astype(str).str.upper().eq('TOTAL')
+        base_vals = df.loc[~is_total, num_cols] if (~is_total).any() else df[num_cols]
+    
+        max_map = {}
+        for c in num_cols:
+            try:
+                max_map[c] = float(pd.to_numeric(base_vals[c], errors='coerce').max())
+            except Exception:
+                max_map[c] = None
+    
+        if title:
+            st.markdown(f"### {title}")
+    
+        pretty = {
+            'category':'Category', 'kol_name':'KOL', 'tier':'Tier', 'platform':'Platform', 'followers':'Followers',
+            'cost':'Cost', 'impression':'Impressions', 'engagement':'Engagements', 'view':'Views', 'share':'Shares', 'score':'Score'
+        }
+    
+        html = ["<div id='kol-res'><table><thead><tr>"]
+        for h in display_cols: html.append(f"<th>{pretty.get(h,h)}</th>")
+        html.append("</tr></thead><tbody>")
+    
+        for idx, row in df.iterrows():
+            tr_class = "total" if (('kol_name' in row) and str(row['kol_name']).upper()=='TOTAL') else ""
+            html.append(f"<tr class='{tr_class}'>")
+            for h in display_cols:
+                if h not in num_cols:
+                    if h == 'followers':
+                        html.append(f"<th>{_fmt_num(row[h], 0)}</th>")
+                    elif h in ['category','kol_name','tier','platform']:
+                        html.append(f"<th>{str(row[h]) if pd.notna(row[h]) else '-'}</th>")
+                    else:
+                        html.append(f"<td>{str(row[h])}</td>")
+                else:
+                    try:
+                        vnum = float(row[h])
+                    except Exception:
+                        vnum = None
+                    m = max_map.get(h) or 0.0
+                    pct = 0.0 if not m or m == 0 else max(0.0, min(100.0, (vnum / m) * 100.0))
+                    is_best = (vnum is not None and m and abs(vnum - m) < 1e-9 and (not is_total.iloc[idx] if idx < len(is_total) else True))
+                    cell_class = "best" if is_best else ""
+                    color = _metric_color(h)
+                    dec = 2 if h == 'score' else 0
+                    html.append(
+                        f"<td><div class='cell {cell_class}' style='--w:{pct:.1f};--c:{color};'>"
+                        f"<div class='bar'></div><span class='val'>{_fmt_num(vnum, dec)}</span></div></td>"
+                    )
+            html.append("</tr>")
+        html.append("</tbody></table></div>")
+        st.markdown("".join(html), unsafe_allow_html=True)
+    
+        # Simple chart per scenario (optional)
+        if show_chart and kpi_col in df.columns:
+            chart_df = df.loc[~is_total].copy()
+            if not chart_df.empty:
+                chart_df['KOL'] = chart_df['kol_name'].astype(str) + chart_df['platform'].apply(lambda x: f" ({x})" if pd.notna(x) and str(x)!='' else "")
+                kpi_title = pretty.get(kpi_col, kpi_col.title())
+                st.altair_chart(
+                    alt.Chart(chart_df)
+                    .mark_bar(cornerRadius=5)
+                    .encode(
+                        x=alt.X('KOL:N', sort='-y', axis=alt.Axis(labelLimit=240, title=None)),
+                        y=alt.Y(f'{kpi_col}:Q', title=kpi_title),
+                        color=alt.Color(f'{kpi_col}:Q', scale=alt.Scale(scheme='tealblues'), legend=None),
+                        tooltip=[alt.Tooltip('kol_name:N', title='KOL'),
+                                 alt.Tooltip('platform:N', title='Platform'),
+                                 alt.Tooltip(f'{kpi_col}:Q', title=kpi_title, format=',')]
+                    ).properties(height=300),
+                    use_container_width=True
+                )
+    
+    # ==========================
+    # Filters (Tier / Platform / Category) — keep logic and UX
+    # ==========================
+    st.header("🎯 KOL Selection Optimizer")
+    
+    # Tier selection
     all_tiers = ['All', 'VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano']
-    
     if 'tier_selection' not in st.session_state:
         st.session_state.tier_selection = ['All']
     
     def update_tiers():
         selected = st.session_state['tier_multiselect']
-        if 'All' in selected:
-            st.session_state.tier_selection = ['All']
-        else:
-            st.session_state.tier_selection = selected
+        st.session_state.tier_selection = ['All'] if 'All' in selected else selected
     
     tier_selection = st.multiselect(
         "🏷️ Tier Selection",
@@ -1770,20 +1935,13 @@ if st.session_state.page == "Influencer Performance":
         key='tier_multiselect',
         on_change=update_tiers
     )
+    filtered_tiers = None if 'All' in st.session_state.tier_selection else [t.lower() for t in st.session_state.tier_selection]
     
-    if 'All' in st.session_state.tier_selection:
-        filtered_tiers = None
-    else:
-        filtered_tiers = [t.lower() for t in st.session_state.tier_selection]
-    
-    # --------------------- Platform Selection ---------------------
+    # Platform selection
     platform_column_exists = 'platform' in df_full.columns
     if platform_column_exists:
         platforms_raw = (
-            df_full['platform']
-            .astype(str)
-            .str.strip()
-            .replace({'nan': '', 'None': '', 'NaN': ''})
+            df_full['platform'].astype(str).str.strip().replace({'nan':'','None':'','NaN':''})
         )
         unique_platforms = sorted([p for p in platforms_raw.unique().tolist() if p])
         all_platforms = ['All'] + unique_platforms
@@ -1795,10 +1953,7 @@ if st.session_state.page == "Influencer Performance":
     
     def update_platforms():
         selected = st.session_state['platform_multiselect']
-        if 'All' in selected:
-            st.session_state.platform_selection = ['All']
-        else:
-            st.session_state.platform_selection = selected
+        st.session_state.platform_selection = ['All'] if 'All' in selected else selected
     
     if platform_column_exists:
         platform_selection = st.multiselect(
@@ -1812,19 +1967,13 @@ if st.session_state.page == "Influencer Performance":
         st.info("No 'platform' column found; platform filtering is disabled.")
         platform_selection = ['All']
     
-    if 'All' in st.session_state.platform_selection or not platform_column_exists:
-        filtered_platforms = None
-    else:
-        filtered_platforms = [p.lower() for p in st.session_state.platform_selection]
+    filtered_platforms = None if ('All' in st.session_state.platform_selection or not platform_column_exists) else [p.lower() for p in st.session_state.platform_selection]
     
-    # --------------------- Category Selection (new) ---------------------
+    # Category selection
     category_column_exists = 'category' in df_full.columns
     if category_column_exists:
         categories_raw = (
-            df_full['category']
-            .astype(str)
-            .str.strip()
-            .replace({'nan': '', 'None': '', 'NaN': ''})
+            df_full['category'].astype(str).str.strip().replace({'nan':'','None':'','NaN':''})
         )
         unique_categories = sorted([c for c in categories_raw.unique().tolist() if c])
         all_categories = ['All'] + unique_categories
@@ -1836,10 +1985,7 @@ if st.session_state.page == "Influencer Performance":
     
     def update_categories():
         selected = st.session_state['category_multiselect']
-        if 'All' in selected:
-            st.session_state.category_selection = ['All']
-        else:
-            st.session_state.category_selection = selected
+        st.session_state.category_selection = ['All'] if 'All' in selected else selected
     
     if category_column_exists:
         category_selection = st.multiselect(
@@ -1853,12 +1999,11 @@ if st.session_state.page == "Influencer Performance":
         st.info("No 'category' column found; category filtering is disabled.")
         category_selection = ['All']
     
-    if 'All' in st.session_state.category_selection or not category_column_exists:
-        filtered_categories = None
-    else:
-        filtered_categories = [c.lower() for c in st.session_state.category_selection]
+    filtered_categories = None if ('All' in st.session_state.category_selection or not category_column_exists) else [c.lower() for c in st.session_state.category_selection]
     
-    # --------------------- KPI Mapping ---------------------
+    # ==========================
+    # KPI Mapping & Helpers
+    # ==========================
     kpi_map = {
         'total_impression': 'impression',
         'total_engagement': 'engagement',
@@ -1866,106 +2011,89 @@ if st.session_state.page == "Influencer Performance":
         'total_share': 'share',
     }
     
-    # --------------------- Helper Functions ---------------------
     def prepare_df(df_in: pd.DataFrame, kpi_col: str,
                    allowed_tiers=None, allowed_platforms=None, allowed_categories=None) -> pd.DataFrame:
         df_work = df_in.copy()
     
-        # Ensure required columns exist
-        for col in ['cost', 'impression', 'engagement', 'view', 'share', 'tier', 'platform', 'category']:
+        # Ensure required columns
+        for col in ['cost', 'impression', 'engagement', 'view', 'share', 'tier', 'platform', 'category', 'kol_name', 'followers']:
             if col not in df_work.columns:
                 df_work[col] = pd.NA
     
-        # Tier filter
+        # Filters
         if allowed_tiers is not None:
             df_work = df_work[df_work['tier'].astype(str).str.lower().isin(allowed_tiers)]
-    
-        # Platform filter
         if allowed_platforms is not None:
             df_work = df_work[df_work['platform'].astype(str).str.lower().isin(allowed_platforms)]
-    
-        # Category filter
         if allowed_categories is not None:
             df_work = df_work[df_work['category'].astype(str).str.lower().isin(allowed_categories)]
     
-        # Coerce numeric cols
-        for col in ['cost', 'impression', 'engagement', 'view', 'share']:
+        # Numeric coercion
+        for col in ['cost', 'impression', 'engagement', 'view', 'share', 'followers']:
             df_work[col] = pd.to_numeric(df_work[col], errors='coerce')
     
-        # Valid rows for cost and KPI
+        # Valid rows
         df_work = df_work[df_work['cost'].notna() & (df_work['cost'] > 0)]
         df_work = df_work[df_work[kpi_col].notna()]
         df_work = df_work.reset_index(drop=True)
-    
         return df_work
     
     def summarize_selection(df_sel: pd.DataFrame) -> pd.DataFrame:
         if df_sel is None or df_sel.empty:
             return pd.DataFrame()
         summary = {
+            'category': '',
             'kol_name': 'TOTAL' if 'kol_name' in df_sel.columns else '',
+            'tier': '',
             'platform': '',
+            'followers': '' if 'followers' in df_sel.columns else '',
             'cost': df_sel['cost'].sum() if 'cost' in df_sel else 0,
             'impression': df_sel['impression'].sum() if 'impression' in df_sel else 0,
             'engagement': df_sel['engagement'].sum() if 'engagement' in df_sel else 0,
             'view': df_sel['view'].sum() if 'view' in df_sel else 0,
             'share': df_sel['share'].sum() if 'share' in df_sel else 0,
-            'followers': '' if 'followers' in df_sel.columns else '',
-            'tier': '',
             'score': ''
         }
         return pd.concat([df_sel, pd.DataFrame([summary])], ignore_index=True)
     
-    # --------------------- Greedy (single) ---------------------
+    # Greedy
     def select_kols_greedy(df_in, budget, k, kpi_col,
                            allowed_tiers=None, allowed_platforms=None, allowed_categories=None):
         df_work = prepare_df(df_in, kpi_col, allowed_tiers, allowed_platforms, allowed_categories)
         if df_work.empty:
             return pd.DataFrame()
-    
         df_work['score'] = df_work[kpi_col] / df_work['cost']
         df_work = df_work.sort_values('score', ascending=False).reset_index(drop=True)
-    
         selected_rows = []
         total_cost = 0.0
-    
         for _, row in df_work.iterrows():
             if len(selected_rows) >= k:
                 break
             if total_cost + row['cost'] <= budget:
                 selected_rows.append(row)
                 total_cost += row['cost']
-    
         result = pd.DataFrame(selected_rows)
         return summarize_selection(result)
     
-    # --------------------- Greedy (multiple portfolios for same K) ---------------------
     def greedy_multiple_scenarios(df_in, budget, k, kpi_col,
                                   allowed_tiers=None, allowed_platforms=None, allowed_categories=None,
                                   num_scenarios=5):
         df_base = prepare_df(df_in, kpi_col, allowed_tiers, allowed_platforms, allowed_categories)
         if df_base.empty:
             return []
-    
         scenarios = []
         excluded_idx = set()
-    
-        for s in range(num_scenarios):
+        for _ in range(num_scenarios):
             work = df_base.copy()
             if excluded_idx:
                 work = work[~work.index.isin(excluded_idx)].reset_index(drop=True)
                 if work.empty:
                     break
-    
-            # Compute score and sort
             work['score'] = work[kpi_col] / work['cost']
             work = work.sort_values('score', ascending=False)
-    
-            # Greedy selection on 'work'
             selected_indices = []
             selected_rows = []
             total_cost = 0.0
-    
             for i, row in work.iterrows():
                 if len(selected_rows) >= k:
                     break
@@ -1973,20 +2101,16 @@ if st.session_state.page == "Influencer Performance":
                     selected_rows.append(row)
                     selected_indices.append(i)
                     total_cost += row['cost']
-    
             if not selected_rows:
                 break
-    
             scenario_df = summarize_selection(pd.DataFrame(selected_rows))
             scenarios.append(scenario_df)
-    
-            # Diversify: exclude the highest-score item among the chosen in this scenario
             work_chosen = work.loc[selected_indices].copy().sort_values('score', ascending=False)
             if not work_chosen.empty:
                 key_cols = [c for c in ['kol_name', 'platform', 'cost'] if c in df_base.columns]
                 if key_cols:
                     key_vals = tuple(work_chosen.iloc[0][key_cols].tolist())
-                    mask = pd.Series([True] * len(df_base))
+                    mask = pd.Series(True, index=df_base.index)
                     for c, v in zip(key_cols, key_vals):
                         mask &= (df_base[c] == v)
                     idx_to_exclude = df_base[mask].index.tolist()
@@ -1994,122 +2118,97 @@ if st.session_state.page == "Influencer Performance":
                         excluded_idx.add(idx_to_exclude[0])
                 else:
                     excluded_idx.add(work_chosen.index[0])
-    
         return scenarios
     
-    # --------------------- LP (single) ---------------------
+    # LP single/multiple (optional if pulp installed)
     def optimize_kols_lp_single(df_in, budget, k, kpi_col,
                                 allowed_tiers=None, allowed_platforms=None, allowed_categories=None,
                                 exact_k=False):
         try:
             from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary, LpStatus
         except Exception:
-            st.error("PuLP not installed. Please install with: pip install pulp")
+            st.error("PuLP not installed. Please: pip install pulp")
             return pd.DataFrame()
-    
         df_work = prepare_df(df_in, kpi_col, allowed_tiers, allowed_platforms, allowed_categories)
         if df_work.empty:
             return pd.DataFrame()
-    
-        # Cap candidates for speed
         if len(df_work) > 200:
             df_work = df_work.nlargest(200, kpi_col).reset_index(drop=True)
-    
         n = len(df_work)
         prob = LpProblem("KOL_Selection", LpMaximize)
         x = [LpVariable(f"x_{i}", cat=LpBinary) for i in range(n)]
-    
         prob += lpSum(df_work.loc[i, kpi_col] * x[i] for i in range(n))
         prob += lpSum(df_work.loc[i, 'cost'] * x[i] for i in range(n)) <= budget
         if exact_k:
             prob += lpSum(x[i] for i in range(n)) == k
         else:
             prob += lpSum(x[i] for i in range(n)) <= k
-    
         status = prob.solve()
         try:
             if LpStatus[status] != 'Optimal':
                 return pd.DataFrame()
         except Exception:
             pass
-    
         chosen_idx = [i for i in range(n) if x[i].varValue == 1]
         result = df_work.loc[chosen_idx].copy()
         return summarize_selection(result)
     
-    # --------------------- LP (multiple portfolios for same K) ---------------------
     def optimize_kols_lp_multiple(df_in, budget, k, kpi_col,
                                   allowed_tiers=None, allowed_platforms=None, allowed_categories=None,
                                   num_scenarios=5, exact_k=False):
         try:
             from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary, LpStatus
         except Exception:
-            st.error("PuLP not installed. Please install with: pip install pulp")
+            st.error("PuLP not installed. Please: pip install pulp")
             return []
-    
         df_work = prepare_df(df_in, kpi_col, allowed_tiers, allowed_platforms, allowed_categories)
         if df_work.empty:
             return []
-    
-        # Cap candidates for speed
         if len(df_work) > 200:
             df_work = df_work.nlargest(200, kpi_col).reset_index(drop=True)
-    
         n = len(df_work)
         scenarios = []
-        cuts = []  # sets of chosen indices
-    
+        cuts = []
         for s in range(num_scenarios):
             prob = LpProblem(f"KOL_Selection_{s+1}", LpMaximize)
             x = [LpVariable(f"x_{i}_{s}", cat=LpBinary) for i in range(n)]
-    
             prob += lpSum(df_work.loc[i, kpi_col] * x[i] for i in range(n))
             prob += lpSum(df_work.loc[i, 'cost'] * x[i] for i in range(n)) <= budget
             if exact_k:
                 prob += lpSum(x[i] for i in range(n)) == k
             else:
                 prob += lpSum(x[i] for i in range(n)) <= k
-    
-            # No-good cuts to enforce diversity
             for sel_set in cuts:
                 prob += lpSum(x[i] for i in sel_set) <= max(0, len(sel_set) - 1)
-    
             status = prob.solve()
             try:
                 if LpStatus[status] != 'Optimal':
                     break
             except Exception:
                 pass
-    
             chosen_idx = [i for i in range(n) if x[i].varValue == 1]
             if not chosen_idx:
                 break
-    
             cuts.append(set(chosen_idx))
             scenarios.append(summarize_selection(df_work.loc[chosen_idx].copy()))
-    
         return scenarios
     
-    # --------------------- Optimizer UI ---------------------
-    st.header("🎯 KOL Selection Optimizer")
-    
+    # ==========================
+    # Optimizer UI Controls
+    # ==========================
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
         selection_mode = st.radio("🔀 Optimization Method", ["Greedy", "Linear Programming"], horizontal=False)
     with col2:
         budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
     with col3:
-        kpi_option = st.selectbox(
-            "📊 KPI Focus",
-            options=['total_impression', 'total_engagement', 'total_view', 'total_share']
-        )
+        kpi_option = st.selectbox("📊 KPI Focus", options=['total_impression', 'total_engagement', 'total_view', 'total_share'])
     
     kpi_col = kpi_map[kpi_option]
     
     st.subheader("🧪 Scenario Mode")
     scenario_mode = st.radio("Choose scenario mode", ["By K values", "Multiple portfolios (same K)"], horizontal=True)
     
-    # Inputs per scenario mode
     if scenario_mode == "By K values":
         k_values_str = st.text_input("Enter K values (comma-separated)", value="2,3,5")
         try:
@@ -2127,7 +2226,9 @@ if st.session_state.page == "Influencer Performance":
         if selection_mode == "Linear Programming":
             exact_k = st.checkbox("Force exactly K KOLs (LP only)", value=False)
     
-    # --------------------- Run Optimization ---------------------
+    # ==========================
+    # Run Optimization
+    # ==========================
     if st.button("🚀 Run Optimization"):
         allowed_tiers = filtered_tiers
         allowed_platforms = filtered_platforms
@@ -2154,7 +2255,8 @@ if st.session_state.page == "Influencer Performance":
                     if res.empty:
                         st.info("No feasible selection under budget.")
                     else:
-                        st.dataframe(res, use_container_width=True)
+                        # Fancy render here (replace st.dataframe)
+                        render_kol_result(res, kpi_col, title=None, show_chart=True)
         else:
             st.success("✅ Optimization complete!")
             if selection_mode == "Greedy":
@@ -2174,11 +2276,440 @@ if st.session_state.page == "Influencer Performance":
                 st.warning("No feasible scenarios found. Try increasing budget or reducing K.")
             else:
                 for i, sc in enumerate(scenarios, start=1):
-                    st.subheader(f"Scenario #{i}")
-                    st.dataframe(sc, use_container_width=True)
+                    render_kol_result(sc, kpi_col, title=f"Scenario #{i}", show_chart=True)
+
+    #Version2 InfluSearch
+    # st.title("💰 Influencer Performance")
+    
+    # # --------------------- Tier Selection ---------------------
+    # all_tiers = ['All', 'VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano']
+    
+    # if 'tier_selection' not in st.session_state:
+    #     st.session_state.tier_selection = ['All']
+    
+    # def update_tiers():
+    #     selected = st.session_state['tier_multiselect']
+    #     if 'All' in selected:
+    #         st.session_state.tier_selection = ['All']
+    #     else:
+    #         st.session_state.tier_selection = selected
+    
+    # tier_selection = st.multiselect(
+    #     "🏷️ Tier Selection",
+    #     options=all_tiers,
+    #     default=st.session_state.tier_selection,
+    #     key='tier_multiselect',
+    #     on_change=update_tiers
+    # )
+    
+    # if 'All' in st.session_state.tier_selection:
+    #     filtered_tiers = None
+    # else:
+    #     filtered_tiers = [t.lower() for t in st.session_state.tier_selection]
+    
+    # # --------------------- Platform Selection ---------------------
+    # platform_column_exists = 'platform' in df_full.columns
+    # if platform_column_exists:
+    #     platforms_raw = (
+    #         df_full['platform']
+    #         .astype(str)
+    #         .str.strip()
+    #         .replace({'nan': '', 'None': '', 'NaN': ''})
+    #     )
+    #     unique_platforms = sorted([p for p in platforms_raw.unique().tolist() if p])
+    #     all_platforms = ['All'] + unique_platforms
+    # else:
+    #     all_platforms = ['All']
+    
+    # if 'platform_selection' not in st.session_state:
+    #     st.session_state.platform_selection = ['All']
+    
+    # def update_platforms():
+    #     selected = st.session_state['platform_multiselect']
+    #     if 'All' in selected:
+    #         st.session_state.platform_selection = ['All']
+    #     else:
+    #         st.session_state.platform_selection = selected
+    
+    # if platform_column_exists:
+    #     platform_selection = st.multiselect(
+    #         "🖥️ Platform Selection",
+    #         options=all_platforms,
+    #         default=st.session_state.platform_selection,
+    #         key='platform_multiselect',
+    #         on_change=update_platforms
+    #     )
+    # else:
+    #     st.info("No 'platform' column found; platform filtering is disabled.")
+    #     platform_selection = ['All']
+    
+    # if 'All' in st.session_state.platform_selection or not platform_column_exists:
+    #     filtered_platforms = None
+    # else:
+    #     filtered_platforms = [p.lower() for p in st.session_state.platform_selection]
+    
+    # # --------------------- Category Selection (new) ---------------------
+    # category_column_exists = 'category' in df_full.columns
+    # if category_column_exists:
+    #     categories_raw = (
+    #         df_full['category']
+    #         .astype(str)
+    #         .str.strip()
+    #         .replace({'nan': '', 'None': '', 'NaN': ''})
+    #     )
+    #     unique_categories = sorted([c for c in categories_raw.unique().tolist() if c])
+    #     all_categories = ['All'] + unique_categories
+    # else:
+    #     all_categories = ['All']
+    
+    # if 'category_selection' not in st.session_state:
+    #     st.session_state.category_selection = ['All']
+    
+    # def update_categories():
+    #     selected = st.session_state['category_multiselect']
+    #     if 'All' in selected:
+    #         st.session_state.category_selection = ['All']
+    #     else:
+    #         st.session_state.category_selection = selected
+    
+    # if category_column_exists:
+    #     category_selection = st.multiselect(
+    #         "📂 Category Selection",
+    #         options=all_categories,
+    #         default=st.session_state.category_selection,
+    #         key='category_multiselect',
+    #         on_change=update_categories
+    #     )
+    # else:
+    #     st.info("No 'category' column found; category filtering is disabled.")
+    #     category_selection = ['All']
+    
+    # if 'All' in st.session_state.category_selection or not category_column_exists:
+    #     filtered_categories = None
+    # else:
+    #     filtered_categories = [c.lower() for c in st.session_state.category_selection]
+    
+    # # --------------------- KPI Mapping ---------------------
+    # kpi_map = {
+    #     'total_impression': 'impression',
+    #     'total_engagement': 'engagement',
+    #     'total_view': 'view',
+    #     'total_share': 'share',
+    # }
+    
+    # # --------------------- Helper Functions ---------------------
+    # def prepare_df(df_in: pd.DataFrame, kpi_col: str,
+    #                allowed_tiers=None, allowed_platforms=None, allowed_categories=None) -> pd.DataFrame:
+    #     df_work = df_in.copy()
+    
+    #     # Ensure required columns exist
+    #     for col in ['cost', 'impression', 'engagement', 'view', 'share', 'tier', 'platform', 'category']:
+    #         if col not in df_work.columns:
+    #             df_work[col] = pd.NA
+    
+    #     # Tier filter
+    #     if allowed_tiers is not None:
+    #         df_work = df_work[df_work['tier'].astype(str).str.lower().isin(allowed_tiers)]
+    
+    #     # Platform filter
+    #     if allowed_platforms is not None:
+    #         df_work = df_work[df_work['platform'].astype(str).str.lower().isin(allowed_platforms)]
+    
+    #     # Category filter
+    #     if allowed_categories is not None:
+    #         df_work = df_work[df_work['category'].astype(str).str.lower().isin(allowed_categories)]
+    
+    #     # Coerce numeric cols
+    #     for col in ['cost', 'impression', 'engagement', 'view', 'share']:
+    #         df_work[col] = pd.to_numeric(df_work[col], errors='coerce')
+    
+    #     # Valid rows for cost and KPI
+    #     df_work = df_work[df_work['cost'].notna() & (df_work['cost'] > 0)]
+    #     df_work = df_work[df_work[kpi_col].notna()]
+    #     df_work = df_work.reset_index(drop=True)
+    
+    #     return df_work
+    
+    # def summarize_selection(df_sel: pd.DataFrame) -> pd.DataFrame:
+    #     if df_sel is None or df_sel.empty:
+    #         return pd.DataFrame()
+    #     summary = {
+    #         'kol_name': 'TOTAL' if 'kol_name' in df_sel.columns else '',
+    #         'platform': '',
+    #         'cost': df_sel['cost'].sum() if 'cost' in df_sel else 0,
+    #         'impression': df_sel['impression'].sum() if 'impression' in df_sel else 0,
+    #         'engagement': df_sel['engagement'].sum() if 'engagement' in df_sel else 0,
+    #         'view': df_sel['view'].sum() if 'view' in df_sel else 0,
+    #         'share': df_sel['share'].sum() if 'share' in df_sel else 0,
+    #         'followers': '' if 'followers' in df_sel.columns else '',
+    #         'tier': '',
+    #         'score': ''
+    #     }
+    #     return pd.concat([df_sel, pd.DataFrame([summary])], ignore_index=True)
+    
+    # # --------------------- Greedy (single) ---------------------
+    # def select_kols_greedy(df_in, budget, k, kpi_col,
+    #                        allowed_tiers=None, allowed_platforms=None, allowed_categories=None):
+    #     df_work = prepare_df(df_in, kpi_col, allowed_tiers, allowed_platforms, allowed_categories)
+    #     if df_work.empty:
+    #         return pd.DataFrame()
+    
+    #     df_work['score'] = df_work[kpi_col] / df_work['cost']
+    #     df_work = df_work.sort_values('score', ascending=False).reset_index(drop=True)
+    
+    #     selected_rows = []
+    #     total_cost = 0.0
+    
+    #     for _, row in df_work.iterrows():
+    #         if len(selected_rows) >= k:
+    #             break
+    #         if total_cost + row['cost'] <= budget:
+    #             selected_rows.append(row)
+    #             total_cost += row['cost']
+    
+    #     result = pd.DataFrame(selected_rows)
+    #     return summarize_selection(result)
+    
+    # # --------------------- Greedy (multiple portfolios for same K) ---------------------
+    # def greedy_multiple_scenarios(df_in, budget, k, kpi_col,
+    #                               allowed_tiers=None, allowed_platforms=None, allowed_categories=None,
+    #                               num_scenarios=5):
+    #     df_base = prepare_df(df_in, kpi_col, allowed_tiers, allowed_platforms, allowed_categories)
+    #     if df_base.empty:
+    #         return []
+    
+    #     scenarios = []
+    #     excluded_idx = set()
+    
+    #     for s in range(num_scenarios):
+    #         work = df_base.copy()
+    #         if excluded_idx:
+    #             work = work[~work.index.isin(excluded_idx)].reset_index(drop=True)
+    #             if work.empty:
+    #                 break
+    
+    #         # Compute score and sort
+    #         work['score'] = work[kpi_col] / work['cost']
+    #         work = work.sort_values('score', ascending=False)
+    
+    #         # Greedy selection on 'work'
+    #         selected_indices = []
+    #         selected_rows = []
+    #         total_cost = 0.0
+    
+    #         for i, row in work.iterrows():
+    #             if len(selected_rows) >= k:
+    #                 break
+    #             if total_cost + row['cost'] <= budget:
+    #                 selected_rows.append(row)
+    #                 selected_indices.append(i)
+    #                 total_cost += row['cost']
+    
+    #         if not selected_rows:
+    #             break
+    
+    #         scenario_df = summarize_selection(pd.DataFrame(selected_rows))
+    #         scenarios.append(scenario_df)
+    
+    #         # Diversify: exclude the highest-score item among the chosen in this scenario
+    #         work_chosen = work.loc[selected_indices].copy().sort_values('score', ascending=False)
+    #         if not work_chosen.empty:
+    #             key_cols = [c for c in ['kol_name', 'platform', 'cost'] if c in df_base.columns]
+    #             if key_cols:
+    #                 key_vals = tuple(work_chosen.iloc[0][key_cols].tolist())
+    #                 mask = pd.Series([True] * len(df_base))
+    #                 for c, v in zip(key_cols, key_vals):
+    #                     mask &= (df_base[c] == v)
+    #                 idx_to_exclude = df_base[mask].index.tolist()
+    #                 if idx_to_exclude:
+    #                     excluded_idx.add(idx_to_exclude[0])
+    #             else:
+    #                 excluded_idx.add(work_chosen.index[0])
+    
+    #     return scenarios
+    
+    # # --------------------- LP (single) ---------------------
+    # def optimize_kols_lp_single(df_in, budget, k, kpi_col,
+    #                             allowed_tiers=None, allowed_platforms=None, allowed_categories=None,
+    #                             exact_k=False):
+    #     try:
+    #         from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary, LpStatus
+    #     except Exception:
+    #         st.error("PuLP not installed. Please install with: pip install pulp")
+    #         return pd.DataFrame()
+    
+    #     df_work = prepare_df(df_in, kpi_col, allowed_tiers, allowed_platforms, allowed_categories)
+    #     if df_work.empty:
+    #         return pd.DataFrame()
+    
+    #     # Cap candidates for speed
+    #     if len(df_work) > 200:
+    #         df_work = df_work.nlargest(200, kpi_col).reset_index(drop=True)
+    
+    #     n = len(df_work)
+    #     prob = LpProblem("KOL_Selection", LpMaximize)
+    #     x = [LpVariable(f"x_{i}", cat=LpBinary) for i in range(n)]
+    
+    #     prob += lpSum(df_work.loc[i, kpi_col] * x[i] for i in range(n))
+    #     prob += lpSum(df_work.loc[i, 'cost'] * x[i] for i in range(n)) <= budget
+    #     if exact_k:
+    #         prob += lpSum(x[i] for i in range(n)) == k
+    #     else:
+    #         prob += lpSum(x[i] for i in range(n)) <= k
+    
+    #     status = prob.solve()
+    #     try:
+    #         if LpStatus[status] != 'Optimal':
+    #             return pd.DataFrame()
+    #     except Exception:
+    #         pass
+    
+    #     chosen_idx = [i for i in range(n) if x[i].varValue == 1]
+    #     result = df_work.loc[chosen_idx].copy()
+    #     return summarize_selection(result)
+    
+    # # --------------------- LP (multiple portfolios for same K) ---------------------
+    # def optimize_kols_lp_multiple(df_in, budget, k, kpi_col,
+    #                               allowed_tiers=None, allowed_platforms=None, allowed_categories=None,
+    #                               num_scenarios=5, exact_k=False):
+    #     try:
+    #         from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary, LpStatus
+    #     except Exception:
+    #         st.error("PuLP not installed. Please install with: pip install pulp")
+    #         return []
+    
+    #     df_work = prepare_df(df_in, kpi_col, allowed_tiers, allowed_platforms, allowed_categories)
+    #     if df_work.empty:
+    #         return []
+    
+    #     # Cap candidates for speed
+    #     if len(df_work) > 200:
+    #         df_work = df_work.nlargest(200, kpi_col).reset_index(drop=True)
+    
+    #     n = len(df_work)
+    #     scenarios = []
+    #     cuts = []  # sets of chosen indices
+    
+    #     for s in range(num_scenarios):
+    #         prob = LpProblem(f"KOL_Selection_{s+1}", LpMaximize)
+    #         x = [LpVariable(f"x_{i}_{s}", cat=LpBinary) for i in range(n)]
+    
+    #         prob += lpSum(df_work.loc[i, kpi_col] * x[i] for i in range(n))
+    #         prob += lpSum(df_work.loc[i, 'cost'] * x[i] for i in range(n)) <= budget
+    #         if exact_k:
+    #             prob += lpSum(x[i] for i in range(n)) == k
+    #         else:
+    #             prob += lpSum(x[i] for i in range(n)) <= k
+    
+    #         # No-good cuts to enforce diversity
+    #         for sel_set in cuts:
+    #             prob += lpSum(x[i] for i in sel_set) <= max(0, len(sel_set) - 1)
+    
+    #         status = prob.solve()
+    #         try:
+    #             if LpStatus[status] != 'Optimal':
+    #                 break
+    #         except Exception:
+    #             pass
+    
+    #         chosen_idx = [i for i in range(n) if x[i].varValue == 1]
+    #         if not chosen_idx:
+    #             break
+    
+    #         cuts.append(set(chosen_idx))
+    #         scenarios.append(summarize_selection(df_work.loc[chosen_idx].copy()))
+    
+    #     return scenarios
+    
+    # # --------------------- Optimizer UI ---------------------
+    # st.header("🎯 KOL Selection Optimizer")
+    
+    # col1, col2, col3 = st.columns([1, 1, 1])
+    # with col1:
+    #     selection_mode = st.radio("🔀 Optimization Method", ["Greedy", "Linear Programming"], horizontal=False)
+    # with col2:
+    #     budget = st.number_input("💰 Total Budget (THB)", min_value=0, value=250000, step=1000)
+    # with col3:
+    #     kpi_option = st.selectbox(
+    #         "📊 KPI Focus",
+    #         options=['total_impression', 'total_engagement', 'total_view', 'total_share']
+    #     )
+    
+    # kpi_col = kpi_map[kpi_option]
+    
+    # st.subheader("🧪 Scenario Mode")
+    # scenario_mode = st.radio("Choose scenario mode", ["By K values", "Multiple portfolios (same K)"], horizontal=True)
+    
+    # # Inputs per scenario mode
+    # if scenario_mode == "By K values":
+    #     k_values_str = st.text_input("Enter K values (comma-separated)", value="2,3,5")
+    #     try:
+    #         k_values = [int(x.strip()) for x in k_values_str.split(",") if x.strip().isdigit()]
+    #     except Exception:
+    #         k_values = []
+    #     exact_k = False
+    #     if selection_mode == "Linear Programming":
+    #         exact_k = st.checkbox("Force exactly K KOLs (LP only)", value=False,
+    #                               help="If off, LP may choose fewer KOLs if the budget is too tight.")
+    # else:
+    #     fixed_k = st.number_input("🔢 Number of KOLs (K)", min_value=1, value=5, step=1)
+    #     num_scenarios = st.number_input("How many scenarios?", min_value=2, value=5, step=1)
+    #     exact_k = False
+    #     if selection_mode == "Linear Programming":
+    #         exact_k = st.checkbox("Force exactly K KOLs (LP only)", value=False)
+    
+    # # --------------------- Run Optimization ---------------------
+    # if st.button("🚀 Run Optimization"):
+    #     allowed_tiers = filtered_tiers
+    #     allowed_platforms = filtered_platforms
+    #     allowed_categories = filtered_categories
+    
+    #     if scenario_mode == "By K values":
+    #         if not k_values:
+    #             st.warning("Please provide at least one valid K.")
+    #         else:
+    #             st.success("✅ Optimization complete!")
+    #             for k in k_values:
+    #                 st.subheader(f"Scenario: best portfolio for K = {k}")
+    #                 if selection_mode == "Greedy":
+    #                     res = select_kols_greedy(
+    #                         df_full, budget, k, kpi_col,
+    #                         allowed_tiers, allowed_platforms, allowed_categories
+    #                     )
+    #                 else:
+    #                     res = optimize_kols_lp_single(
+    #                         df_full, budget, k, kpi_col,
+    #                         allowed_tiers, allowed_platforms, allowed_categories,
+    #                         exact_k=exact_k
+    #                     )
+    #                 if res.empty:
+    #                     st.info("No feasible selection under budget.")
+    #                 else:
+    #                     st.dataframe(res, use_container_width=True)
+    #     else:
+    #         st.success("✅ Optimization complete!")
+    #         if selection_mode == "Greedy":
+    #             scenarios = greedy_multiple_scenarios(
+    #                 df_full, budget, fixed_k, kpi_col,
+    #                 allowed_tiers, allowed_platforms, allowed_categories,
+    #                 num_scenarios=num_scenarios
+    #             )
+    #         else:
+    #             scenarios = optimize_kols_lp_multiple(
+    #                 df_full, budget, fixed_k, kpi_col,
+    #                 allowed_tiers, allowed_platforms, allowed_categories,
+    #                 num_scenarios=num_scenarios, exact_k=exact_k
+    #             )
+    
+    #         if not scenarios:
+    #             st.warning("No feasible scenarios found. Try increasing budget or reducing K.")
+    #         else:
+    #             for i, sc in enumerate(scenarios, start=1):
+    #                 st.subheader(f"Scenario #{i}")
+    #                 st.dataframe(sc, use_container_width=True)
 
 
-
+        #Version1 Influsearch
         # # ---------- GOOGLE SHEETS ----------
         # sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
         # sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"

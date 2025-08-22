@@ -12,12 +12,10 @@ from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 import altair as alt
 from textwrap import dedent
 
-
-
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(layout="wide")
 
-# คุมความกว้างหลัก (ลบ 4 บรรทัดนี้ได้ถ้าไม่ต้องการ)
+# คุมความกว้างหลัก (ลบได้ถ้าไม่ต้องการ)
 st.markdown(
     """
     <style>
@@ -44,8 +42,12 @@ valid_users = {
 }
 
 # -------------------- OPTIONS --------------------
-SHOW_TAGLINE = False  # ตั้ง True ถ้าอยากมีคำโปรย
+SHOW_TAGLINE = False  # ถ้าต้องการคำโปรยใต้ ticker ให้ตั้ง True
 TAGLINE_TEXT = "Smart solutions for budget optimization"
+
+# ใหม่: แถบตัวอักษรวิ่งด้านบน
+SHOW_TICKER = True
+TICKER_TEXT = "MBCS AI Optimization Tool"
 
 # -------------------- CSS PLACEHOLDER --------------------
 login_css = st.empty()
@@ -68,7 +70,12 @@ def inject_login_css():
           padding-top: 2vh;
         }
 
-        /* ชั้น Aurora ลอย */
+        /* ซ่อนแถบขาวที่ตกค้างจากโค้ดเก่า */
+        .glow, .soft-glow, .top-pill { display:none !important; }
+        /* ซ่อน block แรกที่ไม่ใช่ login-scope (หากเบราว์เซอร์รองรับ :has) */
+        .block-container > div:first-of-type:not(:has(#login-scope)) { display:none !important; }
+
+        /* Aurora ลอย */
         #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
         #login-aurora:before, #login-aurora:after{
           content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
@@ -85,12 +92,48 @@ def inject_login_css():
         }
         @keyframes floaty{ 0%{ transform: translateY(0) scale(1); } 100%{ transform: translateY(40px) scale(1.04); } }
 
-        /* 1) ซ่อนแถบ/แคปซูลเก่าทาง CSS (ถ้าคลาสตรง) */
-        .glow, .soft-glow, .top-pill { display:none !important; }
+        /* Overlay mask กลบด้านบน (ป้องกันบาร์เก่า) */
+        #login-top-mask{
+          position:fixed; left:0; right:0; top:0; height:120px;
+          background:linear-gradient(180deg,#f6f8fc 0%,rgba(246,248,252,0) 100%);
+          pointer-events:none; z-index:3;
+        }
 
-        /* 2) หากยังเหลือ block ว่าง/ไม่ใช่ login-scope อันดับต้น ให้ซ่อน (ทำงานในบราวเซอร์รุ่นใหม่) */
-        /* ถ้าเบราว์เซอร์รองรับ :has; จะซ่อนบล็อกแรกที่ไม่ได้มี #login-scope */
-        .block-container > div:first-of-type:not(:has(#login-scope)) { display:none !important; }
+        /* Ticker (ตัวอักษรวิ่ง) */
+        #login-ticker{
+          position:fixed; left:50%; top:14px; transform:translateX(-50%);
+          z-index:5; pointer-events:none;  /* ไม่บังการคลิก */
+          display: """ + ("block" if True else "none") + """;
+        }
+        #login-ticker .pill{
+          min-width: 320px; max-width: 800px;
+          padding: 10px 18px; border-radius:999px;
+          background: rgba(255,255,255,.8);
+          border: 1px solid rgba(17,24,39,.08);
+          backdrop-filter: blur(8px);
+          box-shadow: 0 12px 28px rgba(17,24,39,.10);
+          overflow: hidden; position:relative;
+        }
+        #login-ticker .pill:after{
+          content:""; position:absolute; inset:0;
+          background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
+          background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35;
+        }
+        #login-ticker .marquee{
+          position:relative; z-index:1; white-space:nowrap; font-weight:900;
+          font-size: 16px; letter-spacing:.3px;
+          background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+          background-size: 200% 100%;
+          animation: marquee 10s ease-in-out infinite alternate, hue 8s linear infinite;
+        }
+        @keyframes marquee{
+          0% { transform: translateX(-10%); }
+          50%{ transform: translateX(-70%); }
+          100%{ transform: translateX(-10%); }
+        }
+        @keyframes hue{ 0%{ filter:hue-rotate(0deg);} 100%{ filter:hue-rotate(360deg);} }
+        @keyframes shine{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
 
         /* Login card */
         .login-card{
@@ -109,7 +152,7 @@ def inject_login_css():
         }
         .login-card .inner{ position:relative; z-index:1; }
 
-        /* Tagline slim */
+        /* Tagline slim (ถ้าเปิดใช้งาน) */
         .tagline-slim{
           display:inline-flex; align-items:center; gap:10px;
           padding:6px 12px; border-radius:999px;
@@ -192,19 +235,24 @@ def inject_login_css():
 if not st.session_state.authenticated:
     inject_login_css()
 
-    # 3) Fallback overlay (mask) กลบด้านบนเผื่อบาร์ไหนยังรอด
-    st.markdown(
-        """
-        <div id="login-top-mask"
-             style="position:fixed;left:0;right:0;top:0;height:120px;
-                    background:linear-gradient(180deg,#f6f8fc 0%,rgba(246,248,252,0) 100%);
-                    pointer-events:none;z-index:3"></div>
-        """,
-        unsafe_allow_html=True
-    )
+    # Mask กลบด้านบน (กันบาร์เก่า)
+    st.markdown("<div id='login-top-mask'></div>", unsafe_allow_html=True)
 
     # Aurora layer
     st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
+
+    # Ticker ด้านบน
+    if SHOW_TICKER:
+        st.markdown(
+            f"""
+            <div id="login-ticker">
+              <div class="pill">
+                <span class="marquee">✨ {TICKER_TEXT} ✨</span>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     left, mid, right = st.columns([1, 2, 1])
     with mid:
@@ -243,7 +291,7 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.session_state.invalid_login = False
                 st.toast("✅ Login successful", icon="✨")
-                # remove CSS so other pages won't be affected
+                # ลบ CSS login เพื่อไม่ให้กระทบหน้าอื่น
                 login_css.empty()
                 st.rerun()
             else:
@@ -258,6 +306,253 @@ if not st.session_state.authenticated:
 if not st.session_state.welcome_shown:
     st.success("🎉 Welcome! You are now logged in.")
     st.session_state.welcome_shown = True
+
+
+#Ver3
+# # -------------------- PAGE CONFIG --------------------
+# st.set_page_config(layout="wide")
+
+# # คุมความกว้างหลัก (ลบ 4 บรรทัดนี้ได้ถ้าไม่ต้องการ)
+# st.markdown(
+#     """
+#     <style>
+#     .appview-container .main { max-width: 1100px !important; margin: auto; }
+#     .block-container { max-width: 1100px !important; margin: auto; }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # -------------------- SESSION STATE --------------------
+# if "authenticated" not in st.session_state:
+#     st.session_state.authenticated = False
+# if "invalid_login" not in st.session_state:
+#     st.session_state.invalid_login = False
+# if "welcome_shown" not in st.session_state:
+#     st.session_state.welcome_shown = False
+
+# # -------------------- CREDENTIALS --------------------
+# valid_users = {
+#     "mbcs": "1234",
+#     "mbcs1": "5678",
+#     "admin": "adminpass"
+# }
+
+# # -------------------- OPTIONS --------------------
+# SHOW_TAGLINE = False  # ตั้ง True ถ้าอยากมีคำโปรย
+# TAGLINE_TEXT = "Smart solutions for budget optimization"
+
+# # -------------------- CSS PLACEHOLDER --------------------
+# login_css = st.empty()
+
+# def inject_login_css():
+#     login_css.markdown(
+#         """
+#         <style>
+#         :root{
+#           --p1:#6366f1; --p2:#22d3ee; --p3:#a78bfa; --p4:#10b981;
+#           --ink:#0f172a; --muted:#475569;
+#         }
+
+#         /* BG Aurora เฉพาะหน้า Login */
+#         [data-testid="stAppViewContainer"]{
+#           background:
+#             radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.14), transparent 60%),
+#             radial-gradient(900px 320px at 88% 12%, rgba(34,211,238,.12), transparent 60%),
+#             linear-gradient(180deg, #f6f8fc 0%, #eef2ff 100%);
+#           padding-top: 2vh;
+#         }
+
+#         /* ชั้น Aurora ลอย */
+#         #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
+#         #login-aurora:before, #login-aurora:after{
+#           content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
+#           filter: blur(60px); opacity:.28; animation: floaty 16s ease-in-out infinite alternate;
+#         }
+#         #login-aurora:before{
+#           left:-300px; top:-260px;
+#           background: radial-gradient(circle at 30% 30%, rgba(99,102,241,.75), rgba(167,139,250,.0) 60%);
+#         }
+#         #login-aurora:after{
+#           right:-300px; top:-200px;
+#           background: radial-gradient(circle at 60% 20%, rgba(34,211,238,.75), rgba(34,211,238,0) 60%);
+#           animation-delay: -3s;
+#         }
+#         @keyframes floaty{ 0%{ transform: translateY(0) scale(1); } 100%{ transform: translateY(40px) scale(1.04); } }
+
+#         /* 1) ซ่อนแถบ/แคปซูลเก่าทาง CSS (ถ้าคลาสตรง) */
+#         .glow, .soft-glow, .top-pill { display:none !important; }
+
+#         /* 2) หากยังเหลือ block ว่าง/ไม่ใช่ login-scope อันดับต้น ให้ซ่อน (ทำงานในบราวเซอร์รุ่นใหม่) */
+#         /* ถ้าเบราว์เซอร์รองรับ :has; จะซ่อนบล็อกแรกที่ไม่ได้มี #login-scope */
+#         .block-container > div:first-of-type:not(:has(#login-scope)) { display:none !important; }
+
+#         /* Login card */
+#         .login-card{
+#           position: relative; z-index:1;
+#           max-width: 520px; margin: 5vh auto 6vh; padding: 24px 20px 22px;
+#           border-radius: 18px; background: rgba(255,255,255,.86);
+#           backdrop-filter: blur(10px);
+#           border: 1px solid rgba(17,24,39,.08);
+#           box-shadow: 0 18px 50px rgba(2,132,199,.15);
+#           overflow: hidden;
+#         }
+#         .login-card:before{
+#           content:""; position:absolute; inset:-2px; z-index:0;
+#           background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
+#           filter: blur(28px); opacity:.22; animation: spin 9s linear infinite;
+#         }
+#         .login-card .inner{ position:relative; z-index:1; }
+
+#         /* Tagline slim */
+#         .tagline-slim{
+#           display:inline-flex; align-items:center; gap:10px;
+#           padding:6px 12px; border-radius:999px;
+#           background: rgba(255,255,255,.55);
+#           border: 1px solid rgba(17,24,39,.08);
+#           backdrop-filter: blur(6px);
+#           color:#0f172a; font-weight:800; letter-spacing:.2px;
+#           margin: 0 auto 10px auto; width:max-content; position:relative;
+#           box-shadow: 0 6px 18px rgba(17,24,39,.08);
+#         }
+#         .tagline-slim .dot{ width:8px; height:8px; border-radius:50%; background: var(--p2); box-shadow:0 0 10px var(--p2); }
+
+#         /* Logo + ring */
+#         .logo-wrap{ width:120px; height:120px; margin: 6px auto 12px auto; position:relative; }
+#         .logo-ring{
+#           position:absolute; inset:-8px; border-radius:50%;
+#           background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
+#           filter: blur(8px); opacity:.55; animation: spin 8s linear infinite;
+#         }
+#         .logo{
+#           position:relative; width:120px; height:120px; border-radius:50%;
+#           object-fit: cover; border: 3px solid rgba(255,255,255,.9);
+#           box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff;
+#         }
+
+#         /* Title + Subtitle */
+#         .title{
+#           font-size: clamp(28px, 4.2vw, 44px);
+#           font-weight: 900; text-align:center; margin: 6px 0 6px 0;
+#           background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
+#           -webkit-background-clip: text; background-clip: text; color: transparent;
+#           background-size: 220% 100%; animation: wave 7s ease-in-out infinite;
+#         }
+#         .subtitle{ text-align:center; color:#475569; font-size:14px; margin-bottom: 12px; }
+
+#         /* Inputs */
+#         #login-scope .stTextInput > div > div > input,
+#         #login-scope .stPassword > div > div > input{
+#           background:#fff; color: var(--ink);
+#           border: 1px solid rgba(17,24,39,.12);
+#           border-radius: 12px; padding: .75rem .9rem;
+#           box-shadow: 0 6px 14px rgba(17,24,39,.05);
+#           transition: box-shadow .2s, border-color .2s, transform .12s;
+#         }
+#         #login-scope .stTextInput > div > div > input:focus,
+#         #login-scope .stPassword > div > div > input:focus{
+#           border-color: rgba(99,102,241,.45);
+#           box-shadow: 0 10px 22px rgba(99,102,241,.18);
+#           transform: translateY(-1px);
+#           outline: none;
+#         }
+
+#         /* Button */
+#         #login-scope .stButton > button{
+#           width: 100%;
+#           border-radius: 12px; padding: .9rem 1rem;
+#           border: 1px solid rgba(17,24,39,.08);
+#           color:#fff; font-weight:800; letter-spacing:.2px;
+#           background: linear-gradient(135deg, var(--p1), var(--p2));
+#           box-shadow: 0 10px 22px rgba(2,132,199,.20);
+#           transition: transform .15s, box-shadow .2s, filter .2s;
+#           margin-top: 8px;
+#         }
+#         #login-scope .stButton > button:hover{
+#           transform: translateY(-2px) scale(1.01);
+#           box-shadow: 0 16px 30px rgba(2,132,199,.28);
+#           filter: brightness(1.03);
+#           cursor: pointer;
+#         }
+
+#         /* Animations */
+#         @keyframes wave{ 0%{background-position:0 0} 50%{background-position:100% 0} 100%{background-position:0 0} }
+#         @keyframes spin{ to{ transform: rotate(360deg);} }
+#         </style>
+#         """,
+#         unsafe_allow_html=True
+#     )
+
+# # -------------------- LOGIN UI --------------------
+# if not st.session_state.authenticated:
+#     inject_login_css()
+
+#     # 3) Fallback overlay (mask) กลบด้านบนเผื่อบาร์ไหนยังรอด
+#     st.markdown(
+#         """
+#         <div id="login-top-mask"
+#              style="position:fixed;left:0;right:0;top:0;height:120px;
+#                     background:linear-gradient(180deg,#f6f8fc 0%,rgba(246,248,252,0) 100%);
+#                     pointer-events:none;z-index:3"></div>
+#         """,
+#         unsafe_allow_html=True
+#     )
+
+#     # Aurora layer
+#     st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
+
+#     left, mid, right = st.columns([1, 2, 1])
+#     with mid:
+#         card_class = "login-card" + (" shake" if st.session_state.invalid_login else "")
+#         st.markdown(f"<div id='login-scope' class='{card_class}'><div class='inner'>", unsafe_allow_html=True)
+
+#         # Tagline (ปิดไว้, เปิดได้โดยตั้ง SHOW_TAGLINE=True)
+#         if SHOW_TAGLINE:
+#             st.markdown(
+#                 f"<div class='tagline-slim'><span class='dot'></span>{TAGLINE_TEXT}</div>",
+#                 unsafe_allow_html=True
+#             )
+
+#         # Logo + Title
+#         logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+#         st.markdown(
+#             f"""
+#             <div class="logo-wrap">
+#               <div class="logo-ring"></div>
+#               <img class="logo" src="{logo_url}" alt="NEST">
+#             </div>
+#             <div class="title">🔒 WELCOME TO NEST OPTIMIZED TOOL</div>
+#             <div class="subtitle">Secure access • Smart budget simulation • Influencer optimization</div>
+#             """,
+#             unsafe_allow_html=True
+#         )
+
+#         # Login form
+#         with st.form("login_form", clear_on_submit=False):
+#             username = st.text_input("Username", key="login_username")
+#             password = st.text_input("Password", type="password", key="login_password")
+#             submit = st.form_submit_button("Sign in", use_container_width=True)
+
+#         if submit:
+#             if username in valid_users and password == valid_users[username]:
+#                 st.session_state.authenticated = True
+#                 st.session_state.invalid_login = False
+#                 st.toast("✅ Login successful", icon="✨")
+#                 # remove CSS so other pages won't be affected
+#                 login_css.empty()
+#                 st.rerun()
+#             else:
+#                 st.session_state.invalid_login = True
+#                 st.error("❌ Incorrect username or password. Please try again.")
+
+#         st.markdown("</div></div>", unsafe_allow_html=True)
+
+#     st.stop()
+
+# # -------------------- AFTER LOGIN --------------------
+# if not st.session_state.welcome_shown:
+#     st.success("🎉 Welcome! You are now logged in.")
+#     st.session_state.welcome_shown = True
 
 
 #Login Ver2

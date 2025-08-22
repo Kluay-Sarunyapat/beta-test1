@@ -58,7 +58,9 @@ def inject_login_css():
         :root{
           --p1:#6366f1; --p2:#22d3ee; --p3:#a78bfa; --p4:#10b981;
           --ink:#0f172a; --muted:#475569;
+          --cardW: 520px;  /* ตั้งความกว้างกลางร่วมกันของ card และ ticker */
         }
+
         /* BG Aurora */
         [data-testid="stAppViewContainer"]{
           background:
@@ -68,11 +70,12 @@ def inject_login_css():
           padding-top: 2vh;
         }
 
-        /* ซ่อนบาร์/ท็อปพิลเก่า และ top-mask/ticker แบบ fixed ที่เคยแทรกไว้ */
+        /* ซ่อนของเก่าทั้งหมดที่อาจหลงเหลือ (บาร์ fixed/ticker/mask เก่า) */
         .glow, .soft-glow, .top-pill,
-        #login-top-mask, #login-ticker { display:none !important; }
+        #login-top-mask, #login-ticker,
+        [id*="login-ticker"], [class*="login-ticker"]{ display:none !important; }
 
-        /* Aurora float (back layer) */
+        /* Aurora ลอย */
         #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
         #login-aurora:before, #login-aurora:after{
           content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
@@ -89,10 +92,12 @@ def inject_login_css():
         }
         @keyframes floaty{ 0%{ transform: translateY(0) scale(1);} 100%{ transform: translateY(40px) scale(1.04);} }
 
-        /* Login card */
+        /* Login card และความกว้างที่ใช้ร่วมกับ ticker */
         .login-card{
           position: relative; z-index:1;
-          max-width: 520px; margin: 5vh auto 6vh; padding: 24px 20px 22px;
+          width: min(var(--cardW), 92vw);      /* กว้างเท่ากันกับ ticker */
+          margin: 5vh auto 6vh auto;
+          padding: 24px 20px 22px;
           border-radius: 18px; background: rgba(255,255,255,.86);
           backdrop-filter: blur(10px);
           border: 1px solid rgba(17,24,39,.08);
@@ -106,10 +111,10 @@ def inject_login_css():
         }
         .login-card .inner{ position:relative; z-index:1; }
 
-        /* Ticker (inline centered, symmetric, no overflow) */
+        /* Ticker inline (สมมาตร 100% = เท่ากับ cardW) */
         .ticker{
           position:relative;
-          width:min(92vw, 760px);
+          width: min(var(--cardW), 92vw);
           margin: 6px auto 10px auto;
           border-radius:999px;
           background: rgba(255,255,255,.92);
@@ -118,7 +123,7 @@ def inject_login_css():
           overflow:hidden;
         }
         .ticker .fadeL, .ticker .fadeR{
-          position:absolute; top:0; bottom:0; width:28px; z-index:3; pointer-events:none;
+          position:absolute; top:0; bottom:0; width:24px; z-index:3; pointer-events:none;
         }
         .ticker .fadeL{ left:0;  background: linear-gradient(90deg, rgba(255,255,255,.95), rgba(255,255,255,0)); }
         .ticker .fadeR{ right:0; background: linear-gradient(270deg, rgba(255,255,255,.95), rgba(255,255,255,0)); }
@@ -127,13 +132,14 @@ def inject_login_css():
           background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
           background-size:200% 100%; animation: shine 4s linear infinite; opacity:.35;
         }
+        /* track = 200%, group ละ 50% -> เลื่อน -50% พอดีหนึ่งช่วง */
         .ticker .track{
-          display:flex; width:200%; /* สองกลุ่มรวมกันพอดี */
+          display:flex; width:200%;
           animation: scrollLoop 16s linear infinite;
           will-change: transform;
         }
         .ticker .group{
-          flex:0 0 50%; /* แต่ละกลุ่ม = 50% ของแทร็ค = เท่ากับความกว้าง container */
+          flex:0 0 50%;
           display:flex; justify-content:center; align-items:center; gap:40px;
           white-space:nowrap; padding:8px 0;
         }
@@ -199,13 +205,12 @@ def inject_login_css():
 # -------------------- LOGIN UI --------------------
 if not st.session_state.authenticated:
     inject_login_css()
-
     st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
 
     left, mid, right = st.columns([1, 2, 1])
     with mid:
 
-        # Ticker inline (สมมาตร ไม่ล้น)
+        # Ticker inline (สมมาตร 100%)
         if SHOW_TICKER:
             st.markdown(
                 f"""
@@ -264,7 +269,6 @@ if not st.session_state.authenticated:
 if not st.session_state.welcome_shown:
     st.success("🎉 Welcome! You are now logged in.")
     st.session_state.welcome_shown = True
-
 
 
 #Ver3

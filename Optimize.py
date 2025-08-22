@@ -11,138 +11,323 @@ from scipy.optimize import linprog
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 import altair as alt
 
+# -------------------- PAGE CONFIG --------------------
+st.set_page_config(page_title="MBCS Optimize Tool", page_icon="📁", layout="wide")
 
-# Set Streamlit to wide layout
-st.set_page_config(layout="wide")
+# -------------------- SESSION STATE --------------------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "invalid_login" not in st.session_state:
+    st.session_state.invalid_login = False
+if "page" not in st.session_state:
+    st.session_state.page = "Simulation Budget"
+if "prev_page" not in st.session_state:
+    st.session_state.prev_page = None
+if "inputs" not in st.session_state:
+    st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
-st.markdown(
-    """
-    <style>
-    .appview-container .main {
-        max-width: 1100px !important; /* Adjust width as needed */
-        margin: auto;
-    }
-    .block-container {
-        max-width: 1100px !important; /* Adjust width as needed */
-        margin: auto;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# Function to set black background with black font for login inputs
-def set_black_background():
-    bg_style = """
-    <style>
-    .stApp {
-        background-color: black;
-        color: white;
-    }
-    .stTextInput input, .stTextArea textarea {
-        color: black;
-        background-color: white;
-    }
-    .stButton>button {
-        color: black;
-    }
-    </style>
-    """
-    st.markdown(bg_style, unsafe_allow_html=True)
-
-# List of valid usernames and passwords
+# -------------------- AUTH --------------------
 valid_users = {
     "mbcs": "1234",
     "mbcs1": "5678",
-    "admin": "adminpass"  # Add more users if needed
+    "admin": "adminpass"
 }
 
-# If user is NOT logged in, show login page with black background
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
+def change_page(name: str):
+    st.session_state.prev_page = st.session_state.page
+    st.session_state.page = name
 
-if not st.session_state.authenticated:
-    set_black_background()  # Set black background
-    
-    # Logo image (Google Drive direct link)
-    # logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
-    logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-    st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
-
-    # Title with larger and bold text
-    st.markdown("<h1 style='text-align: center; color: white;'>🔒 WELCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
-
-    # Bold and white color for the input labels
-    st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
-    username = st.text_input("", key="username")
-    
-    st.markdown("<h3 style='color: white; font-weight: bold;'>Password</h3>", unsafe_allow_html=True)
-    password = st.text_input("", type="password", key="password")
-
-    # Login button
-    if st.button("Login"):
-        if username in valid_users and password == valid_users[username]:
-            st.session_state.authenticated = True
-            st.success("✅ Login successful!")
-        else:
-            st.error("❌ Incorrect username or password. Please try again.")
-    
-    st.stop()  # Stop execution if not logged in
-
-#function to add logo
-def show_logo(centered=True, width=200):
-    logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-    if centered:
-        st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='{width}'></div>", unsafe_allow_html=True)
-    else:
-        st.image(logo_url, width=width)
-
-# After login, show main content
-show_logo(centered=True, width=150)
-st.write("🎉 Welcome! You are now logged in.")
-
-# ---------- SESSION STATE FOR DATA SHARING ----------
-if 'inputs' not in st.session_state:
-    st.session_state.inputs = {
-        'VIP': 0,
-        'Mega': 0,
-        'Macro': 0,
-        'Mid': 0,
-        'Micro': 0,
-        'Nano': 0
-    }
-
-if 'page' not in st.session_state:
-    st.session_state.page = 'Simulation Budget'  # Default page
-
-# ---------- FUNCTION TO CHANGE PAGE ----------
-def change_page(page_name):
-    st.session_state.page = page_name
-
+# -------------------- GLOBAL STYLES (LOGIN + MAIN) --------------------
 st.markdown(
     """
     <style>
-    .stButton>button {
-        width: 100%;
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 8px;
-        background-color: #000000;
-        color: white;
-        border: none;
-        transition: background-color 0.3s, color 0.3s;
-        white-space: nowrap;  /* Prevents wrapping */
+    :root{
+      --p1:#6a5acd; --p2:#00e5ff; --p3:#ff7bd5; --p4:#8affc1;
+      --bg1:#0e1022; --bg2:#171a35; --glass:rgba(255,255,255,.08);
+    }
+    /* App background */
+    [data-testid="stAppViewContainer"]{
+      background: radial-gradient(1200px 500px at 10% 0%, rgba(0,229,255,.06), transparent),
+                  radial-gradient(1200px 500px at 90% 0%, rgba(255,123,213,.06), transparent),
+                  linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+      color: #e9ecff;
+      padding-top: 1.2rem;
+    }
+    /* Hide default Streamlit menu/footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+
+    /* Header card (used on both login and main) */
+    .app-header{
+      position: relative; overflow: hidden; padding: 28px 28px 22px;
+      border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 18px 60px rgba(0,0,0,.35), inset 0 0 40px rgba(255,255,255,.02);
+      margin-bottom: 18px;
+    }
+    .app-header:before{
+      content:""; position:absolute; inset:-2px;
+      background: conic-gradient(from 0deg, var(--p1), var(--p2), var(--p3), var(--p1));
+      filter: blur(28px); opacity:.35; animation: spin 8s linear infinite;
+    }
+    .headline{
+      font-size: clamp(26px, 4.2vw, 44px); font-weight: 900; letter-spacing:.4px;
+      background: linear-gradient(90deg, #fff, #cfe9ff, #ffffff);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 0 18px rgba(0,229,255,.25);
+    }
+    .subline{
+      margin-top: 6px; color:#c9d4ff; opacity:.9; font-size: clamp(12px, 1.6vw, 14px);
+    }
+    .shine{
+      position:absolute; inset:1px; border-radius:16px;
+      background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 30%, transparent 70%, rgba(255,255,255,.22));
+      background-size: 220% 100%; animation: shine 3.6s linear infinite;
+      pointer-events:none;
     }
 
-    .stButton>button:hover {
-        background-color: #333333;
-        color: #ffffff;
-        cursor: pointer;
+    /* Buttons (main nav + login submit) */
+    div.stButton > button, button[kind="formSubmit"]{
+      width: 100%;
+      border-radius: 14px;
+      padding: 0.9rem 1rem;
+      border: 1px solid rgba(255,255,255,.18);
+      color: #fff; font-weight: 800; letter-spacing:.2px;
+      background: linear-gradient(135deg, rgba(106,90,205,.85), rgba(0,229,255,.55));
+      box-shadow: 0 12px 28px rgba(68,144,255,.28), inset 0 0 18px rgba(255,255,255,.06);
+      transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+      backdrop-filter: blur(6px);
+    }
+    div.stButton > button:hover, button[kind="formSubmit"]:hover{
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 18px 36px rgba(68,144,255,.38);
+      filter: brightness(1.05);
+      cursor: pointer;
+    }
+    div.stButton > button:active, button[kind="formSubmit"]:active{
+      transform: translateY(0) scale(.98);
+    }
+
+    /* Current page pill (main) */
+    .page-pill{
+      display: inline-flex; align-items: center; gap:10px;
+      padding: 10px 16px; margin-top: 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(106,90,205,.4), rgba(0,229,255,.25));
+      border: 1px solid rgba(255,255,255,.18);
+      color: #f4f7ff; font-weight: 700;
+      box-shadow: 0 0 0 0 rgba(106,90,205,.45);
+      animation: pulse 2.4s infinite;
+      position: relative; overflow: hidden;
+    }
+    .page-pill .dot{ width: 10px; height: 10px; border-radius: 50%; background: var(--p4); box-shadow: 0 0 12px var(--p4); }
+    .page-pill .glowline{
+      position:absolute; inset:1px; border-radius:999px;
+      background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 40%, transparent 60%, rgba(255,255,255,.22));
+      background-size: 200% 100%; animation: shine 3.2s linear infinite;
+      pointer-events:none;
+    }
+
+    /* Login: input styling */
+    .stTextInput > div > div > input{
+      background: rgba(255,255,255,.92);
+      color: #0e1022;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 12px;
+      padding: 0.7rem 0.9rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,.25), inset 0 0 0 rgba(0,0,0,0);
+      transition: box-shadow .2s ease, transform .12s ease, border-color .2s ease;
+    }
+    .stTextInput > div > div > input:focus{
+      border-color: rgba(0,229,255,.7);
+      box-shadow: 0 10px 28px rgba(0,229,255,.25);
+      outline: none;
+      transform: translateY(-1px);
+    }
+    .stTextInput label{
+      color: #cfe9ff !important;
+      font-weight: 700 !important;
+      text-shadow: 0 0 10px rgba(0,229,255,.15);
+    }
+
+    /* Login logo ring */
+    .login-wrap{ max-width: 520px; margin: 0 auto; }
+    .logo-ring{
+      width:130px; height:130px; margin: 0 auto 10px auto; border-radius:50%;
+      position:relative; overflow: visible;
+      box-shadow: 0 12px 50px rgba(0,229,255,.25);
+    }
+    .logo-ring:before{
+      content:""; position:absolute; inset:-6px; border-radius:50%;
+      background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
+      filter: blur(8px); opacity:.55; animation: spin 6.5s linear infinite;
+      z-index:0;
+    }
+    .logo-ring img{
+      position:relative; z-index:1; width:100%; height:100%; object-fit: cover; border-radius:50%;
+      border: 3px solid rgba(255,255,255,.75);
+      background: #fff;
+    }
+
+    /* Shake animation on wrong login */
+    .shake{ animation: shake .35s ease-in-out 0s 1; }
+
+    @keyframes shine{
+      0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; }
+    }
+    @keyframes pulse{
+      0%{ box-shadow: 0 0 0 0 rgba(106,90,205,.45); }
+      70%{ box-shadow: 0 0 0 14px rgba(106,90,205,0); }
+      100%{ box-shadow: 0 0 0 0 rgba(106,90,205,0); }
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+    @keyframes shake{
+      0%,100%{ transform: translateX(0); }
+      20%{ transform: translateX(-6px); }
+      40%{ transform: translateX(6px); }
+      60%{ transform: translateX(-4px); }
+      80%{ transform: translateX(4px); }
     }
     </style>
     """,
     unsafe_allow_html=True
 )
+
+# If wrong credentials, briefly apply shake to the main block container
+if st.session_state.invalid_login:
+    st.markdown("<style>.block-container{animation: shake .35s ease-in-out 0s 1;}</style>", unsafe_allow_html=True)
+
+# # Set Streamlit to wide layout
+# st.set_page_config(layout="wide")
+
+# st.markdown(
+#     """
+#     <style>
+#     .appview-container .main {
+#         max-width: 1100px !important; /* Adjust width as needed */
+#         margin: auto;
+#     }
+#     .block-container {
+#         max-width: 1100px !important; /* Adjust width as needed */
+#         margin: auto;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # Function to set black background with black font for login inputs
+# def set_black_background():
+#     bg_style = """
+#     <style>
+#     .stApp {
+#         background-color: black;
+#         color: white;
+#     }
+#     .stTextInput input, .stTextArea textarea {
+#         color: black;
+#         background-color: white;
+#     }
+#     .stButton>button {
+#         color: black;
+#     }
+#     </style>
+#     """
+#     st.markdown(bg_style, unsafe_allow_html=True)
+
+# # List of valid usernames and passwords
+# valid_users = {
+#     "mbcs": "1234",
+#     "mbcs1": "5678",
+#     "admin": "adminpass"  # Add more users if needed
+# }
+
+# # If user is NOT logged in, show login page with black background
+# if 'authenticated' not in st.session_state:
+#     st.session_state.authenticated = False
+
+# if not st.session_state.authenticated:
+#     set_black_background()  # Set black background
+    
+#     # Logo image (Google Drive direct link)
+#     # logo_url = "https://i.postimg.cc/x1JFDk6P/Nest.webp"
+#     logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+#     st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='200'></div>", unsafe_allow_html=True)
+
+#     # Title with larger and bold text
+#     st.markdown("<h1 style='text-align: center; color: white;'>🔒 WELCOME TO NEST OPTIMIZED TOOL</h1>", unsafe_allow_html=True)
+
+#     # Bold and white color for the input labels
+#     st.markdown("<h3 style='color: white; font-weight: bold;'>Username</h3>", unsafe_allow_html=True)
+#     username = st.text_input("", key="username")
+    
+#     st.markdown("<h3 style='color: white; font-weight: bold;'>Password</h3>", unsafe_allow_html=True)
+#     password = st.text_input("", type="password", key="password")
+
+#     # Login button
+#     if st.button("Login"):
+#         if username in valid_users and password == valid_users[username]:
+#             st.session_state.authenticated = True
+#             st.success("✅ Login successful!")
+#         else:
+#             st.error("❌ Incorrect username or password. Please try again.")
+    
+#     st.stop()  # Stop execution if not logged in
+
+# #function to add logo
+# def show_logo(centered=True, width=200):
+#     logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+#     if centered:
+#         st.markdown(f"<div style='text-align: center;'><img src='{logo_url}' width='{width}'></div>", unsafe_allow_html=True)
+#     else:
+#         st.image(logo_url, width=width)
+
+# # After login, show main content
+# show_logo(centered=True, width=150)
+# st.write("🎉 Welcome! You are now logged in.")
+
+# # ---------- SESSION STATE FOR DATA SHARING ----------
+# if 'inputs' not in st.session_state:
+#     st.session_state.inputs = {
+#         'VIP': 0,
+#         'Mega': 0,
+#         'Macro': 0,
+#         'Mid': 0,
+#         'Micro': 0,
+#         'Nano': 0
+#     }
+
+# if 'page' not in st.session_state:
+#     st.session_state.page = 'Simulation Budget'  # Default page
+
+# # ---------- FUNCTION TO CHANGE PAGE ----------
+# def change_page(page_name):
+#     st.session_state.page = page_name
+
+# st.markdown(
+#     """
+#     <style>
+#     .stButton>button {
+#         width: 100%;
+#         padding: 10px;
+#         font-size: 16px;
+#         border-radius: 8px;
+#         background-color: #000000;
+#         color: white;
+#         border: none;
+#         transition: background-color 0.3s, color 0.3s;
+#         white-space: nowrap;  /* Prevents wrapping */
+#     }
+
+#     .stButton>button:hover {
+#         background-color: #333333;
+#         color: #ffffff;
+#         cursor: pointer;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
 
 # ---------- TOP NAVIGATION BUTTONS ----------
 st.set_page_config(page_title="MBCS Optimize Tool", page_icon="📁", layout="wide")

@@ -11,187 +11,196 @@ from scipy.optimize import linprog
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 import altair as alt
 
-# -------------------- PAGE CONFIG --------------------
-st.set_page_config(page_title="MBCS Optimize Tool", page_icon="📁", layout="wide")
-
 # -------------------- SESSION STATE --------------------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "invalid_login" not in st.session_state:
     st.session_state.invalid_login = False
-if "page" not in st.session_state:
-    st.session_state.page = "Simulation Budget"
-if "prev_page" not in st.session_state:
-    st.session_state.prev_page = None
-if "inputs" not in st.session_state:
-    st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
-# -------------------- AUTH --------------------
+# -------------------- CREDENTIALS --------------------
 valid_users = {
     "mbcs": "1234",
     "mbcs1": "5678",
     "admin": "adminpass"
 }
 
-def change_page(name: str):
-    st.session_state.prev_page = st.session_state.page
-    st.session_state.page = name
+# -------------------- LOGIN PAGE (SCOPED, NO IMPACT TO OTHER PAGES) --------------------
+if not st.session_state.authenticated:
+    # CSS is injected only when NOT authenticated and scoped inside .login-scope
+    st.markdown(
+        """
+        <style>
+        /* Scope everything to login only */
+        .login-scope{
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+          background:
+            radial-gradient(1000px 400px at 10% 10%, rgba(0,229,255,.08), transparent 60%),
+            radial-gradient(1000px 400px at 90% 10%, rgba(255,123,213,.08), transparent 60%),
+            linear-gradient(180deg, #0f1329 0%, #1a1e3d 100%);
+        }
 
-# -------------------- GLOBAL STYLES (LOGIN + MAIN) --------------------
-st.markdown(
-    """
-    <style>
-    :root{
-      --p1:#6a5acd; --p2:#00e5ff; --p3:#ff7bd5; --p4:#8affc1;
-      --bg1:#0e1022; --bg2:#171a35; --glass:rgba(255,255,255,.08);
-    }
-    /* App background */
-    [data-testid="stAppViewContainer"]{
-      background: radial-gradient(1200px 500px at 10% 0%, rgba(0,229,255,.06), transparent),
-                  radial-gradient(1200px 500px at 90% 0%, rgba(255,123,213,.06), transparent),
-                  linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
-      color: #e9ecff;
-      padding-top: 1.2rem;
-    }
-    /* Hide default Streamlit menu/footer */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+        .login-card{
+          width: 520px; max-width: 94vw;
+          position: relative; overflow: hidden;
+          border-radius: 18px;
+          padding: 28px 24px 22px;
+          background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+          border: 1px solid rgba(255,255,255,.12);
+          box-shadow: 0 18px 60px rgba(0,0,0,.35), inset 0 0 40px rgba(255,255,255,.02);
+        }
+        .login-card:before{
+          content:""; position:absolute; inset:-2px;
+          background: conic-gradient(from 0deg, #6a5acd, #00e5ff, #ff7bd5, #6a5acd);
+          filter: blur(28px); opacity:.35; animation: lg-spin 8s linear infinite;
+        }
+        .login-shine{
+          position:absolute; inset:1px; border-radius:16px;
+          background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 30%, transparent 70%, rgba(255,255,255,.22));
+          background-size: 220% 100%; animation: lg-shine 3.6s linear infinite;
+          pointer-events:none;
+        }
 
-    /* Header card (used on both login and main) */
-    .app-header{
-      position: relative; overflow: hidden; padding: 28px 28px 22px;
-      border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-      border: 1px solid rgba(255,255,255,.12);
-      box-shadow: 0 18px 60px rgba(0,0,0,.35), inset 0 0 40px rgba(255,255,255,.02);
-      margin-bottom: 18px;
-    }
-    .app-header:before{
-      content:""; position:absolute; inset:-2px;
-      background: conic-gradient(from 0deg, var(--p1), var(--p2), var(--p3), var(--p1));
-      filter: blur(28px); opacity:.35; animation: spin 8s linear infinite;
-    }
-    .headline{
-      font-size: clamp(26px, 4.2vw, 44px); font-weight: 900; letter-spacing:.4px;
-      background: linear-gradient(90deg, #fff, #cfe9ff, #ffffff);
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-      text-shadow: 0 0 18px rgba(0,229,255,.25);
-    }
-    .subline{
-      margin-top: 6px; color:#c9d4ff; opacity:.9; font-size: clamp(12px, 1.6vw, 14px);
-    }
-    .shine{
-      position:absolute; inset:1px; border-radius:16px;
-      background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 30%, transparent 70%, rgba(255,255,255,.22));
-      background-size: 220% 100%; animation: shine 3.6s linear infinite;
-      pointer-events:none;
-    }
+        .login-title{
+          font-size: clamp(26px, 4.2vw, 40px);
+          font-weight: 900; letter-spacing:.4px; margin: 4px 0 2px 0;
+          background: linear-gradient(90deg, #ffffff, #cfe9ff, #ffffff);
+          -webkit-background-clip: text; background-clip: text; color: transparent;
+          text-shadow: 0 0 18px rgba(0,229,255,.25);
+          text-align: center;
+        }
+        .login-sub{
+          text-align:center; color:#c9d4ff; opacity:.9; font-size: 13px; margin-bottom: 14px;
+        }
 
-    /* Buttons (main nav + login submit) */
-    div.stButton > button, button[kind="formSubmit"]{
-      width: 100%;
-      border-radius: 14px;
-      padding: 0.9rem 1rem;
-      border: 1px solid rgba(255,255,255,.18);
-      color: #fff; font-weight: 800; letter-spacing:.2px;
-      background: linear-gradient(135deg, rgba(106,90,205,.85), rgba(0,229,255,.55));
-      box-shadow: 0 12px 28px rgba(68,144,255,.28), inset 0 0 18px rgba(255,255,255,.06);
-      transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
-      backdrop-filter: blur(6px);
-    }
-    div.stButton > button:hover, button[kind="formSubmit"]:hover{
-      transform: translateY(-2px) scale(1.02);
-      box-shadow: 0 18px 36px rgba(68,144,255,.38);
-      filter: brightness(1.05);
-      cursor: pointer;
-    }
-    div.stButton > button:active, button[kind="formSubmit"]:active{
-      transform: translateY(0) scale(.98);
-    }
+        .logo-ring{
+          width:120px; height:120px; margin: 0 auto 12px auto; border-radius:50%;
+          position:relative; overflow: visible; box-shadow: 0 12px 50px rgba(0,229,255,.25);
+        }
+        .logo-ring:before{
+          content:""; position:absolute; inset:-6px; border-radius:50%;
+          background: conic-gradient(#6a5acd, #00e5ff, #ff7bd5, #6a5acd);
+          filter: blur(8px); opacity:.55; animation: lg-spin 6.5s linear infinite;
+          z-index:0;
+        }
+        .logo-ring img{
+          position:relative; z-index:1; width:100%; height:100%; object-fit: cover; border-radius:50%;
+          border: 3px solid rgba(255,255,255,.75); background: #fff;
+        }
 
-    /* Current page pill (main) */
-    .page-pill{
-      display: inline-flex; align-items: center; gap:10px;
-      padding: 10px 16px; margin-top: 8px;
-      border-radius: 999px;
-      background: linear-gradient(135deg, rgba(106,90,205,.4), rgba(0,229,255,.25));
-      border: 1px solid rgba(255,255,255,.18);
-      color: #f4f7ff; font-weight: 700;
-      box-shadow: 0 0 0 0 rgba(106,90,205,.45);
-      animation: pulse 2.4s infinite;
-      position: relative; overflow: hidden;
-    }
-    .page-pill .dot{ width: 10px; height: 10px; border-radius: 50%; background: var(--p4); box-shadow: 0 0 12px var(--p4); }
-    .page-pill .glowline{
-      position:absolute; inset:1px; border-radius:999px;
-      background: linear-gradient(120deg, rgba(255,255,255,.22), transparent 40%, transparent 60%, rgba(255,255,255,.22));
-      background-size: 200% 100%; animation: shine 3.2s linear infinite;
-      pointer-events:none;
-    }
+        /* Form inputs (login scope only) */
+        .login-scope input[type="text"],
+        .login-scope input[type="password"]{
+          width: 100%;
+          background: rgba(255,255,255,.95);
+          color: #0e1022;
+          border: 1px solid rgba(255,255,255,.18);
+          border-radius: 12px;
+          padding: 0.7rem 0.9rem;
+          box-shadow: 0 8px 24px rgba(0,0,0,.25), inset 0 0 0 rgba(0,0,0,0);
+          transition: box-shadow .2s ease, transform .12s ease, border-color .2s ease;
+        }
+        .login-scope input[type="text"]:focus,
+        .login-scope input[type="password"]:focus{
+          border-color: rgba(0,229,255,.7);
+          box-shadow: 0 10px 28px rgba(0,229,255,.25);
+          outline: none; transform: translateY(-1px);
+        }
+        .login-label{
+          color: #cfe9ff; font-weight: 700; margin: 10px 0 6px 2px; display:block;
+          text-shadow: 0 0 10px rgba(0,229,255,.15);
+        }
 
-    /* Login: input styling */
-    .stTextInput > div > div > input{
-      background: rgba(255,255,255,.92);
-      color: #0e1022;
-      border: 1px solid rgba(255,255,255,.18);
-      border-radius: 12px;
-      padding: 0.7rem 0.9rem;
-      box-shadow: 0 8px 24px rgba(0,0,0,.25), inset 0 0 0 rgba(0,0,0,0);
-      transition: box-shadow .2s ease, transform .12s ease, border-color .2s ease;
-    }
-    .stTextInput > div > div > input:focus{
-      border-color: rgba(0,229,255,.7);
-      box-shadow: 0 10px 28px rgba(0,229,255,.25);
-      outline: none;
-      transform: translateY(-1px);
-    }
-    .stTextInput label{
-      color: #cfe9ff !important;
-      font-weight: 700 !important;
-      text-shadow: 0 0 10px rgba(0,229,255,.15);
-    }
+        /* Submit button (login scope only) */
+        .login-scope button[kind="formSubmit"],
+        .login-scope div.stButton > button{
+          width: 100%;
+          border-radius: 14px;
+          padding: 0.9rem 1rem;
+          border: 1px solid rgba(255,255,255,.18);
+          color: #fff; font-weight: 800; letter-spacing:.2px;
+          background: linear-gradient(135deg, rgba(106,90,205,.85), rgba(0,229,255,.55));
+          box-shadow: 0 12px 28px rgba(68,144,255,.28), inset 0 0 18px rgba(255,255,255,.06);
+          transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+          backdrop-filter: blur(6px);
+          margin-top: 10px;
+        }
+        .login-scope button[kind="formSubmit"]:hover,
+        .login-scope div.stButton > button:hover{
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: 0 18px 36px rgba(68,144,255,.38);
+          filter: brightness(1.05);
+          cursor: pointer;
+        }
+        .login-scope button[kind="formSubmit"]:active,
+        .login-scope div.stButton > button:active{
+          transform: translateY(0) scale(.98);
+        }
 
-    /* Login logo ring */
-    .login-wrap{ max-width: 520px; margin: 0 auto; }
-    .logo-ring{
-      width:130px; height:130px; margin: 0 auto 10px auto; border-radius:50%;
-      position:relative; overflow: visible;
-      box-shadow: 0 12px 50px rgba(0,229,255,.25);
-    }
-    .logo-ring:before{
-      content:""; position:absolute; inset:-6px; border-radius:50%;
-      background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
-      filter: blur(8px); opacity:.55; animation: spin 6.5s linear infinite;
-      z-index:0;
-    }
-    .logo-ring img{
-      position:relative; z-index:1; width:100%; height:100%; object-fit: cover; border-radius:50%;
-      border: 3px solid rgba(255,255,255,.75);
-      background: #fff;
-    }
+        /* Shake on wrong login (apply to .login-card) */
+        .shake{ animation: lg-shake .35s ease-in-out 0s 1; }
 
-    /* Shake animation on wrong login */
-    .shake{ animation: shake .35s ease-in-out 0s 1; }
+        @keyframes lg-shine{
+          0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; }
+        }
+        @keyframes lg-spin{ to{ transform: rotate(360deg);} }
+        @keyframes lg-shake{
+          0%,100%{ transform: translateX(0); }
+          20%{ transform: translateX(-6px); }
+          40%{ transform: translateX(6px); }
+          60%{ transform: translateX(-4px); }
+          80%{ transform: translateX(4px); }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-    @keyframes shine{
-      0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; }
-    }
-    @keyframes pulse{
-      0%{ box-shadow: 0 0 0 0 rgba(106,90,205,.45); }
-      70%{ box-shadow: 0 0 0 14px rgba(106,90,205,0); }
-      100%{ box-shadow: 0 0 0 0 rgba(106,90,205,0); }
-    }
-    @keyframes spin{ to{ transform: rotate(360deg);} }
-    @keyframes shake{
-      0%,100%{ transform: translateX(0); }
-      20%{ transform: translateX(-6px); }
-      40%{ transform: translateX(6px); }
-      60%{ transform: translateX(-4px); }
-      80%{ transform: translateX(4px); }
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+    # Open scoped wrapper and card
+    card_class = "login-card shake" if st.session_state.invalid_login else "login-card"
+    st.markdown(f'<div class="login-scope"><div class="{card_class}">', unsafe_allow_html=True)
+
+    # Header
+    st.markdown(
+        """
+        <div class="login-shine"></div>
+        <div class="logo-ring"><img src="https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg" alt="NEST"></div>
+        <div class="login-title">🔒 WELCOME TO NEST OPTIMIZED TOOL</div>
+        <div class="login-sub">Secure access • Smart budget simulation • Influencer optimization</div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # Form
+    with st.form("login_form", clear_on_submit=False):
+        st.markdown('<label class="login-label">Username</label>', unsafe_allow_html=True)
+        username = st.text_input(label="", placeholder="Enter username", key="login_username")
+
+        st.markdown('<label class="login-label">Password</label>', unsafe_allow_html=True)
+        password = st.text_input(label="", placeholder="Enter password", type="password", key="login_password")
+
+        submit = st.form_submit_button("Login", use_container_width=True)
+
+    # Close scoped wrapper and card
+    st.markdown('</div></div>', unsafe_allow_html=True)
+
+    if submit:
+        if username in valid_users and password == valid_users[username]:
+            st.session_state.authenticated = True
+            st.session_state.invalid_login = False
+            st.rerun()
+        else:
+            st.session_state.invalid_login = True
+            st.error("❌ Incorrect username or password. Please try again.")
+
+    st.stop()
+
+# -------------------- AFTER LOGIN --------------------
+# Put your main app code below. Nothing from the login CSS affects this area.
+st.success("คุณล็อกอินแล้ว (Login passed). โหลดหน้าอื่นต่อได้เลย!")
 
 # If wrong credentials, briefly apply shake to the main block container
 if st.session_state.invalid_login:

@@ -12,10 +12,10 @@ from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 import altair as alt
 
 
-# Set Streamlit to wide layout
+# -------------------- PAGE CONFIG --------------------
 st.set_page_config(layout="wide")
 
-# Keep your original width (no change of size/layout anywhere else)
+# คงค่า width เดิมของคุณ
 st.markdown(
     """
     <style>
@@ -26,36 +26,70 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Minimal, modern effects only for the login area (no box, no global size change)
-def login_styles():
-    st.markdown(
+# -------------------- SESSION STATE --------------------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "invalid_login" not in st.session_state:
+    st.session_state.invalid_login = False
+if "welcome_shown" not in st.session_state:
+    st.session_state.welcome_shown = False
+
+# -------------------- CREDENTIALS --------------------
+valid_users = {
+    "mbcs": "1234",
+    "mbcs1": "5678",
+    "admin": "adminpass"
+}
+
+# ใช้ placeholder สำหรับ CSS login เพื่อถอดทิ้งหลังล็อกอิน
+login_css = st.empty()
+
+def inject_login_css():
+    login_css.markdown(
         """
         <style>
-        /* Scope styles inside #login-scope only */
+        :root{ --p1:#6366f1; --p2:#22d3ee; --p3:#a78bfa; --ink:#0f172a; --muted:#475569; }
+
+        /* พื้นหลังแบบสว่างแต่มีโทนสี (เฉพาะตอนยังไม่ล็อกอิน) */
+        [data-testid="stAppViewContainer"]{
+          background:
+            radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.14), transparent 60%),
+            radial-gradient(900px 320px at 88% 12%, rgba(34,211,238,.12), transparent 60%),
+            linear-gradient(180deg, #f5f7fb 0%, #eef2ff 100%);
+          padding-top: 2vh;
+        }
+
+        /* สไตล์เฉพาะในโซน login เท่านั้น (ไม่มีกล่อง ไม่ปรับ size) */
+        #login-scope .logo{
+          display:block; margin: 6px auto 10px auto; width:120px; height:120px;
+          border-radius:50%; object-fit:cover;
+          border: 3px solid rgba(255,255,255,.9);
+          box-shadow: 0 10px 28px rgba(2,132,199,.15);
+        }
         #login-scope .title{
           font-size: clamp(28px, 4.2vw, 44px);
           font-weight: 900; text-align:center; margin: 6px 0 4px 0;
           background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
           -webkit-background-clip: text; background-clip: text; color: transparent;
-          background-size: 200% 100%; animation: titleWave 7s ease-in-out infinite;
+          background-size: 220% 100%; animation: wave 7s ease-in-out infinite;
         }
         #login-scope .subtitle{
           text-align:center; color:#475569; font-size:14px; margin-bottom: 14px;
         }
-        /* Small glow under the title (no container box) */
-        #login-scope .soft-glow{
-          height: 10px; margin: 0 auto 14px auto; max-width: 360px; border-radius: 999px;
+        #login-scope .glow{
+          height: 10px; margin: 0 auto 16px auto; max-width: 360px; border-radius: 999px;
           background: radial-gradient(closest-side, rgba(99,102,241,.25), rgba(99,102,241,0));
           filter: blur(2px);
         }
-        /* Inputs (only inside login scope) */
+
+        /* Inputs เฉพาะใน login */
         #login-scope .stTextInput > div > div > input,
         #login-scope .stPassword > div > div > input{
-          background: #ffffff; color: #0f172a;
+          background:#fff; color: var(--ink);
           border: 1px solid rgba(17,24,39,.12);
-          border-radius: 12px; padding: 0.75rem 0.9rem;
+          border-radius: 12px; padding: .75rem .9rem;
           box-shadow: 0 6px 14px rgba(17,24,39,.05);
-          transition: box-shadow .2s ease, border-color .2s ease, transform .12s ease;
+          transition: box-shadow .2s, border-color .2s, transform .12s;
         }
         #login-scope .stTextInput > div > div > input:focus,
         #login-scope .stPassword > div > div > input:focus{
@@ -64,29 +98,24 @@ def login_styles():
           transform: translateY(-1px);
           outline: none;
         }
-        /* Submit button (small gradient + hover) */
+
+        /* ปุ่ม Login เล็กๆ มีไฮไลต์ */
         #login-scope .stButton > button{
           width: 100%;
-          border-radius: 12px; padding: 0.85rem 1rem;
+          border-radius: 12px; padding: .85rem 1rem;
           border: 1px solid rgba(17,24,39,.08);
-          color: #ffffff; font-weight: 800; letter-spacing:.2px;
-          background: linear-gradient(135deg, #6366f1, #22d3ee);
+          color:#fff; font-weight:800; letter-spacing:.2px;
+          background: linear-gradient(135deg, var(--p1), var(--p2));
           box-shadow: 0 10px 20px rgba(2,132,199,.18);
-          transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+          transition: transform .15s, box-shadow .2s, filter .2s;
         }
         #login-scope .stButton > button:hover{
-          transform: translateY(-2px);
+          transform: translateY(-2px); filter: brightness(1.03);
           box-shadow: 0 16px 28px rgba(2,132,199,.24);
-          filter: brightness(1.03);
           cursor: pointer;
         }
-        /* Logo size only (no card/box) */
-        #login-scope .logo{
-          display:block; margin: 6px auto 8px auto; width:120px; height:120px;
-          border-radius:50%; object-fit:cover; border: 3px solid rgba(255,255,255,.85);
-          box-shadow: 0 10px 28px rgba(2,132,199,.15);
-        }
-        @keyframes titleWave{
+
+        @keyframes wave{
           0%{ background-position: 0% 0; }
           50%{ background-position: 100% 0; }
           100%{ background-position: 0% 0; }
@@ -96,44 +125,43 @@ def login_styles():
         unsafe_allow_html=True
     )
 
-# List of valid usernames and passwords
-valid_users = {
-    "mbcs": "1234",
-    "mbcs1": "5678",
-    "admin": "adminpass"  # Add more users if needed
-}
-
-# If user is NOT logged in, show login page
-if 'authenticated' not in st.session_state:
-    st.session_state.authenticated = False
-
+# -------------------- LOGIN UI --------------------
 if not st.session_state.authenticated:
-    login_styles()  # subtle effects only for this area
+    inject_login_css()
 
-    # Center layout without changing global sizes
     left, mid, right = st.columns([1, 2, 1])
     with mid:
+        st.markdown('<div id="login-scope">', unsafe_allow_html=True)
+
         logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-        st.markdown(f'<div id="login-scope">', unsafe_allow_html=True)
         st.markdown(f"<img class='logo' src='{logo_url}' alt='NEST'>", unsafe_allow_html=True)
         st.markdown("<div class='title'>🔒 WELCOME TO NEST OPTIMIZED TOOL</div>", unsafe_allow_html=True)
         st.markdown("<div class='subtitle'>Secure access • Smart budget simulation • Influencer optimization</div>", unsafe_allow_html=True)
-        st.markdown("<div class='soft-glow'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='glow'></div>", unsafe_allow_html=True)
 
-        # Inputs
-        username = st.text_input("Username", key="username")
-        password = st.text_input("Password", type="password", key="password")
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
 
-        # Login button
         if st.button("Login"):
             if username in valid_users and password == valid_users[username]:
                 st.session_state.authenticated = True
+                st.toast("✅ Login successful", icon="✨")
+                # เอา CSS login ออกเพื่อไม่ให้กระทบหน้าอื่น
+                login_css.empty()
                 st.rerun()
             else:
                 st.error("❌ Incorrect username or password. Please try again.")
 
         st.markdown("</div>", unsafe_allow_html=True)
-    st.stop()  # Stop execution if not logged in
+
+    st.stop()
+
+# -------------------- AFTER LOGIN --------------------
+# ไม่แสดงโลโก้/Welcome บนทุกหน้าอีกแล้ว
+# ถ้าอยากแสดงเฉพาะครั้งแรกหลังล็อกอิน ให้ใช้ block นี้
+if not st.session_state.welcome_shown:
+    st.success("🎉 Welcome! You are now logged in.")
+    st.session_state.welcome_shown = True
 
 
 # # Set Streamlit to wide layout

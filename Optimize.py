@@ -11,6 +11,7 @@ from scipy.optimize import linprog
 from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 import altair as alt
 from textwrap import dedent
+import urllib.parse as _url
 
 
 # -------------------- PAGE CONFIG --------------------
@@ -480,207 +481,82 @@ st.success("You are logged in. Build your app content here.")
 # st.success("You are logged in. Build your app content here.")
 
 
+# ---------- TOP NAVIGATION (Ellipse pills, equal spacing) ----------
 
-# ---------- SESSION STATE FOR DATA SHARING ----------
-if 'inputs' not in st.session_state:
-    st.session_state.inputs = {
-        'VIP': 0,
-        'Mega': 0,
-        'Macro': 0,
-        'Mid': 0,
-        'Micro': 0,
-        'Nano': 0
-    }
-
-if 'page' not in st.session_state:
-    st.session_state.page = 'Simulation Budget'  # Default page
-
-# ---------- FUNCTION TO CHANGE PAGE ----------
-def change_page(page_name):
-    st.session_state.page = page_name
-
-st.markdown(
-    """
-    <style>
-    .stButton>button {
-        width: 100%;
-        padding: 10px;
-        font-size: 16px;
-        border-radius: 8px;
-        background-color: #000000;
-        color: white;
-        border: none;
-        transition: background-color 0.3s, color 0.3s;
-        white-space: nowrap;  /* Prevents wrapping */
-    }
-
-    .stButton>button:hover {
-        background-color: #333333;
-        color: #ffffff;
-        cursor: pointer;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# ---------- TOP NAVIGATION BUTTONS ----------
-
-st.set_page_config(page_title="MBCS Optimize Tool", page_icon="📁", layout="wide")
-
-# Init session state
+# มีค่าเริ่มต้นให้แน่ใจว่า page ถูกตั้งไว้
 if "page" not in st.session_state:
-    st.session_state.page = "Home"
-if "prev_page" not in st.session_state:
-    st.session_state.prev_page = None
+    st.session_state.page = "Simulation Budget"
 
-def change_page(name: str):
-    st.session_state.prev_page = st.session_state.page
-    st.session_state.page = name
+# sync page กับ query string ?page=...
+def sync_page_from_query():
+    params = st.experimental_get_query_params()
+    if "page" in params:
+        st.session_state.page = params["page"][0]
+    else:
+        st.experimental_set_query_params(page=st.session_state.page)
 
-# Light, modern theme + effects (no global text color override)
-st.markdown(
-    """
-    <style>
-    :root{
-      --p1:#6366f1; /* indigo */
-      --p2:#22d3ee; /* cyan */
-      --p3:#a78bfa; /* violet */
-      --p4:#10b981; /* emerald */
-      --bg1:#f9fafb;
-      --bg2:#eef2ff;
-    }
+# CSS ของปุ่มวงรี 3 อัน (จัดวางเท่ากันด้วย CSS Grid)
+st.markdown("""
+<style>
+.pill-nav-wrap{ display:flex; justify-content:center; }
+.pill-nav{
+  display:grid; grid-template-columns: repeat(3, 1fr);
+  gap: 18px; margin: 8px 0 8px 0; align-items: stretch;
+  max-width: 900px; width:100%;
+}
+.pill-nav .pill-btn{
+  display:flex; align-items:center; justify-content:center;
+  gap:10px; height:46px; padding:0 18px;
+  border-radius:9999px; text-decoration:none;
+  font-weight:800; letter-spacing:.2px; font-size:14px;
+  color:#fff; border:1px solid rgba(17,24,39,.08);
+  box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12);
+  transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+.pill-nav .pill-btn:hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.04); }
+.pill-nav .pill-btn:active{ transform: translateY(0) scale(.98); }
 
-    /* App background (soft, light) */
-    [data-testid="stAppViewContainer"]{
-      background:
-        radial-gradient(850px 300px at 8% 10%, rgba(99,102,241,.14), transparent 60%),
-        radial-gradient(850px 300px at 92% 8%, rgba(34,211,238,.12), transparent 60%),
-        linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
-      /* Do NOT set global text color to preserve black text on other parts */
-      padding-top: 1.2rem;
-    }
+/* สีแต่ละปุ่ม */
+.pill-btn.p1{ background: linear-gradient(135deg, #22c55e, #06b6d4); }  /* Simulation Budget */
+.pill-btn.p2{ background: linear-gradient(135deg, #f97316, #ef4444); }  /* Influencer Performance */
+.pill-btn.p3{ background: linear-gradient(135deg, #6366f1, #22d3ee); }  /* Optimized Budget */
 
-    /* Header card (glass on light bg) */
-    .app-header{
-      position: relative; overflow: hidden; padding: 26px 26px 20px;
-      border-radius: 18px;
-      background: rgba(255,255,255,.78);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(17,24,39,.08);
-      box-shadow: 0 12px 35px rgba(17,24,39,.10);
-      margin-bottom: 18px;
-    }
-    .app-header:before{
-      content:""; position:absolute; inset:-2px;
-      background: conic-gradient(from 0deg, var(--p1), var(--p2), var(--p3), var(--p1));
-      filter: blur(28px); opacity:.25; animation: spin 10s linear infinite;
-    }
-    .shine{
-      position:absolute; inset:1px; border-radius:16px;
-      background: linear-gradient(120deg, rgba(255,255,255,.18), transparent 35%, transparent 65%, rgba(255,255,255,.18));
-      background-size: 220% 100%; animation: shine 4s linear infinite;
-      pointer-events:none;
-    }
-    .headline{
-      font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px;
-      background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a);
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-    }
-    .subline{
-      margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px);
-    }
+/* ปุ่มที่ถูกเลือก */
+.pill-btn.active{
+  outline: 3px solid rgba(99,102,241,.20);
+  box-shadow: 0 16px 30px rgba(2,132,199,.25);
+  cursor: default;
+}
+.pill-btn.active:hover{ transform:none; filter:none; }
+.pill-btn .icon{ font-size:15px; line-height:1; }
 
-    /* Scope nav button styles so other buttons elsewhere won't be impacted */
-    .nav-scope div.stButton > button{
-      width: 100%;
-      border-radius: 12px;
-      padding: 0.85rem 1rem;
-      border: 1px solid rgba(17,24,39,.08);
-      color: #ffffff; font-weight: 800; letter-spacing:.2px;
-      background: linear-gradient(135deg, var(--p1), var(--p2));
-      box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12);
-      transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
-    }
-    .nav-scope div.stButton > button:hover{
-      transform: translateY(-2px) scale(1.01);
-      box-shadow: 0 16px 30px rgba(2,132,199,.25);
-      filter: brightness(1.03);
-      cursor: pointer;
-    }
-    .nav-scope div.stButton > button:active{
-      transform: translateY(0) scale(.98);
-    }
+/* ถ้าต้องการให้กว้างเต็มแถวมากขึ้น ปรับ max-width ได้ */
+</style>
+""", unsafe_allow_html=True)
 
-    /* Current page pill (light style) */
-    .page-pill{
-      display: inline-flex; align-items: center; gap:10px;
-      padding: 10px 16px; margin-top: 10px;
-      border-radius: 999px;
-      background:
-        linear-gradient(135deg, rgba(99,102,241,.08), rgba(34,211,238,.06)),
-        #ffffff;
-      border: 1px solid rgba(17,24,39,.10);
-      color: #111827; font-weight: 700;
-      box-shadow: 0 4px 16px rgba(17,24,39,.08);
-      animation: pulse 3s infinite;
-      position: relative; overflow: hidden;
-    }
-    .page-pill .dot{
-      width: 10px; height: 10px; border-radius: 50%;
-      background: var(--p1); box-shadow: 0 0 10px rgba(99,102,241,.6);
-    }
-    .page-pill .glowline{
-      position:absolute; inset:1px; border-radius:999px;
-      background: linear-gradient(120deg, rgba(255,255,255,.6), transparent 40%, transparent 60%, rgba(255,255,255,.6));
-      background-size: 200% 100%; animation: shine 3.2s linear infinite;
-      pointer-events:none;
-    }
+def render_nav_pills():
+    pages = [
+        ("Simulation Budget", "📂", "p1"),
+        ("Influencer Performance", "📊", "p2"),
+        ("Optimized Budget", "🧾", "p3"),
+    ]
+    curr = st.session_state.page
+    html = ['<div class="pill-nav-wrap"><div class="pill-nav">']
+    for name, icon, cls in pages:
+        active = " active" if curr == name else ""
+        href = f"?page={_url.quote(name)}"
+        html.append(
+            f'<a class="pill-btn {cls}{active}" href="{href}">'
+            f'<span class="icon">{icon}</span><span>{name}</span></a>'
+        )
+    html.append("</div></div>")
+    st.markdown("".join(html), unsafe_allow_html=True)
 
-    @keyframes shine{
-      0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; }
-    }
-    @keyframes pulse{
-      0%{ box-shadow: 0 4px 16px rgba(17,24,39,.10); }
-      50%{ box-shadow: 0 6px 20px rgba(17,24,39,.12); }
-      100%{ box-shadow: 0 4px 16px rgba(17,24,39,.10); }
-    }
-    @keyframes spin{ to{ transform: rotate(360deg);} }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# เรียกใช้งาน (วางหลัง Header และก่อนคอนเทนต์ของหน้า)
+sync_page_from_query()
+render_nav_pills()
 
-# Fancy header
-st.markdown(
-    """
-    <div class="app-header">
-      <div class="shine"></div>
-      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
-      <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# Navigation (scoped so other buttons in other pages keep their own style)
-st.markdown('<div class="nav-scope">', unsafe_allow_html=True)
-col1, col2, col3 = st.columns([1, 1, 1])
-
-with col1:
-    if st.button("📂 Simulation Budget"):
-        change_page("Simulation Budget")
-
-with col2:
-    if st.button("💰 Influencer Performance"):
-        change_page("Influencer Performance")
-
-with col3:
-    if st.button("📋 Optimized Budget"):
-        change_page("Optimized Budget")
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Animated Current Page pill
+# Current Page pill ที่คุณมีอยู่ ใช้ต่อได้เลย
 curr = st.session_state.page
 st.markdown(
     f"""
@@ -692,6 +568,219 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+#Version3 Nevigate
+# # ---------- SESSION STATE FOR DATA SHARING ----------
+# if 'inputs' not in st.session_state:
+#     st.session_state.inputs = {
+#         'VIP': 0,
+#         'Mega': 0,
+#         'Macro': 0,
+#         'Mid': 0,
+#         'Micro': 0,
+#         'Nano': 0
+#     }
+
+# if 'page' not in st.session_state:
+#     st.session_state.page = 'Simulation Budget'  # Default page
+
+# # ---------- FUNCTION TO CHANGE PAGE ----------
+# def change_page(page_name):
+#     st.session_state.page = page_name
+
+# st.markdown(
+#     """
+#     <style>
+#     .stButton>button {
+#         width: 100%;
+#         padding: 10px;
+#         font-size: 16px;
+#         border-radius: 8px;
+#         background-color: #000000;
+#         color: white;
+#         border: none;
+#         transition: background-color 0.3s, color 0.3s;
+#         white-space: nowrap;  /* Prevents wrapping */
+#     }
+
+#     .stButton>button:hover {
+#         background-color: #333333;
+#         color: #ffffff;
+#         cursor: pointer;
+#     }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # ---------- TOP NAVIGATION BUTTONS ----------
+
+# st.set_page_config(page_title="MBCS Optimize Tool", page_icon="📁", layout="wide")
+
+# # Init session state
+# if "page" not in st.session_state:
+#     st.session_state.page = "Home"
+# if "prev_page" not in st.session_state:
+#     st.session_state.prev_page = None
+
+# def change_page(name: str):
+#     st.session_state.prev_page = st.session_state.page
+#     st.session_state.page = name
+
+# # Light, modern theme + effects (no global text color override)
+# st.markdown(
+#     """
+#     <style>
+#     :root{
+#       --p1:#6366f1; /* indigo */
+#       --p2:#22d3ee; /* cyan */
+#       --p3:#a78bfa; /* violet */
+#       --p4:#10b981; /* emerald */
+#       --bg1:#f9fafb;
+#       --bg2:#eef2ff;
+#     }
+
+#     /* App background (soft, light) */
+#     [data-testid="stAppViewContainer"]{
+#       background:
+#         radial-gradient(850px 300px at 8% 10%, rgba(99,102,241,.14), transparent 60%),
+#         radial-gradient(850px 300px at 92% 8%, rgba(34,211,238,.12), transparent 60%),
+#         linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 100%);
+#       /* Do NOT set global text color to preserve black text on other parts */
+#       padding-top: 1.2rem;
+#     }
+
+#     /* Header card (glass on light bg) */
+#     .app-header{
+#       position: relative; overflow: hidden; padding: 26px 26px 20px;
+#       border-radius: 18px;
+#       background: rgba(255,255,255,.78);
+#       backdrop-filter: blur(8px);
+#       border: 1px solid rgba(17,24,39,.08);
+#       box-shadow: 0 12px 35px rgba(17,24,39,.10);
+#       margin-bottom: 18px;
+#     }
+#     .app-header:before{
+#       content:""; position:absolute; inset:-2px;
+#       background: conic-gradient(from 0deg, var(--p1), var(--p2), var(--p3), var(--p1));
+#       filter: blur(28px); opacity:.25; animation: spin 10s linear infinite;
+#     }
+#     .shine{
+#       position:absolute; inset:1px; border-radius:16px;
+#       background: linear-gradient(120deg, rgba(255,255,255,.18), transparent 35%, transparent 65%, rgba(255,255,255,.18));
+#       background-size: 220% 100%; animation: shine 4s linear infinite;
+#       pointer-events:none;
+#     }
+#     .headline{
+#       font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px;
+#       background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a);
+#       -webkit-background-clip: text; background-clip: text; color: transparent;
+#     }
+#     .subline{
+#       margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px);
+#     }
+
+#     /* Scope nav button styles so other buttons elsewhere won't be impacted */
+#     .nav-scope div.stButton > button{
+#       width: 100%;
+#       border-radius: 12px;
+#       padding: 0.85rem 1rem;
+#       border: 1px solid rgba(17,24,39,.08);
+#       color: #ffffff; font-weight: 800; letter-spacing:.2px;
+#       background: linear-gradient(135deg, var(--p1), var(--p2));
+#       box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12);
+#       transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+#     }
+#     .nav-scope div.stButton > button:hover{
+#       transform: translateY(-2px) scale(1.01);
+#       box-shadow: 0 16px 30px rgba(2,132,199,.25);
+#       filter: brightness(1.03);
+#       cursor: pointer;
+#     }
+#     .nav-scope div.stButton > button:active{
+#       transform: translateY(0) scale(.98);
+#     }
+
+#     /* Current page pill (light style) */
+#     .page-pill{
+#       display: inline-flex; align-items: center; gap:10px;
+#       padding: 10px 16px; margin-top: 10px;
+#       border-radius: 999px;
+#       background:
+#         linear-gradient(135deg, rgba(99,102,241,.08), rgba(34,211,238,.06)),
+#         #ffffff;
+#       border: 1px solid rgba(17,24,39,.10);
+#       color: #111827; font-weight: 700;
+#       box-shadow: 0 4px 16px rgba(17,24,39,.08);
+#       animation: pulse 3s infinite;
+#       position: relative; overflow: hidden;
+#     }
+#     .page-pill .dot{
+#       width: 10px; height: 10px; border-radius: 50%;
+#       background: var(--p1); box-shadow: 0 0 10px rgba(99,102,241,.6);
+#     }
+#     .page-pill .glowline{
+#       position:absolute; inset:1px; border-radius:999px;
+#       background: linear-gradient(120deg, rgba(255,255,255,.6), transparent 40%, transparent 60%, rgba(255,255,255,.6));
+#       background-size: 200% 100%; animation: shine 3.2s linear infinite;
+#       pointer-events:none;
+#     }
+
+#     @keyframes shine{
+#       0%{ background-position: 200% 0; } 100%{ background-position: -200% 0; }
+#     }
+#     @keyframes pulse{
+#       0%{ box-shadow: 0 4px 16px rgba(17,24,39,.10); }
+#       50%{ box-shadow: 0 6px 20px rgba(17,24,39,.12); }
+#       100%{ box-shadow: 0 4px 16px rgba(17,24,39,.10); }
+#     }
+#     @keyframes spin{ to{ transform: rotate(360deg);} }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # Fancy header
+# st.markdown(
+#     """
+#     <div class="app-header">
+#       <div class="shine"></div>
+#       <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
+#       <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
+#     </div>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # Navigation (scoped so other buttons in other pages keep their own style)
+# st.markdown('<div class="nav-scope">', unsafe_allow_html=True)
+# col1, col2, col3 = st.columns([1, 1, 1])
+
+# with col1:
+#     if st.button("📂 Simulation Budget"):
+#         change_page("Simulation Budget")
+
+# with col2:
+#     if st.button("💰 Influencer Performance"):
+#         change_page("Influencer Performance")
+
+# with col3:
+#     if st.button("📋 Optimized Budget"):
+#         change_page("Optimized Budget")
+# st.markdown('</div>', unsafe_allow_html=True)
+
+# # Animated Current Page pill
+# curr = st.session_state.page
+# st.markdown(
+#     f"""
+#     <div class="page-pill">
+#       <span class="dot"></span>
+#       <span>Current Page: <strong>{curr}</strong></span>
+#       <div class="glowline"></div>
+#     </div>
+#     """,
+#     unsafe_allow_html=True
+# )
 
 #Verion2
 # st.set_page_config(page_title="MBCS Optimize Tool", page_icon="📁", layout="wide")

@@ -41,7 +41,7 @@ valid_users = {
     "admin": "adminpass"
 }
 
--------------------- OPTIONS --------------------
+#-------------------- OPTIONS --------------------
 SHOW_TAGLINE = False
 TAGLINE_TEXT = "Smart solutions for budget optimization"
 

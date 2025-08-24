@@ -486,36 +486,29 @@ st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wi
 
 # -------------------- SESSION STATE --------------------
 st.session_state.setdefault("authenticated", False)
-st.session_state.setdefault("invalid_login", False)
 st.session_state.setdefault("page", "Simulation Budget")
 st.session_state.setdefault("prev_page", None)
+st.session_state.setdefault("ticker_rendered_once", False)  # กันซ้ำจากฝั่งเราเอง
 
-# Shared data (เผื่อใช้ต่อ)
+# Shared data (ถ้ามีการใช้ต่อ)
 if "inputs" not in st.session_state:
     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
 # -------------------- OPTIONS --------------------
 logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-
-# อย่าให้มีตัววิ่งในหน้า Login (เราไม่ไปแก้โค้ดหน้า Login ของคุณ)
-SHOW_TICKER_APP = True
-
-# ซ่อนเฉพาะแบนเนอร์ “You are logged in…” หลังล็อกอิน
-HIDE_LOGGEDIN_BANNER = True
-
-# ข้อความในตัววิ่ง
+SHOW_TICKER_APP = True  # แสดงตัววิ่งหลังล็อกอิน
 TICKER_ITEMS = [
     {"text": "MBCS AI Optimization Tool", "color": "#000000"},
     {"text": "Smart budget simulation",   "color": "#16a34a"},
     {"text": "Influencer optimization",   "color": "#2563eb"},
 ]
 
-# -------------------- GLOBAL STYLES (เฉพาะหลังล็อกอิน) --------------------
+# -------------------- GLOBAL STYLES --------------------
 st.markdown("""
 <style>
 .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
 
-/* พื้นหลังรวม */
+/* พื้นหลัง */
 body {
   background:
     radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
@@ -523,12 +516,8 @@ body {
     linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
 }
 
-/* Ticker pills */
+/* Ticker pills (ของเรา) */
 .top-wrap { margin-top: 10px; margin-bottom: 22px; }
-.ticker-wrap { margin: 0; }
-/* ถ้ามี ticker-wrap มากกว่า 1 อัน ให้ซ่อนอันถัดไปทั้งหมด (กันซ้ำ) */
-.ticker-wrap ~ .ticker-wrap { display: none !important; }
-
 .pill { width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px; position:relative; overflow:hidden;
   background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
 .pill .sheen{ content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
@@ -550,7 +539,7 @@ body {
 .headline{ font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .subline{ margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px); }
 
-/* Brand hero (logo + glow) */
+/* Brand hero */
 .brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
 .brand-hero .brand-stage{ position:relative; z-index:1; }
 .brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
@@ -589,42 +578,69 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------- Helper: ซ่อนแบนเนอร์ “You are logged in …” --------------------
-def hide_logged_in_banner():
-    if not HIDE_LOGGEDIN_BANNER:
-        return
+# -------------------- Inject JS: ลบตัววิ่งซ้ำ (ข้าม iframe) + ซ่อนแบนเนอร์สีเขียว --------------------
+def inject_cleanup_js():
     st.markdown("""
     <script>
-    // ลบเฉพาะ alert ที่มีข้อความ 'You are logged in. Build your app content here.'
-    const kill = () => {
-      const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
-      alerts.forEach(a => {
-        const t = a.innerText || "";
-        if (t.trim().startsWith('You are logged in. Build your app content here.')) {
-          a.style.display = 'none';
+    (function(){
+      function hideDuplicateTickers(){
+        const iframes = Array.from(document.querySelectorAll('iframe'));
+        const tickers = [];
+        for (const f of iframes){
+          try{
+            const doc = f.contentDocument || f.contentWindow?.document;
+            if(!doc) continue;
+            const txt = (doc.body?.innerText || "").replace(/\\s+/g,' ').trim();
+            // ตรวจจับจากข้อความ 3 ชิ้นใน ticker
+            if (txt.includes('MBCS AI Optimization Tool') &&
+                txt.includes('Smart budget simulation') &&
+                txt.includes('Influencer optimization')){
+              tickers.push(f);
+            }
+          }catch(e){/* sandbox บางกรณี */}
         }
-      });
-    };
-    // เรียกหลายครั้งเผื่อ DOM ยังโหลดไม่ครบ
-    kill(); setTimeout(kill, 150); setTimeout(kill, 400); setTimeout(kill, 900);
+        if (tickers.length > 1){
+          // เก็บตัวสุดท้าย (ด้านล่าง) ไว้ตัวเดียว
+          for(let i=0;i<tickers.length-1;i++){
+            tickers[i].style.display = 'none';
+          }
+        }
+      }
+
+      function hideLoggedInBanner(){
+        const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
+        alerts.forEach(a=>{
+          const t = (a.innerText||"").trim();
+          if (t.startsWith('You are logged in. Build your app content here.')){
+            a.style.display = 'none';
+          }
+        });
+      }
+
+      // เรียกซ้ำหลายครั้งเผื่อ DOM อัปเดต
+      hideDuplicateTickers(); hideLoggedInBanner();
+      setTimeout(hideDuplicateTickers, 250);  setTimeout(hideLoggedInBanner, 250);
+      setTimeout(hideDuplicateTickers, 800);  setTimeout(hideLoggedInBanner, 800);
+      setTimeout(hideDuplicateTickers, 2000); setTimeout(hideLoggedInBanner, 2000);
+    })();
     </script>
     """, unsafe_allow_html=True)
 
-# -------------------- TICKER (HTML component) --------------------
-def render_top_banner():
+# -------------------- TICKER (render once from our side) --------------------
+def render_top_banner_once():
+    if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
+        return
     import json as _json
     items_json = _json.dumps(TICKER_ITEMS)
     html = f"""
-    <div class="ticker-wrap">
-      <div class="top-wrap">
-        <div class="pill">
-          <div class="sheen"></div>
-          <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
-            <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
-          </div>
+    <div class="top-wrap">
+      <div class="pill">
+        <div class="sheen"></div>
+        <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
+          <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
         </div>
-        <div class="glass pill"></div>
       </div>
+      <div class="glass pill"></div>
     </div>
     <style>
       @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
@@ -663,6 +679,7 @@ def render_top_banner():
     </script>
     """
     st.components.v1.html(html, height=110, scrolling=False)
+    st.session_state.ticker_rendered_once = True  # กันซ้ำจากฝั่งเราเอง
 
 # -------------------- HEADER / BRAND HERO --------------------
 def render_header():
@@ -751,30 +768,29 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# -------------------- PAGE CONTENT (เว้นว่าง เพื่อไม่ชนกับคอนเทนต์จริงของคุณ) --------------------
+# -------------------- PAGE CONTENT DUMMIES --------------------
 def page_simulation_budget(): return
 def page_influencer_performance(): return
 def page_optimized_budget(): return
 
 # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:
-    # คงหน้า Login ของคุณตามเดิม
+    # คงหน้า Login ของคุณไว้ตามเดิม (เราไม่แตะ)
     st.info("Please sign in on your existing login view.")
     st.stop()
 
-# ซ่อนแบนเนอร์สีเขียวที่ระบบอื่นๆ แสดง
-hide_logged_in_banner()
+# 1) เคลียร์ตัววิ่งซ้ำ + ซ่อนแบนเนอร์เขียว (ทำก่อนเรนเดอร์อย่างอื่น)
+inject_cleanup_js()
 
-# แสดงตัววิ่ง “แถวเดียว” หลังล็อกอิน (CSS บังคับไม่ให้ซ้ำ)
-if SHOW_TICKER_APP:
-    render_top_banner()
+# 2) เรนเดอร์ตัววิ่งของเราเอง “แค่ครั้งเดียว” ต่อรอบ
+render_top_banner_once()
 
-# โลโก้วงกลม + Header + Nav
+# 3) โลโก้ + Header + Nav
 render_brand_hero()
 render_header()
 render_nav_pills()
 
-# Current page pill
+# 4) Current page pill
 st.markdown(f"""
 <div class="page-pill">
   <span class="dot"></span>
@@ -783,7 +799,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ตัวอย่างสวิตช์เพจ (ปล่อยว่างเพื่อไม่ทับคอนเทนต์จริงของคุณ)
+# 5) สลับเพจ (ปล่อยว่างเพื่อไม่ทับคอนเทนต์จริงของคุณ)
 if st.session_state.page == "Simulation Budget":
     page_simulation_budget()
 elif st.session_state.page == "Influencer Performance":

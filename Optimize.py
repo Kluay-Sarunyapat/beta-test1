@@ -13,7 +13,6 @@ import altair as alt
 from textwrap import dedent
 import urllib.parse as _url
 
-
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="wide")
 
@@ -48,7 +47,6 @@ st.markdown(
     <style>
     .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
 
-    /* Global background */
     body {
       background:
         radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
@@ -56,46 +54,32 @@ st.markdown(
         linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
     }
 
-    /* -------- Login hero with soft ambient glow pulses (แทน twinkle/bubbles) -------- */
     .login-hero { position:relative; padding-top: 4px; }
     .ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
     .ambient::before, .ambient::after, .ambient i {
       content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%;
       filter: blur(20px);
     }
-    /* วงกลางสีฟ้า pulse ชัด */
     .ambient::before {
       top: -30px; width: 520px; height: 520px;
       background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%);
       opacity:.38; animation: glowPulse1 7s ease-in-out infinite;
     }
-    /* วงม่วงชั้นนอก pulse ช้า */
     .ambient::after {
       top: 40px; width: 720px; height: 720px;
       background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%);
       opacity:.28; animation: glowPulse2 10s ease-in-out infinite 0.8s;
     }
-    /* ไฮไลต์เขียวอ่อนเล็กๆ ให้มีชีวิต */
     .ambient i {
       top: 220px; width: 420px; height: 420px;
       background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%);
       opacity:.22; animation: glowPulse3 12s ease-in-out infinite 0.4s;
     }
 
-    @keyframes glowPulse1 {
-      0%,100% { opacity:.22; transform:translateX(-50%) scale(0.96) }
-      50%     { opacity:.55; transform:translateX(-50%) scale(1.06) }
-    }
-    @keyframes glowPulse2 {
-      0%,100% { opacity:.18; transform:translateX(-50%) scale(0.98) }
-      50%     { opacity:.40; transform:translateX(-50%) scale(1.05) }
-    }
-    @keyframes glowPulse3 {
-      0%,100% { opacity:.14; transform:translateX(-50%) scale(0.97) }
-      50%     { opacity:.32; transform:translateX(-50%) scale(1.04) }
-    }
+    @keyframes glowPulse1 { 0%,100% { opacity:.22; transform:translateX(-50%) scale(0.96) } 50% { opacity:.55; transform:translateX(-50%) scale(1.06) } }
+    @keyframes glowPulse2 { 0%,100% { opacity:.18; transform:translateX(-50%) scale(0.98) } 50% { opacity:.40; transform:translateX(-50%) scale(1.05) } }
+    @keyframes glowPulse3 { 0%,100% { opacity:.14; transform:translateX(-50%) scale(0.97) } 50% { opacity:.32; transform:translateX(-50%) scale(1.04) } }
 
-    /* Headline gradient shimmer */
     .gradient-title {
       font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0; text-align: center; font-size: 44px;
       background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
@@ -107,7 +91,6 @@ st.markdown(
     @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
     .subtitle { color:#526273; text-align:center; margin-bottom: 22px; position:relative; z-index:1; }
 
-    /* Logo wrap: rotating glow ring + soft pulse */
     .logo-wrap { position:relative; width:130px; height:130px; margin: 0 auto 10px auto; z-index:1; }
     .logo-wrap::before {
       content:""; position:absolute; inset:-10px; border-radius:50%;
@@ -125,7 +108,6 @@ st.markdown(
       50%     { box-shadow: 0 8px 24px rgba(2,6,23,.25), 0 0 28px rgba(167,139,250,.35); filter: saturate(1.06) }
     }
 
-    /* Login card */
     .login-card {
       position:relative; z-index:1;
       border-radius: 14px; border:1px solid #dbe7fb; background: #ffffffcc;
@@ -137,9 +119,7 @@ st.markdown(
       background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
       transform: skewX(-18deg); animation: sweep 6s linear infinite;
     }
-    @keyframes sweep { 0%{ left:-120px } 100%{ left:120% } }
 
-    /* Inputs & button */
     .stTextInput > div > div > input,
     .stPassword > div > div > input { background: #f8fbff; border-radius: 10px; }
     .stButton > button {
@@ -150,12 +130,9 @@ st.markdown(
     }
     .stButton > button:hover { filter: brightness(1.04); transform: translateY(-1px); }
 
-    /* Top ticker with sheen */
     .top-wrap { margin-top: 10px; margin-bottom: 22px; }
     .pill {
-      width: min(720px, 90vw);
-      margin: 0 auto 12px auto;
-      border-radius: 9999px;
+      width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px;
       box-shadow: 0 10px 24px rgba(15, 40, 80, .12);
       position:relative; overflow:hidden;
       background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb;
@@ -167,13 +144,8 @@ st.markdown(
       animation: sheenMove 8s linear infinite;
     }
     @keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg) } 100%{ transform: translateX(250%) skewX(-18deg) } }
-    .glass {
-      height: 22px;
-      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
-      border: 1px solid #e6eefb; backdrop-filter: blur(6px);
-      border-radius: 9999px;
-      box-shadow: 0 10px 24px rgba(15, 40, 80, .12);
-    }
+    .glass { height: 22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
+      border: 1px solid #e6eefb; backdrop-filter: blur(6px); border-radius: 9999px; box-shadow: 0 10px 24px rgba(15,40,80,.12); }
     </style>
     """,
     unsafe_allow_html=True
@@ -254,10 +226,7 @@ def login_view():
     # Logo
     logo_col = st.columns([1,1,1])[1]
     with logo_col:
-        st.markdown(
-            f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>',
-            unsafe_allow_html=True
-        )
+        st.markdown(f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>', unsafe_allow_html=True)
 
     st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
     st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
@@ -267,8 +236,7 @@ def login_view():
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     with st.form("login_form"):
         u = st.text_input("Username")
-        show_pw = st.checkbox("Show password", value=False)
-        p = st.text_input("Password", type="default" if show_pw else "password")
+        p = st.text_input("Password", type="password")  # ซ่อนเสมอ ไม่ใช้ checkbox แล้ว
         submitted = st.form_submit_button("Sign in")
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -295,7 +263,6 @@ if not st.session_state.authenticated:
 # หลังล็อกอิน
 render_top_banner()
 st.success("You are logged in. Build your app content here.")
-
 # # -------------------- PAGE CONFIG --------------------
 # st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="wide")
 
@@ -329,43 +296,132 @@ st.success("You are logged in. Build your app content here.")
 #     """
 #     <style>
 #     .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
+
+#     /* Global background */
 #     body {
-#       background: radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
-#                   radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
-#                   linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
+#       background:
+#         radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
+#         radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
+#         linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
 #     }
+
+#     /* -------- Login hero with soft ambient glow pulses (แทน twinkle/bubbles) -------- */
+#     .login-hero { position:relative; padding-top: 4px; }
+#     .ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
+#     .ambient::before, .ambient::after, .ambient i {
+#       content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%;
+#       filter: blur(20px);
+#     }
+#     /* วงกลางสีฟ้า pulse ชัด */
+#     .ambient::before {
+#       top: -30px; width: 520px; height: 520px;
+#       background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%);
+#       opacity:.38; animation: glowPulse1 7s ease-in-out infinite;
+#     }
+#     /* วงม่วงชั้นนอก pulse ช้า */
+#     .ambient::after {
+#       top: 40px; width: 720px; height: 720px;
+#       background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%);
+#       opacity:.28; animation: glowPulse2 10s ease-in-out infinite 0.8s;
+#     }
+#     /* ไฮไลต์เขียวอ่อนเล็กๆ ให้มีชีวิต */
+#     .ambient i {
+#       top: 220px; width: 420px; height: 420px;
+#       background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%);
+#       opacity:.22; animation: glowPulse3 12s ease-in-out infinite 0.4s;
+#     }
+
+#     @keyframes glowPulse1 {
+#       0%,100% { opacity:.22; transform:translateX(-50%) scale(0.96) }
+#       50%     { opacity:.55; transform:translateX(-50%) scale(1.06) }
+#     }
+#     @keyframes glowPulse2 {
+#       0%,100% { opacity:.18; transform:translateX(-50%) scale(0.98) }
+#       50%     { opacity:.40; transform:translateX(-50%) scale(1.05) }
+#     }
+#     @keyframes glowPulse3 {
+#       0%,100% { opacity:.14; transform:translateX(-50%) scale(0.97) }
+#       50%     { opacity:.32; transform:translateX(-50%) scale(1.04) }
+#     }
+
+#     /* Headline gradient shimmer */
 #     .gradient-title {
-#       font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0;
-#       background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6);
+#       font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0; text-align: center; font-size: 44px;
+#       background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
 #       -webkit-background-clip: text; background-clip: text; color: transparent;
-#       text-align: center; font-size: 44px;
+#       background-size: 200% auto; animation: gradientMove 10s linear infinite;
 #       text-shadow: 0 1px 0 rgba(255,255,255,.4);
+#       position:relative; z-index:1;
 #     }
-#     .subtitle { color:#506070; text-align:center; margin-bottom: 20px; }
+#     @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+#     .subtitle { color:#526273; text-align:center; margin-bottom: 22px; position:relative; z-index:1; }
+
+#     /* Logo wrap: rotating glow ring + soft pulse */
+#     .logo-wrap { position:relative; width:130px; height:130px; margin: 0 auto 10px auto; z-index:1; }
+#     .logo-wrap::before {
+#       content:""; position:absolute; inset:-10px; border-radius:50%;
+#       background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
+#       animation: spin 10s linear infinite; filter: blur(10px); opacity:.7;
+#     }
+#     .logo-wrap img {
+#       position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
+#       box-shadow: 0 8px 24px rgba(2,6,23,.25);
+#       animation: softPulse 4.5s ease-in-out infinite;
+#     }
+#     @keyframes spin { to { transform: rotate(360deg) } }
+#     @keyframes softPulse {
+#       0%,100% { box-shadow: 0 8px 24px rgba(2,6,23,.25); filter: saturate(1) }
+#       50%     { box-shadow: 0 8px 24px rgba(2,6,23,.25), 0 0 28px rgba(167,139,250,.35); filter: saturate(1.06) }
+#     }
+
+#     /* Login card */
 #     .login-card {
-#       border-radius: 12px; border:1px solid #dde6f3; background: #ffffffcc;
-#       box-shadow: 0 8px 24px rgba(25, 60, 120, .12);
-#       padding: 18px 18px 10px 18px;
+#       position:relative; z-index:1;
+#       border-radius: 14px; border:1px solid #dbe7fb; background: #ffffffcc;
+#       box-shadow: 0 10px 28px rgba(25, 60, 120, .14);
+#       padding: 18px 18px 10px 18px; overflow:hidden;
 #     }
+#     .login-card::after{
+#       content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
+#       background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
+#       transform: skewX(-18deg); animation: sweep 6s linear infinite;
+#     }
+#     @keyframes sweep { 0%{ left:-120px } 100%{ left:120% } }
+
+#     /* Inputs & button */
 #     .stTextInput > div > div > input,
-#     .stPassword > div > div > input { background: #f8fbff; border-radius: 8px; }
+#     .stPassword > div > div > input { background: #f8fbff; border-radius: 10px; }
 #     .stButton > button {
-#       width: 100%; border-radius: 8px; height: 42px;
+#       width: 100%; border-radius: 10px; height: 44px; position:relative; z-index:1;
 #       background: linear-gradient(90deg, #22c55e, #06b6d4); border: none;
-#       color: white; font-weight: 600; box-shadow: 0 6px 16px rgba(3, 105, 161, .25);
+#       color: white; font-weight: 700; letter-spacing:.2px;
+#       box-shadow: 0 8px 22px rgba(3, 105, 161, .28);
 #     }
-#     .stButton > button:hover { filter: brightness(1.03); }
+#     .stButton > button:hover { filter: brightness(1.04); transform: translateY(-1px); }
+
+#     /* Top ticker with sheen */
 #     .top-wrap { margin-top: 10px; margin-bottom: 22px; }
 #     .pill {
 #       width: min(720px, 90vw);
 #       margin: 0 auto 12px auto;
 #       border-radius: 9999px;
 #       box-shadow: 0 10px 24px rgba(15, 40, 80, .12);
+#       position:relative; overflow:hidden;
+#       background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb;
 #     }
+#     .pill .sheen {
+#       content:""; position:absolute; inset:0; pointer-events:none;
+#       background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
+#       width: 80px; transform: translateX(-150%) skewX(-18deg);
+#       animation: sheenMove 8s linear infinite;
+#     }
+#     @keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg) } 100%{ transform: translateX(250%) skewX(-18deg) } }
 #     .glass {
 #       height: 22px;
 #       background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
 #       border: 1px solid #e6eefb; backdrop-filter: blur(6px);
+#       border-radius: 9999px;
+#       box-shadow: 0 10px 24px rgba(15, 40, 80, .12);
 #     }
 #     </style>
 #     """,
@@ -380,17 +436,24 @@ st.success("You are logged in. Build your app content here.")
 
 #     html = f"""
 #     <div class="top-wrap">
-#       <div class="pill" style="overflow:hidden; background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb;">
+#       <div class="pill">
+#         <div class="sheen"></div>
 #         <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
-#           <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite;"></div>
+#           <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
 #         </div>
 #       </div>
-#       <div class="pill glass"></div>
+#       <div class="glass pill"></div>
 #     </div>
 #     <style>
 #       @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
 #       .t-item {{ display:inline-flex; align-items:center; font-weight:600; }}
 #       .t-sep {{ color:#94a3b8; margin:0 12px; }}
+#       #track::after {{
+#         content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
+#         background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
+#         transform: skewX(-18deg); animation: sweepT 7s linear infinite;
+#       }}
+#       @keyframes sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
 #     </style>
 #     <script>
 #       const ENABLE = {show_ticker_js};
@@ -432,16 +495,16 @@ st.success("You are logged in. Build your app content here.")
 
 # # -------------------- LOGIN VIEW --------------------
 # def login_view():
+#     # hero + ambient glow layers
+#     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
+
 #     render_top_banner()
 
-#     # Logo วงกลม + เงา
+#     # Logo
 #     logo_col = st.columns([1,1,1])[1]
 #     with logo_col:
 #         st.markdown(
-#             f'<div style="display:flex;justify-content:center;">'
-#             f'<img src="{logo_url}" width="120" '
-#             f'style="border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,.25);" />'
-#             f'</div>',
+#             f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>',
 #             unsafe_allow_html=True
 #         )
 
@@ -449,13 +512,16 @@ st.success("You are logged in. Build your app content here.")
 #     st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
 #     st.markdown(f'<div class="subtitle">{TAGLINE_TEXT}</div>', unsafe_allow_html=True)
 
-#     # ฟอร์มล็อกอิน
+#     # Login card
 #     st.markdown('<div class="login-card">', unsafe_allow_html=True)
 #     with st.form("login_form"):
 #         u = st.text_input("Username")
 #         show_pw = st.checkbox("Show password", value=False)
 #         p = st.text_input("Password", type="default" if show_pw else "password")
 #         submitted = st.form_submit_button("Sign in")
+#     st.markdown('</div>', unsafe_allow_html=True)
+
+#     # close hero
 #     st.markdown('</div>', unsafe_allow_html=True)
 
 #     if submitted:
@@ -472,13 +538,13 @@ st.success("You are logged in. Build your app content here.")
 
 # # -------------------- MAIN ROUTING --------------------
 # if not st.session_state.authenticated:
-#     # แสดงเฉพาะหน้า Login แล้วหยุดการเรนเดอร์ส่วนอื่นทั้งหมด
 #     login_view()
 #     st.stop()
 
-# # จากตรงนี้เป็นคอนเทนต์หลักหลังล็อกอินเท่านั้น
+# # หลังล็อกอิน
 # render_top_banner()
 # st.success("You are logged in. Build your app content here.")
+
 
 
 # -------------------- PAGE CONFIG --------------------

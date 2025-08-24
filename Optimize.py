@@ -481,14 +481,272 @@ st.success("You are logged in. Build your app content here.")
 # st.success("You are logged in. Build your app content here.")
 
 
-# 0) Ensure default
-if "page" not in st.session_state:
-    st.session_state.page = "Simulation Budget"
+# -------------------- PAGE CONFIG --------------------
+st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wide")
 
-# 1) read query string (new API, with fallback)
+# -------------------- SESSION STATE --------------------
+st.session_state.setdefault("authenticated", False)
+st.session_state.setdefault("invalid_login", False)
+st.session_state.setdefault("page", "Simulation Budget")
+st.session_state.setdefault("prev_page", None)
+
+# Shared data
+if "inputs" not in st.session_state:
+    st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
+
+# -------------------- CREDENTIALS --------------------
+valid_users = {"mbcs": "1234", "mbcs1": "5678", "admin": "adminpass"}
+
+# -------------------- ASSETS / OPTIONS --------------------
+logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+
+SHOW_TAGLINE = True
+TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
+
+SHOW_TICKER = True
+TICKER_ITEMS = [
+    {"text": "MBCS AI Optimization Tool", "color": "#000000"},
+    {"text": "Smart budget simulation",   "color": "#16a34a"},
+    {"text": "Influencer optimization",   "color": "#2563eb"},
+]
+
+# -------------------- GLOBAL STYLES --------------------
+st.markdown("""
+<style>
+.appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
+
+/* Global background */
+body {
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
+    radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
+    linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
+}
+
+/* ---------- Login hero with ambient pulses ---------- */
+.login-hero { position:relative; padding-top: 4px; }
+.ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
+.ambient::before, .ambient::after, .ambient i {
+  content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
+}
+.ambient::before { top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: glowPulse1 7s ease-in-out infinite; }
+.ambient::after { top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: glowPulse2 10s ease-in-out infinite .8s; }
+.ambient i { top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: glowPulse3 12s ease-in-out infinite .4s; }
+@keyframes glowPulse1 { 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
+@keyframes glowPulse2 { 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
+@keyframes glowPulse3 { 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
+
+/* Headline gradient (used in login) */
+.gradient-title {
+  font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0; text-align: center; font-size: 44px;
+  background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  background-size: 200% auto; animation: gradientMove 10s linear infinite;
+  text-shadow: 0 1px 0 rgba(255,255,255,.4); position:relative; z-index:1;
+}
+@keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+.subtitle { color:#526273; text-align:center; margin-bottom: 22px; position:relative; z-index:1; }
+
+/* Login card */
+.login-card {
+  position:relative; z-index:1; border-radius:14px; border:1px solid #dbe7fb; background:#ffffffcc;
+  box-shadow:0 10px 28px rgba(25,60,120,.14); padding:18px 18px 10px 18px; overflow:hidden;
+}
+.login-card::after{
+  content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
+  transform: skewX(-18deg); animation: sweep 6s linear infinite;
+}
+@keyframes sweep { 0%{ left:-120px } 100%{ left:120% } }
+.stTextInput > div > div > input, .stPassword > div > div > input{ background:#f8fbff; border-radius:10px; }
+.stButton > button{ width:100%; border-radius:10px; height:44px; background:linear-gradient(90deg,#22c55e,#06b6d4); border:none; color:white; font-weight:700; letter-spacing:.2px; box-shadow:0 8px 22px rgba(3,105,161,.28); }
+
+/* Ticker pills */
+.top-wrap { margin-top: 10px; margin-bottom: 22px; }
+.pill { width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px; position:relative; overflow:hidden;
+  background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
+.pill .sheen{ content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
+@keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg)} 100%{ transform: translateX(250%) skewX(-18deg)} }
+.glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
+
+/* Header after login */
+.app-header{
+  position: relative; overflow: hidden; padding: 26px 26px 20px; border-radius: 18px;
+  background: rgba(255,255,255,.78); backdrop-filter: blur(8px);
+  border: 1px solid rgba(17,24,39,.08); box-shadow: 0 12px 35px rgba(17,24,39,.10); margin-bottom: 18px;
+}
+.app-header:before{ content:""; position:absolute; inset:-2px;
+  background: conic-gradient(from 0deg, #6366f1, #22d3ee, #a78bfa, #6366f1);
+  filter: blur(28px); opacity:.25; animation: spin 10s linear infinite; }
+.shine{ position:absolute; inset:1px; border-radius:16px;
+  background: linear-gradient(120deg, rgba(255,255,255,.18), transparent 35%, transparent 65%, rgba(255,255,255,.18));
+  background-size:220% 100%; animation: gradientMove 6s linear infinite; pointer-events:none; }
+.headline{ font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.subline{ margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px); }
+
+/* Current page pill */
+.page-pill{
+  display: inline-flex; align-items: center; gap:10px; padding: 10px 16px; margin-top: 10px;
+  border-radius: 999px; background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(34,211,238,.06)), #ffffff;
+  border: 1px solid rgba(17,24,39,.10); color:#111827; font-weight: 700;
+  box-shadow: 0 4px 16px rgba(17,24,39,.08); position: relative; overflow: hidden;
+}
+.page-pill .dot{ width: 10px; height: 10px; border-radius: 50%; background: #6366f1; box-shadow: 0 0 10px rgba(99,102,241,.6); }
+.page-pill .glowline{ position:absolute; inset:1px; border-radius:999px; background: linear-gradient(120deg, rgba(255,255,255,.6), transparent 40%, transparent 60%, rgba(255,255,255,.6)); background-size: 200% 100%; animation: gradientMove 3.2s linear infinite; pointer-events:none; }
+@keyframes spin{ to{ transform: rotate(360deg);} }
+</style>
+""", unsafe_allow_html=True)
+
+# -------------------- BRAND HERO (AFTER LOGIN) --------------------
+def add_brand_styles():
+    st.markdown("""
+    <style>
+    .brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
+    .brand-hero .brand-stage{ position:relative; z-index:1; }
+    .brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
+    .brand-ambient .g1, .brand-ambient .g2, .brand-ambient .g3{
+      position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
+    }
+    .brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
+    .brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
+    .brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
+    @keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
+    @keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
+    @keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
+    .brand-logo{ position:relative; width:120px; height:120px; }
+    .brand-logo::before{
+      content:""; position:absolute; inset:-10px; border-radius:50%;
+      background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
+      animation: bh_spin 10s linear infinite; filter: blur(10px); opacity:.7;
+    }
+    .brand-logo img{
+      position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
+      box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s ease-in-out infinite;
+    }
+    @keyframes bh_spin{ to{ transform: rotate(360deg) } }
+    @keyframes bh_pulse{ 0%,100%{ box-shadow: 0 8px 24px rgba(2,6,23,.25); filter: saturate(1) } 50%{ box-shadow: 0 8px 24px rgba(2,6,23,.25), 0 0 28px rgba(167,139,250,.35); filter: saturate(1.06) } }
+    </style>
+    """, unsafe_allow_html=True)
+
+def render_brand_hero(logo_url: str):
+    st.markdown(f"""
+    <div class="brand-hero">
+      <div class="brand-ambient">
+        <span class="g1"></span><span class="g2"></span><span class="g3"></span>
+      </div>
+      <div class="brand-stage">
+        <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# -------------------- TICKER (HTML component) --------------------
+def render_top_banner():
+    import json as _json
+    items_json = _json.dumps(TICKER_ITEMS)
+    show_ticker_js = "true" if SHOW_TICKER else "false"
+
+    html = f"""
+    <div class="top-wrap">
+      <div class="pill">
+        <div class="sheen"></div>
+        <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
+          <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
+        </div>
+      </div>
+      <div class="glass pill"></div>
+    </div>
+    <style>
+      @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
+      .t-item {{ display:inline-flex; align-items:center; font-weight:600; }}
+      .t-sep {{ color:#94a3b8; margin:0 12px; }}
+      #track::after {{
+        content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
+        background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
+        transform: skewX(-18deg); animation: sweepT 7s linear infinite;
+      }}
+      @keyframes sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
+    </style>
+    <script>
+      const ENABLE = {show_ticker_js};
+      const ITEMS = {items_json};
+      const SEPARATOR = "•";
+      const END_SPACE_PX = 40;
+      if (ENABLE && ITEMS.length) {{
+        const track = document.getElementById("track");
+        const make = () => {{
+          const frag = document.createDocumentFragment();
+          ITEMS.forEach((it, i) => {{
+            const s = document.createElement("span"); s.className = "t-item"; s.style.color = it.color; s.textContent = it.text; frag.appendChild(s);
+            if (i < ITEMS.length - 1) {{ const sep = document.createElement("span"); sep.className = "t-sep"; sep.textContent = SEPARATOR; frag.appendChild(sep); }}
+          }});
+          const spacer = document.createElement("span"); spacer.style.display = "inline-block"; spacer.style.width = END_SPACE_PX + "px"; frag.appendChild(spacer);
+          return frag;
+        }};
+        const c1 = document.createElement("div"); c1.appendChild(make());
+        const c2 = document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
+        track.appendChild(c1); track.appendChild(c2);
+        requestAnimationFrame(() => {{
+          const w = c1.getBoundingClientRect().width; const dur = Math.max(16, w / 90);
+          track.style.animationDuration = dur + "s";
+        }});
+      }}
+    </script>
+    """
+    st.components.v1.html(html, height=110, scrolling=False)
+
+# -------------------- LOGIN VIEW --------------------
+def login_view():
+    st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
+
+    render_top_banner()
+
+    # Logo on login
+    logo_col = st.columns([1,1,1])[1]
+    with logo_col:
+        st.markdown(f'<div style="display:flex;justify-content:center;"><img src="{logo_url}" width="120" style="border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,.25);" /></div>', unsafe_allow_html=True)
+
+    st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
+    st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="subtitle">{TAGLINE_TEXT}</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    with st.form("login_form"):
+        u = st.text_input("Username")
+        show_pw = st.checkbox("Show password", value=False)
+        p = st.text_input("Password", type="default" if show_pw else "password")
+        submitted = st.form_submit_button("Sign in")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)  # close hero
+
+    if submitted:
+        if u in valid_users and p == valid_users[u]:
+            st.session_state.authenticated = True
+            st.session_state.invalid_login = False
+            st.success("Signed in successfully.")
+            st.rerun()
+        else:
+            st.session_state.invalid_login = True
+
+    if st.session_state.invalid_login:
+        st.error("Invalid username or password.")
+
+# -------------------- HEADER AFTER LOGIN --------------------
+def render_header():
+    st.markdown("""
+    <div class="app-header">
+      <div class="shine"></div>
+      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
+      <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# -------------------- NAVIGATION (ellipse pills, no hard reload) --------------------
 def sync_page_from_query():
+    # ใช้ API ใหม่ ถ้าเวอร์ชันเก่าให้ fallback
     try:
-        qp = st.query_params               # Streamlit >= 1.30
+        qp = st.query_params
         if "page" in qp:
             st.session_state.page = qp["page"]
     except Exception:
@@ -496,7 +754,6 @@ def sync_page_from_query():
         if "page" in qp:
             st.session_state.page = qp["page"][0]
 
-# 2) update page without hard reload, and keep URL in sync
 def set_page(name: str):
     st.session_state.page = name
     try:
@@ -505,81 +762,99 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
     st.rerun()
 
-# 3) styles
-st.markdown("""
-<style>
-.nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
-.nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+def render_nav_pills():
+    # styles for nav
+    st.markdown("""
+    <style>
+    .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
+    .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .nav-scope div.stButton > button{
+      height: 46px; border-radius: 9999px; width: 100%;
+      font-weight: 800; letter-spacing: .2px; font-size: 14px; color: #fff;
+      border: 1px solid rgba(17,24,39,.08);
+      box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12);
+      transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+    }
+    .nav-scope div.stButton > button:hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.04); }
+    .nav-scope div.stButton > button:active{ transform: translateY(0) scale(.98); }
+    .nav-scope .p1 div.stButton > button{ background: linear-gradient(135deg, #22c55e, #06b6d4); }
+    .nav-scope .p2 div.stButton > button{ background: linear-gradient(135deg, #f97316, #ef4444); }
+    .nav-scope .p3 div.stButton > button{ background: linear-gradient(135deg, #6366f1, #22d3ee); }
+    .nav-scope div.stButton > button:disabled{
+      cursor: default; filter: none; transform: none;
+      outline: 3px solid rgba(99,102,241,.20);
+      box-shadow: 0 16px 30px rgba(2,132,199,.25);
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-/* scope-only button style */
-.nav-scope div.stButton > button{
-  height: 46px; border-radius: 9999px; width: 100%;
-  font-weight: 800; letter-spacing: .2px; font-size: 14px; color: #fff;
-  border: 1px solid rgba(17,24,39,.08);
-  box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12);
-  transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
-}
-.nav-scope div.stButton > button:hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.04); }
-.nav-scope div.stButton > button:active{ transform: translateY(0) scale(.98); }
+    sync_page_from_query()
+    curr = st.session_state.page
 
-/* colors */
-.nav-scope .p1 div.stButton > button{ background: linear-gradient(135deg, #22c55e, #06b6d4); }
-.nav-scope .p2 div.stButton > button{ background: linear-gradient(135deg, #f97316, #ef4444); }
-.nav-scope .p3 div.stButton > button{ background: linear-gradient(135deg, #6366f1, #22d3ee); }
+    st.markdown('<div class="nav-scope"><div class="nav-grid">', unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.markdown('<div class="p1">', unsafe_allow_html=True)
+        st.button("📂 Simulation Budget", use_container_width=True,
+                  disabled=(curr == "Simulation Budget"), on_click=set_page, args=("Simulation Budget",))
+        st.markdown('</div>', unsafe_allow_html=True)
+    with c2:
+        st.markdown('<div class="p2">', unsafe_allow_html=True)
+        st.button("📊 Influencer Performance", use_container_width=True,
+                  disabled=(curr == "Influencer Performance"), on_click=set_page, args=("Influencer Performance",))
+        st.markdown('</div>', unsafe_allow_html=True)
+    with c3:
+        st.markdown('<div class="p3">', unsafe_allow_html=True)
+        st.button("🧾 Optimized Budget", use_container_width=True,
+                  disabled=(curr == "Optimized Budget"), on_click=set_page, args=("Optimized Budget",))
+        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
-/* active (use disabled=True) */
-.nav-scope div.stButton > button:disabled{
-  cursor: default; filter: none; transform: none;
-  outline: 3px solid rgba(99,102,241,.20);
-  box-shadow: 0 16px 30px rgba(2,132,199,.25);
-}
-</style>
+# -------------------- PAGE CONTENT (examples) --------------------
+def page_simulation_budget():
+    st.markdown("## Simulation Budget")
+    cols = st.columns(3)
+    keys = list(st.session_state.inputs.keys())
+    for i, k in enumerate(keys):
+        with cols[i % 3]:
+            st.session_state.inputs[k] = st.number_input(k, min_value=0, step=1, value=int(st.session_state.inputs[k]))
+
+def page_influencer_performance():
+    st.markdown("## Influencer Performance")
+    st.info("Placeholder content. Add your charts/tables here.")
+
+def page_optimized_budget():
+    st.markdown("## Optimized Budget")
+    st.success("Placeholder content. Show optimized results here.")
+
+# -------------------- ROUTING --------------------
+if not st.session_state.authenticated:
+    login_view()
+    st.stop()
+
+# After login
+render_top_banner()
+add_brand_styles()
+render_brand_hero(logo_url)
+render_header()
+render_nav_pills()
+
+# Current page pill
+st.markdown(f"""
+<div class="page-pill">
+  <span class="dot"></span>
+  <span>Current Page: <strong>{st.session_state.page}</strong></span>
+  <div class="glowline"></div>
+</div>
 """, unsafe_allow_html=True)
 
-# 4) render
-sync_page_from_query()
-curr = st.session_state.page
-
-st.markdown('<div class="nav-scope"><div class="nav-grid">', unsafe_allow_html=True)
-
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.markdown('<div class="p1">', unsafe_allow_html=True)
-    st.button("📂 Simulation Budget",
-              use_container_width=True,
-              disabled=(curr == "Simulation Budget"),
-              on_click=set_page, args=("Simulation Budget",))
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with c2:
-    st.markdown('<div class="p2">', unsafe_allow_html=True)
-    st.button("📊 Influencer Performance",
-              use_container_width=True,
-              disabled=(curr == "Influencer Performance"),
-              on_click=set_page, args=("Influencer Performance",))
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with c3:
-    st.markdown('<div class="p3">', unsafe_allow_html=True)
-    st.button("🧾 Optimized Budget",
-              use_container_width=True,
-              disabled=(curr == "Optimized Budget"),
-              on_click=set_page, args=("Optimized Budget",))
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown('</div></div>', unsafe_allow_html=True)
-
-# 5) current page pill (ของเดิมคุณใช้ต่อได้)
-st.markdown(
-    f"""
-    <div class="page-pill">
-      <span class="dot"></span>
-      <span>Current Page: <strong>{st.session_state.page}</strong></span>
-      <div class="glowline"></div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Page switch
+if st.session_state.page == "Simulation Budget":
+    page_simulation_budget()
+elif st.session_state.page == "Influencer Performance":
+    page_influencer_performance()
+else:
+    page_optimized_budget()
 
 
 #Version3 Nevigate

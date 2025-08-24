@@ -49,8 +49,6 @@ SHOW_TICKER = True
 TICKER_TEXT = "MBCS AI Optimization Tool  •  Smart budget simulation  •  Influencer optimization"
 
 
-# -------------------- RENDER --------------------
-st.components.v1.html(html, height=120)
 
 
 # ---------- SESSION STATE FOR DATA SHARING ----------

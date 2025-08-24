@@ -185,69 +185,6 @@ if ({str(SHOW_TICKER).lower()} && TICKER_ITEMS.length) {{
 # -------------------- RENDER --------------------
 st.components.v1.html(html, height=120)
 
-# -------------------- LOGIN UI --------------------
-if not st.session_state.authenticated:
-    inject_login_css()
-    st.markdown("<div id='login-aurora'></div>", unsafe_allow_html=True)
-
-    left, mid, right = st.columns([1, 2, 1])
-    with mid:
-
-        # Ticker inline (สมมาตร 100%)
-        if SHOW_TICKER:
-            st.markdown(
-                f"""
-                <div class="ticker">
-                  <div class="shine"></div>
-                  <div class="fadeL"></div>
-                  <div class="fadeR"></div>
-                  <div class="track">
-                    <div class="group"><span class="item">{TICKER_TEXT}</span></div>
-                    <div class="group" aria-hidden="true"><span class="item">{TICKER_TEXT}</span></div>
-                  </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        st.markdown("<div id='login-scope' class='login-card'><div class='inner'>", unsafe_allow_html=True)
-
-        if SHOW_TAGLINE:
-            st.markdown(f"<div class='tagline-slim'><span class='dot'></span>{TAGLINE_TEXT}</div>", unsafe_allow_html=True)
-
-        logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-        st.markdown(
-            f"""
-            <div class="logo-wrap">
-              <div class="logo-ring"></div>
-              <img class="logo" src="{logo_url}" alt="NEST">
-            </div>
-            <div class="title">🔒 WELCOME TO NEST OPTIMIZED TOOL</div>
-            <div class="subtitle">Secure access • Smart budget simulation • Influencer optimization</div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        with st.form("login_form", clear_on_submit=False):
-            username = st.text_input("Username", key="login_username")
-            password = st.text_input("Password", type="password", key="login_password")
-            submit = st.form_submit_button("Sign in", use_container_width=True)
-
-        if submit:
-            if username in valid_users and password == valid_users[username]:
-                st.session_state.authenticated = True
-                st.session_state.invalid_login = False
-                st.toast("✅ Login successful", icon="✨")
-                login_css.empty()
-                st.rerun()
-            else:
-                st.session_state.invalid_login = True
-                st.error("❌ Incorrect username or password. Please try again.")
-
-        st.markdown("</div></div>", unsafe_allow_html=True)
-
-    st.stop()
-
 
 # ---------- SESSION STATE FOR DATA SHARING ----------
 if 'inputs' not in st.session_state:

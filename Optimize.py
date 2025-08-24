@@ -55,41 +55,61 @@ st.markdown(
         linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
     }
 
-    /* Hero wrapper with floating glow blobs */
+    /* ---------- Login hero with subtle twinkle ---------- */
     .login-hero { position:relative; padding-top: 4px; }
-    .login-hero:before,
-    .login-hero:after {
-      content:""; position:absolute; z-index:0; border-radius:50%;
-      filter: blur(40px); opacity:.32; pointer-events:none;
+    .twinkle-layer {
+      position:absolute; inset:-40px -10px -20px -10px; z-index:0; pointer-events:none;
+      filter: blur(0.2px); /* ทำให้จุดเนียนตา */
     }
-    .login-hero:before {
-      width: 260px; height:260px; left:-60px; top:-30px;
-      background: radial-gradient(circle at 30% 30%, #38bdf8, transparent 60%),
-                  radial-gradient(circle at 70% 70%, #a78bfa, transparent 60%);
-      animation: floatA 12s ease-in-out infinite;
+    /* เลเยอร์จุดไฟกะพริบ 3 ชั้น เวลาไม่เท่ากัน ให้ดูสุ่มเป็นธรรมชาติ */
+    .twinkle-1 { 
+      opacity:.28; animation: twinkle 7s ease-in-out infinite;
+      background:
+        radial-gradient(circle 2px at 12% 22%, rgba(59,130,246,.22), transparent 40%),
+        radial-gradient(circle 2px at 28% 68%, rgba(16,185,129,.20), transparent 40%),
+        radial-gradient(circle 2px at 44% 40%, rgba(99,102,241,.20), transparent 40%),
+        radial-gradient(circle 2px at 63% 18%, rgba(56,189,248,.20), transparent 40%),
+        radial-gradient(circle 2px at 78% 56%, rgba(20,184,166,.20), transparent 40%),
+        radial-gradient(circle 2px at 88% 30%, rgba(37,99,235,.18), transparent 40%);
     }
-    .login-hero:after {
-      width: 300px; height:300px; right:-80px; top:140px;
-      background: radial-gradient(circle at 25% 40%, #34d399, transparent 55%),
-                  radial-gradient(circle at 75% 60%, #22d3ee, transparent 60%);
-      animation: floatB 16s ease-in-out infinite;
+    .twinkle-2 { 
+      opacity:.22; animation: twinkle 9s ease-in-out infinite reverse;
+      background:
+        radial-gradient(circle 1.7px at 18% 52%, rgba(99,102,241,.22), transparent 40%),
+        radial-gradient(circle 1.7px at 36% 24%, rgba(56,189,248,.20), transparent 40%),
+        radial-gradient(circle 1.7px at 52% 72%, rgba(59,130,246,.20), transparent 40%),
+        radial-gradient(circle 1.7px at 70% 36%, rgba(16,185,129,.20), transparent 40%),
+        radial-gradient(circle 1.7px at 86% 64%, rgba(37,99,235,.18), transparent 40%);
     }
-    @keyframes floatA { 0%,100% { transform: translate(0,0) } 50% { transform: translate(18px, -10px) } }
-    @keyframes floatB { 0%,100% { transform: translate(0,0) } 50% { transform: translate(-16px, 12px) } }
+    .twinkle-3 { 
+      opacity:.18; animation: twinkle 11s ease-in-out infinite;
+      background:
+        radial-gradient(circle 1.6px at 8% 34%, rgba(20,184,166,.22), transparent 40%),
+        radial-gradient(circle 1.6px at 24% 84%, rgba(56,189,248,.20), transparent 40%),
+        radial-gradient(circle 1.6px at 58% 54%, rgba(99,102,241,.20), transparent 40%),
+        radial-gradient(circle 1.6px at 76% 22%, rgba(16,185,129,.20), transparent 40%),
+        radial-gradient(circle 1.6px at 92% 48%, rgba(59,130,246,.18), transparent 40%);
+    }
+    @keyframes twinkle {
+      0%  { opacity:.15; transform: translateY(0px) }
+      50% { opacity:.38; transform: translateY(-1.2px) }
+      100%{ opacity:.18; transform: translateY(0.6px) }
+    }
 
-    /* Gradient headline with subtle shimmer */
+    /* Headline gradient shimmer */
     .gradient-title {
       font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0; text-align: center; font-size: 44px;
       background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
       -webkit-background-clip: text; background-clip: text; color: transparent;
       background-size: 200% auto; animation: gradientMove 10s linear infinite;
       text-shadow: 0 1px 0 rgba(255,255,255,.4);
+      position:relative; z-index:1;
     }
     @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
     .subtitle { color:#526273; text-align:center; margin-bottom: 22px; position:relative; z-index:1; }
 
     /* Logo wrap: rotating glow ring + soft pulse */
-    .logo-wrap { position:relative; width:130px; height:130px; margin: 0 auto 10px auto; }
+    .logo-wrap { position:relative; width:130px; height:130px; margin: 0 auto 10px auto; z-index:1; }
     .logo-wrap::before {
       content:""; position:absolute; inset:-10px; border-radius:50%;
       background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
@@ -111,10 +131,8 @@ st.markdown(
       position:relative; z-index:1;
       border-radius: 14px; border:1px solid #dbe7fb; background: #ffffffcc;
       box-shadow: 0 10px 28px rgba(25, 60, 120, .14);
-      padding: 18px 18px 10px 18px;
-      overflow:hidden;
+      padding: 18px 18px 10px 18px; overflow:hidden;
     }
-    /* animated light sweep on card */
     .login-card::after{
       content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
       background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
@@ -122,7 +140,7 @@ st.markdown(
     }
     @keyframes sweep { 0%{ left:-120px } 100%{ left:120% } }
 
-    /* inputs and button */
+    /* Inputs & button */
     .stTextInput > div > div > input,
     .stPassword > div > div > input { background: #f8fbff; border-radius: 10px; }
     .stButton > button {
@@ -133,7 +151,7 @@ st.markdown(
     }
     .stButton > button:hover { filter: brightness(1.04); transform: translateY(-1px); }
 
-    /* Top ticker pill extra sheen */
+    /* Top ticker with sheen */
     .top-wrap { margin-top: 10px; margin-bottom: 22px; }
     .pill {
       width: min(720px, 90vw);
@@ -170,85 +188,81 @@ def render_top_banner():
 
     html = f"""
     <div class="top-wrap">
-      <!-- Ticker pill -->
       <div class="pill">
         <div class="sheen"></div>
         <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
           <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
         </div>
       </div>
-      <!-- Glass pill (decoration) -->
       <div class="glass pill"></div>
     </div>
-
     <style>
-    @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
-    .t-item {{ display:inline-flex; align-items:center; font-weight:600; }}
-    .t-sep {{ color:#94a3b8; margin:0 12px; }}
-    /* extra sheen across text row */
-    #track::after {{
-      content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
-      background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
-      transform: skewX(-18deg); animation: sweepT 7s linear infinite;
-    }}
-    @keyframes sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
+      @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
+      .t-item {{ display:inline-flex; align-items:center; font-weight:600; }}
+      .t-sep {{ color:#94a3b8; margin:0 12px; }}
+      #track::after {{
+        content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
+        background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
+        transform: skewX(-18deg); animation: sweepT 7s linear infinite;
+      }}
+      @keyframes sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
     </style>
-
     <script>
-    const ENABLE = {show_ticker_js};
-    const ITEMS = {items_json};
-    const SEPARATOR = "•";
-    const END_SPACE_PX = 40;
-
-    if (ENABLE && ITEMS.length) {{
-      const track = document.getElementById("track");
-      const make = () => {{
-        const frag = document.createDocumentFragment();
-        ITEMS.forEach((it, i) => {{
-          const s = document.createElement("span");
-          s.className = "t-item";
-          s.style.color = it.color;
-          s.textContent = it.text;
-          frag.appendChild(s);
-          if (i < ITEMS.length - 1) {{
-            const sep = document.createElement("span");
-            sep.className = "t-sep"; sep.textContent = SEPARATOR; frag.appendChild(sep);
-          }}
+      const ENABLE = {show_ticker_js};
+      const ITEMS = {items_json};
+      const SEPARATOR = "•";
+      const END_SPACE_PX = 40;
+      if (ENABLE && ITEMS.length) {{
+        const track = document.getElementById("track");
+        const make = () => {{
+          const frag = document.createDocumentFragment();
+          ITEMS.forEach((it, i) => {{
+            const s = document.createElement("span");
+            s.className = "t-item";
+            s.style.color = it.color;
+            s.textContent = it.text;
+            frag.appendChild(s);
+            if (i < ITEMS.length - 1) {{
+              const sep = document.createElement("span");
+              sep.className = "t-sep"; sep.textContent = SEPARATOR; frag.appendChild(sep);
+            }}
+          }});
+          const spacer = document.createElement("span");
+          spacer.style.display = "inline-block"; spacer.style.width = END_SPACE_PX + "px";
+          frag.appendChild(spacer);
+          return frag;
+        }};
+        const c1 = document.createElement("div"); c1.appendChild(make());
+        const c2 = document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
+        track.appendChild(c1); track.appendChild(c2);
+        requestAnimationFrame(() => {{
+          const w = c1.getBoundingClientRect().width;
+          const dur = Math.max(16, w / 90);
+          track.style.animationDuration = dur + "s";
         }});
-        const spacer = document.createElement("span");
-        spacer.style.display = "inline-block"; spacer.style.width = END_SPACE_PX + "px";
-        frag.appendChild(spacer);
-        return frag;
-      }};
-      const c1 = document.createElement("div"); c1.appendChild(make());
-      const c2 = document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
-      track.appendChild(c1); track.appendChild(c2);
-
-      // auto speed by content width
-      requestAnimationFrame(() => {{
-        const w = c1.getBoundingClientRect().width;
-        const dur = Math.max(16, w / 90);
-        track.style.animationDuration = dur + "s";
-      }});
-    }}
+      }}
     </script>
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
 # -------------------- LOGIN VIEW --------------------
 def login_view():
-    # hero wrapper adds floating glow blobs behind
-    st.markdown('<div class="login-hero">', unsafe_allow_html=True)
+    # เปิด hero + ใส่เลเยอร์ twinkle 3 ชั้น
+    st.markdown(
+        '<div class="login-hero">'
+        '<div class="twinkle-layer twinkle-1"></div>'
+        '<div class="twinkle-layer twinkle-2"></div>'
+        '<div class="twinkle-layer twinkle-3"></div>',
+        unsafe_allow_html=True
+    )
 
     render_top_banner()
 
-    # Logo with modern effects
+    # Logo
     logo_col = st.columns([1,1,1])[1]
     with logo_col:
         st.markdown(
-            f'<div class="logo-wrap">'
-            f'  <img src="{logo_url}" alt="logo" />'
-            f'</div>',
+            f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>',
             unsafe_allow_html=True
         )
 
@@ -265,7 +279,7 @@ def login_view():
         submitted = st.form_submit_button("Sign in")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # close hero wrapper
+    # ปิด hero div
     st.markdown('</div>', unsafe_allow_html=True)
 
     if submitted:
@@ -285,7 +299,7 @@ if not st.session_state.authenticated:
     login_view()
     st.stop()
 
-# ถ้าล็อกอินแล้ว จัดการหน้าแอปหลักต่อจากนี้
+# จากตรงนี้แสดงเฉพาะหลังล็อกอิน
 render_top_banner()
 st.success("You are logged in. Build your app content here.")
 

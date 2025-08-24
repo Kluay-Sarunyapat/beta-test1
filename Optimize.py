@@ -503,7 +503,13 @@ logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 SHOW_TAGLINE = True
 TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
 
-SHOW_TICKER = True
+# แสดง Ticker ตรงไหน
+SHOW_TICKER_LOGIN = False   # หน้า Login
+SHOW_TICKER_APP   = True    # หลัง Login
+
+# ปิดเดโม่อินพุต 6 ช่อง (กันงอกซ้ำ)
+DEMO_TIER_INPUTS = False
+
 TICKER_ITEMS = [
     {"text": "MBCS AI Optimization Tool", "color": "#000000"},
     {"text": "Smart budget simulation",   "color": "#16a34a"},
@@ -536,7 +542,7 @@ body {
 @keyframes glowPulse2 { 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
 @keyframes glowPulse3 { 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
 
-/* Headline gradient (used in login) */
+/* Headline gradient (login) */
 .gradient-title {
   font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0; text-align: center; font-size: 44px;
   background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
@@ -644,8 +650,6 @@ def render_brand_hero(logo_url: str):
 def render_top_banner():
     import json as _json
     items_json = _json.dumps(TICKER_ITEMS)
-    show_ticker_js = "true" if SHOW_TICKER else "false"
-
     html = f"""
     <div class="top-wrap">
       <div class="pill">
@@ -668,12 +672,11 @@ def render_top_banner():
       @keyframes sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
     </style>
     <script>
-      const ENABLE = {show_ticker_js};
       const ITEMS = {items_json};
       const SEPARATOR = "•";
       const END_SPACE_PX = 40;
-      if (ENABLE && ITEMS.length) {{
-        const track = document.getElementById("track");
+      const track = document.getElementById("track");
+      if (track && ITEMS.length){{
         const make = () => {{
           const frag = document.createDocumentFragment();
           ITEMS.forEach((it, i) => {{
@@ -699,7 +702,8 @@ def render_top_banner():
 def login_view():
     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
 
-    render_top_banner()
+    if SHOW_TICKER_LOGIN:
+        render_top_banner()   # แสดงบนหน้า Login เฉพาะตอนเปิดสวิตช์
 
     # Logo on login
     logo_col = st.columns([1,1,1])[1]
@@ -742,14 +746,15 @@ def render_header():
     </div>
     """, unsafe_allow_html=True)
 
-# -------------------- NAVIGATION (ellipse pills, no hard reload) --------------------
+# -------------------- NAV (ellipse pills, no hard reload) --------------------
 def sync_page_from_query():
-    # ใช้ API ใหม่ ถ้าเวอร์ชันเก่าให้ fallback
+    # ใช้ API ใหม่ ถ้ามี
     try:
         qp = st.query_params
         if "page" in qp:
             st.session_state.page = qp["page"]
     except Exception:
+        # fallback สำหรับเวอร์ชันเก่า
         qp = st.experimental_get_query_params()
         if "page" in qp:
             st.session_state.page = qp["page"][0]
@@ -763,7 +768,6 @@ def set_page(name: str):
     st.rerun()
 
 def render_nav_pills():
-    # styles for nav
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
@@ -810,30 +814,36 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# -------------------- PAGE CONTENT (examples) --------------------
+# -------------------- PAGE CONTENT (no demo to avoid duplication) --------------------
 def page_simulation_budget():
-    st.markdown("## Simulation Budget")
+    # ปิดเดโม่อินพุต 6 ช่องเพื่อไม่ให้ซ้ำกับเพจจริงของคุณ
+    if not DEMO_TIER_INPUTS:
+        return
+    # เดโม่ (เปิดเฉพาะตอนอยากใช้)
     cols = st.columns(3)
-    keys = list(st.session_state.inputs.keys())
-    for i, k in enumerate(keys):
+    for i, k in enumerate(st.session_state.inputs.keys()):
         with cols[i % 3]:
-            st.session_state.inputs[k] = st.number_input(k, min_value=0, step=1, value=int(st.session_state.inputs[k]))
+            st.session_state.inputs[k] = st.number_input(
+                k, min_value=0, step=1, value=int(st.session_state.inputs[k])
+            )
 
 def page_influencer_performance():
-    st.markdown("## Influencer Performance")
-    st.info("Placeholder content. Add your charts/tables here.")
+    # ไม่เรนเดอร์อะไร เพื่อไม่ชนกับคอนเทนต์จริงของคุณ
+    return
 
 def page_optimized_budget():
-    st.markdown("## Optimized Budget")
-    st.success("Placeholder content. Show optimized results here.")
+    # ไม่เรนเดอร์อะไร เพื่อไม่ชนกับคอนเทนต์จริงของคุณ
+    return
 
 # -------------------- ROUTING --------------------
 if not st.session_state.authenticated:
     login_view()
     st.stop()
 
-# After login
-render_top_banner()
+# After login (ลำดับ: Ticker -> Brand hero -> Header -> Nav -> เนื้อหา)
+if SHOW_TICKER_APP:
+    render_top_banner()
+
 add_brand_styles()
 render_brand_hero(logo_url)
 render_header()
@@ -848,7 +858,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Page switch
+# เรียกเพจ (ฟังก์ชันด้านบนถูกทำให้ไม่แสดงอะไร เพื่อหลีกเลี่ยงการงอกซ้ำ)
 if st.session_state.page == "Simulation Budget":
     page_simulation_budget()
 elif st.session_state.page == "Influencer Performance":

@@ -55,45 +55,43 @@ st.markdown(
         linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
     }
 
-    /* ---------- Login hero with subtle twinkle ---------- */
+    /* -------- Login hero with soft ambient glow pulses (แทน twinkle/bubbles) -------- */
     .login-hero { position:relative; padding-top: 4px; }
-    .twinkle-layer {
-      position:absolute; inset:-40px -10px -20px -10px; z-index:0; pointer-events:none;
-      filter: blur(0.2px); /* ทำให้จุดเนียนตา */
+    .ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
+    .ambient::before, .ambient::after, .ambient i {
+      content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%;
+      filter: blur(20px);
     }
-    /* เลเยอร์จุดไฟกะพริบ 3 ชั้น เวลาไม่เท่ากัน ให้ดูสุ่มเป็นธรรมชาติ */
-    .twinkle-1 { 
-      opacity:.28; animation: twinkle 7s ease-in-out infinite;
-      background:
-        radial-gradient(circle 2px at 12% 22%, rgba(59,130,246,.22), transparent 40%),
-        radial-gradient(circle 2px at 28% 68%, rgba(16,185,129,.20), transparent 40%),
-        radial-gradient(circle 2px at 44% 40%, rgba(99,102,241,.20), transparent 40%),
-        radial-gradient(circle 2px at 63% 18%, rgba(56,189,248,.20), transparent 40%),
-        radial-gradient(circle 2px at 78% 56%, rgba(20,184,166,.20), transparent 40%),
-        radial-gradient(circle 2px at 88% 30%, rgba(37,99,235,.18), transparent 40%);
+    /* วงกลางสีฟ้า pulse ชัด */
+    .ambient::before {
+      top: -30px; width: 520px; height: 520px;
+      background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%);
+      opacity:.38; animation: glowPulse1 7s ease-in-out infinite;
     }
-    .twinkle-2 { 
-      opacity:.22; animation: twinkle 9s ease-in-out infinite reverse;
-      background:
-        radial-gradient(circle 1.7px at 18% 52%, rgba(99,102,241,.22), transparent 40%),
-        radial-gradient(circle 1.7px at 36% 24%, rgba(56,189,248,.20), transparent 40%),
-        radial-gradient(circle 1.7px at 52% 72%, rgba(59,130,246,.20), transparent 40%),
-        radial-gradient(circle 1.7px at 70% 36%, rgba(16,185,129,.20), transparent 40%),
-        radial-gradient(circle 1.7px at 86% 64%, rgba(37,99,235,.18), transparent 40%);
+    /* วงม่วงชั้นนอก pulse ช้า */
+    .ambient::after {
+      top: 40px; width: 720px; height: 720px;
+      background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%);
+      opacity:.28; animation: glowPulse2 10s ease-in-out infinite 0.8s;
     }
-    .twinkle-3 { 
-      opacity:.18; animation: twinkle 11s ease-in-out infinite;
-      background:
-        radial-gradient(circle 1.6px at 8% 34%, rgba(20,184,166,.22), transparent 40%),
-        radial-gradient(circle 1.6px at 24% 84%, rgba(56,189,248,.20), transparent 40%),
-        radial-gradient(circle 1.6px at 58% 54%, rgba(99,102,241,.20), transparent 40%),
-        radial-gradient(circle 1.6px at 76% 22%, rgba(16,185,129,.20), transparent 40%),
-        radial-gradient(circle 1.6px at 92% 48%, rgba(59,130,246,.18), transparent 40%);
+    /* ไฮไลต์เขียวอ่อนเล็กๆ ให้มีชีวิต */
+    .ambient i {
+      top: 220px; width: 420px; height: 420px;
+      background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%);
+      opacity:.22; animation: glowPulse3 12s ease-in-out infinite 0.4s;
     }
-    @keyframes twinkle {
-      0%  { opacity:.15; transform: translateY(0px) }
-      50% { opacity:.38; transform: translateY(-1.2px) }
-      100%{ opacity:.18; transform: translateY(0.6px) }
+
+    @keyframes glowPulse1 {
+      0%,100% { opacity:.22; transform:translateX(-50%) scale(0.96) }
+      50%     { opacity:.55; transform:translateX(-50%) scale(1.06) }
+    }
+    @keyframes glowPulse2 {
+      0%,100% { opacity:.18; transform:translateX(-50%) scale(0.98) }
+      50%     { opacity:.40; transform:translateX(-50%) scale(1.05) }
+    }
+    @keyframes glowPulse3 {
+      0%,100% { opacity:.14; transform:translateX(-50%) scale(0.97) }
+      50%     { opacity:.32; transform:translateX(-50%) scale(1.04) }
     }
 
     /* Headline gradient shimmer */
@@ -247,14 +245,8 @@ def render_top_banner():
 
 # -------------------- LOGIN VIEW --------------------
 def login_view():
-    # เปิด hero + ใส่เลเยอร์ twinkle 3 ชั้น
-    st.markdown(
-        '<div class="login-hero">'
-        '<div class="twinkle-layer twinkle-1"></div>'
-        '<div class="twinkle-layer twinkle-2"></div>'
-        '<div class="twinkle-layer twinkle-3"></div>',
-        unsafe_allow_html=True
-    )
+    # hero + ambient glow layers
+    st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
 
     render_top_banner()
 
@@ -279,7 +271,7 @@ def login_view():
         submitted = st.form_submit_button("Sign in")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ปิด hero div
+    # close hero
     st.markdown('</div>', unsafe_allow_html=True)
 
     if submitted:
@@ -299,7 +291,7 @@ if not st.session_state.authenticated:
     login_view()
     st.stop()
 
-# จากตรงนี้แสดงเฉพาะหลังล็อกอิน
+# หลังล็อกอิน
 render_top_banner()
 st.success("You are logged in. Build your app content here.")
 

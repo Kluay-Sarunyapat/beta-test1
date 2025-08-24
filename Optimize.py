@@ -48,98 +48,104 @@ valid_users = {
 # SHOW_TICKER = True
 # TICKER_TEXT = "MBCS AI Optimization Tool  •  Smart budget simulation  •  Influencer optimization"
 
+# -------------------- OPTIONS --------------------
+SHOW_TAGLINE = False
+TAGLINE_TEXT = "Smart solutions for budget optimization"
+
+SHOW_TICKER = True
+TICKER_ITEMS = [
+    {"text": "MBCS AI Optimization Tool", "color": "#000000"},  # ดำ
+    {"text": "Smart budget simulation",   "color": "#16a34a"},  # เขียว
+    {"text": "Influencer optimization",   "color": "#2563eb"},  # น้ำเงิน
+]
+
+# -------------------- PAGE SETUP --------------------
+st.set_page_config(page_title="Ticker Demo", page_icon="📰", layout="wide")
+
+# -------------------- BUILD HTML --------------------
+html = f"""
 <!doctype html>
 <html lang="th">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ticker Demo</title>
 <style>
-:root{
+:root{{
   --sep-color:#888;
   --bg:#ffffff;
   --text:#111;
   --gap:12px;
-  --space-end:40px;
+  --space-end:40px;  /* ช่องว่างท้ายรอบ */
   --speed:18s;
-}
-body{
+}}
+body{{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
   margin:0; color:var(--text); background:var(--bg);
-}
-.wrapper{padding:16px;}
-.tagline{font-size:14px; color:#555; margin-bottom:8px;}
-.ticker{
+}}
+.wrapper{{padding:16px;}}
+.tagline{{font-size:14px; color:#555; margin-bottom:8px;}}
+
+.ticker{{
   position:relative; overflow:hidden; white-space:nowrap;
   border-radius:8px; background:#f8fafc; border:1px solid #e5e7eb;
-}
-.ticker__track{
+}}
+.ticker__track{{
   display:flex; width:max-content; animation:marquee var(--speed) linear infinite;
-}
-.ticker:hover .ticker__track{ animation-play-state:paused; }
-.ticker__content{ display:inline-flex; align-items:center; padding:10px 12px; }
-.item{ display:inline-flex; align-items:center; }
-.sep{ color:var(--sep-color); margin:0 var(--gap); }
-.spacer{ display:inline-block; width:var(--space-end); }
-@keyframes marquee{
-  0%{ transform:translateX(0) }
-  100%{ transform:translateX(-50%) }
-}
+}}
+.ticker:hover .ticker__track{{ animation-play-state:paused; }}
+.ticker__content{{ display:inline-flex; align-items:center; padding:10px 12px; }}
+.item{{ display:inline-flex; align-items:center; }}
+.sep{{ color:var(--sep-color); margin:0 var(--gap); }}
+.spacer{{ display:inline-block; width:var(--space-end); }}
+
+@keyframes marquee{{
+  0%{{ transform:translateX(0) }}
+  100%{{ transform:translateX(-50%) }}
+}}
 </style>
 </head>
 <body>
 <div class="wrapper">
-  <div id="tagline" class="tagline" hidden></div>
+  <div id="tagline" class="tagline" {"hidden" if not SHOW_TAGLINE else ""}></div>
 
-  <div class="ticker" id="ticker" hidden>
-    <div class="ticker__track" id="ticker-track">
-      <!-- content duplicated by JS -->
-    </div>
+  <div class="ticker" id="ticker" {"hidden" if not SHOW_TICKER else ""}>
+    <div class="ticker__track" id="ticker-track"></div>
   </div>
 </div>
 
 <script>
-// -------------------- OPTIONS --------------------
-const SHOW_TAGLINE = false;
-const TAGLINE_TEXT = "Smart solutions for budget optimization";
+const SHOW_TAGLINE = {str(SHOW_TAGLINE).lower()};
+const TAGLINE_TEXT = {json.dumps(TAGLINE_TEXT)};
+const TICKER_ITEMS = {json.dumps(TICKER_ITEMS)};
+const END_SPACE_PX = 40;     // ช่องว่างท้ายรอบ
+const SEPARATOR = "•";       // ตัวคั่น
 
-const SHOW_TICKER = true;
-const TICKER_ITEMS = [
-  { text: "MBCS AI Optimization Tool", color: "#000000" },  // ดำ
-  { text: "Smart budget simulation",   color: "#16a34a" },  // เขียว
-  { text: "Influencer optimization",   color: "#2563eb" },  // น้ำเงิน
-];
-
-const END_SPACE_PX = 40;     // ช่องว่างท้ายรอบ เพื่อไม่ให้ชนรอบแรก
-const SEPARATOR = "•";       // ตัวคั่นระหว่างข้อความ
-// -------------------- RENDER --------------------
 const taglineEl = document.getElementById("tagline");
 const tickerEl  = document.getElementById("ticker");
 const trackEl   = document.getElementById("ticker-track");
 
-if (SHOW_TAGLINE) {
+if (SHOW_TAGLINE) {{
   taglineEl.textContent = TAGLINE_TEXT;
   taglineEl.hidden = false;
-}
+}}
 
-if (SHOW_TICKER && TICKER_ITEMS.length) {
-  function buildContent() {
+if ({str(SHOW_TICKER).lower()} && TICKER_ITEMS.length) {{
+  function buildContent() {{
     const frag = document.createDocumentFragment();
-
-    TICKER_ITEMS.forEach((item, idx) => {
+    TICKER_ITEMS.forEach((item, idx) => {{
       const span = document.createElement("span");
       span.className = "item";
       span.style.color = item.color;
       span.textContent = item.text;
       frag.appendChild(span);
 
-      if (idx < TICKER_ITEMS.length - 1) {
+      if (idx < TICKER_ITEMS.length - 1) {{
         const sep = document.createElement("span");
         sep.className = "sep";
         sep.textContent = SEPARATOR;
         frag.appendChild(sep);
-      }
-    });
+      }}
+    }});
 
     const spacer = document.createElement("span");
     spacer.className = "spacer";
@@ -147,7 +153,7 @@ if (SHOW_TICKER && TICKER_ITEMS.length) {
     frag.appendChild(spacer);
 
     return frag;
-  }
+  }}
 
   const content1 = document.createElement("div");
   content1.className = "ticker__content";
@@ -163,171 +169,21 @@ if (SHOW_TICKER && TICKER_ITEMS.length) {
 
   tickerEl.hidden = false;
 
-  // ปรับความเร็วตามความกว้างเนื้อหา (ออปชัน)
-  const baseSpeedPxPerSec = 80; // px ต่อวินาที
-  requestAnimationFrame(() => {
+  // ปรับความเร็วตามความกว้างเนื้อหาให้ลื่นในทุกขนาดจอ
+  const baseSpeedPxPerSec = 80; // px/วินาที
+  requestAnimationFrame(() => {{
     const singleWidth = content1.getBoundingClientRect().width;
     const duration = Math.max(12, singleWidth / baseSpeedPxPerSec);
     trackEl.style.animationDuration = duration + "s";
-  });
-}
+  }});
+}}
 </script>
 </body>
 </html>
+"""
 
-# -------------------- CSS PLACEHOLDER --------------------
-login_css = st.empty()
-
-def inject_login_css():
-    login_css.markdown(
-        """
-        <style>
-        :root{
-          --p1:#6366f1; --p2:#22d3ee; --p3:#a78bfa; --p4:#10b981;
-          --ink:#0f172a; --muted:#475569;
-          --cardW: 520px;  /* ตั้งความกว้างกลางร่วมกันของ card และ ticker */
-        }
-
-        /* BG Aurora */
-        [data-testid="stAppViewContainer"]{
-          background:
-            radial-gradient(900px 320px at 12% 10%, rgba(99,102,241,.14), transparent 60%),
-            radial-gradient(900px 320px at 88% 12%, rgba(34,211,238,.12), transparent 60%),
-            linear-gradient(180deg, #f6f8fc 0%, #eef2ff 100%);
-          padding-top: 2vh;
-        }
-
-        /* ซ่อนของเก่าทั้งหมดที่อาจหลงเหลือ (บาร์ fixed/ticker/mask เก่า) */
-        .glow, .soft-glow, .top-pill,
-        #login-top-mask, #login-ticker,
-        [id*="login-ticker"], [class*="login-ticker"]{ display:none !important; }
-
-        /* Aurora ลอย */
-        #login-aurora{ position: fixed; inset: 0; pointer-events:none; z-index: 0; overflow: hidden; }
-        #login-aurora:before, #login-aurora:after{
-          content:""; position:absolute; width:1200px; height:1200px; border-radius:50%;
-          filter: blur(60px); opacity:.28; animation: floaty 16s ease-in-out infinite alternate;
-        }
-        #login-aurora:before{
-          left:-300px; top:-260px;
-          background: radial-gradient(circle at 30% 30%, rgba(99,102,241,.75), rgba(167,139,250,.0) 60%);
-        }
-        #login-aurora:after{
-          right:-300px; top:-200px;
-          background: radial-gradient(circle at 60% 20%, rgba(34,211,238,.75), rgba(34,211,238,0) 60%);
-          animation-delay: -3s;
-        }
-        @keyframes floaty{ 0%{ transform: translateY(0) scale(1);} 100%{ transform: translateY(40px) scale(1.04);} }
-
-        /* Login card และความกว้างที่ใช้ร่วมกับ ticker */
-        .login-card{
-          position: relative; z-index:1;
-          width: min(var(--cardW), 92vw);      /* กว้างเท่ากันกับ ticker */
-          margin: 5vh auto 6vh auto;
-          padding: 24px 20px 22px;
-          border-radius: 18px; background: rgba(255,255,255,.86);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(17,24,39,.08);
-          box-shadow: 0 18px 50px rgba(2,132,199,.15);
-          overflow: hidden;
-        }
-        .login-card:before{
-          content:""; position:absolute; inset:-2px; z-index:0;
-          background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1));
-          filter: blur(28px); opacity:.22; animation: spin 9s linear infinite;
-        }
-        .login-card .inner{ position:relative; z-index:1; }
-
-        /* Ticker inline (สมมาตร 100% = เท่ากับ cardW) */
-        .ticker{
-          position:relative;
-          width: min(var(--cardW), 92vw);
-          margin: 6px auto 10px auto;
-          border-radius:999px;
-          background: rgba(255,255,255,.92);
-          border: 1px solid rgba(17,24,39,.12);
-          box-shadow: 0 12px 28px rgba(17,24,39,.12);
-          overflow:hidden;
-        }
-        .ticker .fadeL, .ticker .fadeR{
-          position:absolute; top:0; bottom:0; width:24px; z-index:3; pointer-events:none;
-        }
-        .ticker .fadeL{ left:0;  background: linear-gradient(90deg, rgba(255,255,255,.95), rgba(255,255,255,0)); }
-        .ticker .fadeR{ right:0; background: linear-gradient(270deg, rgba(255,255,255,.95), rgba(255,255,255,0)); }
-        .ticker .shine{
-          position:absolute; inset:0; z-index:2; pointer-events:none;
-          background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 40%, transparent 60%, rgba(255,255,255,.7));
-          background-size:200% 100%; animation: shine 4s linear infinite; opacity:.35;
-        }
-        /* track = 200%, group ละ 50% -> เลื่อน -50% พอดีหนึ่งช่วง */
-        .ticker .track{
-          display:flex; width:200%;
-          animation: scrollLoop 16s linear infinite;
-          will-change: transform;
-        }
-        .ticker .group{
-          flex:0 0 50%;
-          display:flex; justify-content:center; align-items:center; gap:40px;
-          white-space:nowrap; padding:8px 0;
-        }
-        .ticker .item{
-          color:#0f172a; font-weight:900; letter-spacing:.25px; font-size:16px;
-          text-shadow: 0 1px 0 rgba(255,255,255,.6);
-        }
-        @keyframes scrollLoop{ 0%{ transform:translateX(0);} 100%{ transform:translateX(-50%);} }
-        @keyframes shine{ 0%{ background-position:200% 0;} 100%{ background-position:-200% 0;} }
-        @keyframes spin{ to{ transform: rotate(360deg);} }
-
-        /* Logo + ring */
-        .logo-wrap{ width:120px; height:120px; margin: 6px auto 12px auto; position:relative; }
-        .logo-ring{ position:absolute; inset:-8px; border-radius:50%; background: conic-gradient(var(--p1), var(--p2), var(--p3), var(--p1)); filter: blur(8px); opacity:.55; animation: spin 8s linear infinite; }
-        .logo{ position:relative; width:120px; height:120px; border-radius:50%; object-fit: cover; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 10px 28px rgba(2,132,199,.18); background:#fff; }
-
-        .title{
-          font-size: clamp(28px, 4.2vw, 44px); font-weight: 900; text-align:center; margin: 6px 0 6px 0;
-          background: linear-gradient(90deg, #0f172a, #6366f1, #22d3ee, #0f172a);
-          -webkit-background-clip: text; background-clip: text; color: transparent;
-          background-size: 220% 100%; animation: wave 7s ease-in-out infinite;
-        }
-        .subtitle{ text-align:center; color:#475569; font-size:14px; margin-bottom: 12px; }
-
-        #login-scope .stTextInput > div > div > input,
-        #login-scope .stPassword > div > div > input{
-          background:#fff; color: var(--ink);
-          border: 1px solid rgba(17,24,39,.12);
-          border-radius: 12px; padding: .75rem .9rem;
-          box-shadow: 0 6px 14px rgba(17,24,39,.05);
-          transition: box-shadow .2s, border-color .2s, transform .12s;
-        }
-        #login-scope .stTextInput > div > div > input:focus,
-        #login-scope .stPassword > div > div > input:focus{
-          border-color: rgba(99,102,241,.45);
-          box-shadow: 0 10px 22px rgba(99,102,241,.18);
-          transform: translateY(-1px);
-          outline: none;
-        }
-        #login-scope .stButton > button{
-          width: 100%;
-          border-radius: 12px; padding: .9rem 1rem;
-          border: 1px solid rgba(17,24,39,.08);
-          color:#fff; font-weight:800; letter-spacing:.2px;
-          background: linear-gradient(135deg, var(--p1), var(--p2));
-          box-shadow: 0 10px 22px rgba(2,132,199,.20);
-          transition: transform .15s, box-shadow .2s, filter .2s;
-          margin-top: 8px;
-        }
-        #login-scope .stButton > button:hover{
-          transform: translateY(-2px) scale(1.01);
-          box-shadow: 0 16px 30px rgba(2,132,199,.28);
-          filter: brightness(1.03);
-          cursor: pointer;
-        }
-
-        @keyframes wave{ 0%{background-position:0 0} 50%{background-position:100% 0} 100%{background-position:0 0} }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+# -------------------- RENDER --------------------
+st.components.v1.html(html, height=120)
 
 # -------------------- LOGIN UI --------------------
 if not st.session_state.authenticated:

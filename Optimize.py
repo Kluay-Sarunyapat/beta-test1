@@ -481,88 +481,90 @@ st.success("You are logged in. Build your app content here.")
 # st.success("You are logged in. Build your app content here.")
 
 
-# ---------- TOP NAVIGATION (Ellipse pills, equal spacing) ----------
-
-# มีค่าเริ่มต้นให้แน่ใจว่า page ถูกตั้งไว้
-if "page" not in st.session_state:
-    st.session_state.page = "Simulation Budget"
-
-# sync page กับ query string ?page=...
+# ---------- TOP NAVIGATION (ellipse pills, equal spacing, no hard reload) ----------
+# 1) อ่านค่าจาก query string ด้วย API ใหม่
 def sync_page_from_query():
-    params = st.experimental_get_query_params()
-    if "page" in params:
-        st.session_state.page = params["page"][0]
-    else:
-        st.experimental_set_query_params(page=st.session_state.page)
+    qp = st.query_params
+    if "page" in qp:
+        st.session_state.page = qp["page"]
 
-# CSS ของปุ่มวงรี 3 อัน (จัดวางเท่ากันด้วย CSS Grid)
+# 2) ฟังก์ชันเปลี่ยนหน้า + อัปเดต query string (ไม่รีโหลดทั้งแท็บ)
+def set_page(name: str):
+    st.session_state.page = name
+    st.query_params.update({"page": name})
+    st.rerun()
+
+# 3) สไตล์ปุ่มวงรี (ใช้ st.button + use_container_width ให้กว้างเท่ากัน)
 st.markdown("""
 <style>
-.pill-nav-wrap{ display:flex; justify-content:center; }
-.pill-nav{
-  display:grid; grid-template-columns: repeat(3, 1fr);
-  gap: 18px; margin: 8px 0 8px 0; align-items: stretch;
-  max-width: 900px; width:100%;
-}
-.pill-nav .pill-btn{
-  display:flex; align-items:center; justify-content:center;
-  gap:10px; height:46px; padding:0 18px;
-  border-radius:9999px; text-decoration:none;
-  font-weight:800; letter-spacing:.2px; font-size:14px;
-  color:#fff; border:1px solid rgba(17,24,39,.08);
+.nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
+.nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+
+/* ปุ่มใน scope นี้เท่านั้น */
+.nav-scope div.stButton > button{
+  height: 46px; border-radius: 9999px; width: 100%;
+  font-weight: 800; letter-spacing: .2px; font-size: 14px; color: #fff;
+  border: 1px solid rgba(17,24,39,.08);
   box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12);
   transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
 }
-.pill-nav .pill-btn:hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.04); }
-.pill-nav .pill-btn:active{ transform: translateY(0) scale(.98); }
 
-/* สีแต่ละปุ่ม */
-.pill-btn.p1{ background: linear-gradient(135deg, #22c55e, #06b6d4); }  /* Simulation Budget */
-.pill-btn.p2{ background: linear-gradient(135deg, #f97316, #ef4444); }  /* Influencer Performance */
-.pill-btn.p3{ background: linear-gradient(135deg, #6366f1, #22d3ee); }  /* Optimized Budget */
+/* สีตามปุ่ม */
+.nav-scope .p1 div.stButton > button{ background: linear-gradient(135deg, #22c55e, #06b6d4); }  /* Simulation */
+.nav-scope .p2 div.stButton > button{ background: linear-gradient(135deg, #f97316, #ef4444); }  /* Performance */
+.nav-scope .p3 div.stButton > button{ background: linear-gradient(135deg, #6366f1, #22d3ee); }  /* Optimized */
 
-/* ปุ่มที่ถูกเลือก */
-.pill-btn.active{
+.nav-scope div.stButton > button:hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.04); }
+.nav-scope div.stButton > button:active{ transform: translateY(0) scale(.98); }
+
+/* ปุ่มที่ถูกเลือก ใช้ disabled=True แล้วสไตล์ด้วย :disabled */
+.nav-scope div.stButton > button:disabled{
+  cursor: default; filter: none; transform: none;
   outline: 3px solid rgba(99,102,241,.20);
   box-shadow: 0 16px 30px rgba(2,132,199,.25);
-  cursor: default;
 }
-.pill-btn.active:hover{ transform:none; filter:none; }
-.pill-btn .icon{ font-size:15px; line-height:1; }
-
-/* ถ้าต้องการให้กว้างเต็มแถวมากขึ้น ปรับ max-width ได้ */
 </style>
 """, unsafe_allow_html=True)
 
-def render_nav_pills():
-    pages = [
-        ("Simulation Budget", "📂", "p1"),
-        ("Influencer Performance", "📊", "p2"),
-        ("Optimized Budget", "🧾", "p3"),
-    ]
-    curr = st.session_state.page
-    html = ['<div class="pill-nav-wrap"><div class="pill-nav">']
-    for name, icon, cls in pages:
-        active = " active" if curr == name else ""
-        href = f"?page={_url.quote(name)}"
-        html.append(
-            f'<a class="pill-btn {cls}{active}" href="{href}">'
-            f'<span class="icon">{icon}</span><span>{name}</span></a>'
-        )
-    html.append("</div></div>")
-    st.markdown("".join(html), unsafe_allow_html=True)
-
-# เรียกใช้งาน (วางหลัง Header และก่อนคอนเทนต์ของหน้า)
+# 4) เรนเดอร์ปุ่มแบบเท่ากัน 3 ช่อง
 sync_page_from_query()
-render_nav_pills()
-
-# Current Page pill ที่คุณมีอยู่ ใช้ต่อได้เลย
 curr = st.session_state.page
+
+st.markdown('<div class="nav-scope"><div class="nav-grid">', unsafe_allow_html=True)
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.markdown('<div class="p1">', unsafe_allow_html=True)
+    st.button("📂 Simulation Budget",
+              use_container_width=True,
+              disabled=(curr == "Simulation Budget"),
+              on_click=set_page, args=("Simulation Budget",))
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with c2:
+    st.markdown('<div class="p2">', unsafe_allow_html=True)
+    st.button("📊 Influencer Performance",
+              use_container_width=True,
+              disabled=(curr == "Influencer Performance"),
+              on_click=set_page, args=("Influencer Performance",))
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with c3:
+    st.markdown('<div class="p3">', unsafe_allow_html=True)
+    st.button("🧾 Optimized Budget",
+              use_container_width=True,
+              disabled=(curr == "Optimized Budget"),
+              on_click=set_page, args=("Optimized Budget",))
+    st.markdown('</div>', unsafe_allow_html=True)
+
+st.markdown('</div></div>', unsafe_allow_html=True)
+
+# 5) แสดง current page pill ของคุณต่อได้เลย
 st.markdown(
     f"""
     <div class="page-pill">
       <span class="dot"></span>
-      <span>Current Page: <strong>{curr}</strong></span>
+      <span>Current Page: <strong>{st.session_state.page}</strong></span>
       <div class="glowline"></div>
     </div>
     """,

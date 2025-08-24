@@ -14,162 +14,204 @@ from textwrap import dedent
 
 
 # -------------------- PAGE CONFIG --------------------
-st.set_page_config(page_title="Optimize", page_icon="⚙️", layout="wide")
-
-# Optional width control
-st.markdown(
-    """
-    <style>
-    .appview-container .main { max-width: 1100px !important; margin: auto; }
-    .block-container { max-width: 1100px !important; margin: auto; }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="wide")
 
 # -------------------- SESSION STATE --------------------
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-if "invalid_login" not in st.session_state:
-    st.session_state.invalid_login = False
-if "welcome_shown" not in st.session_state:
-    st.session_state.welcome_shown = False
+st.session_state.setdefault("authenticated", False)
+st.session_state.setdefault("invalid_login", False)
 
 # -------------------- CREDENTIALS --------------------
 valid_users = {
     "mbcs": "1234",
     "mbcs1": "5678",
-    "admin": "adminpass"
+    "admin": "adminpass",
 }
 
+# -------------------- ASSETS --------------------
+logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+
 # -------------------- OPTIONS --------------------
-SHOW_TAGLINE = False
-TAGLINE_TEXT = "Smart solutions for budget optimization"
+SHOW_TAGLINE = True
+TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
 
 SHOW_TICKER = True
-# ใช้รายการข้อความพร้อมสี แทน TICKER_TEXT เดิม
 TICKER_ITEMS = [
     {"text": "MBCS AI Optimization Tool", "color": "#000000"},  # ดำ
     {"text": "Smart budget simulation",   "color": "#16a34a"},  # เขียว
     {"text": "Influencer optimization",   "color": "#2563eb"},  # น้ำเงิน
 ]
 
-# -------------------- TICKER RENDERER --------------------
-def render_ticker(show_ticker: bool, show_tagline: bool, tagline_text: str, items: list):
+# -------------------- GLOBAL STYLES --------------------
+st.markdown(
+    """
+    <style>
+    /* page width */
+    .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
+
+    /* background gradient */
+    body {
+      background: radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
+                  radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
+                  linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
+    }
+
+    /* gradient headline */
+    .gradient-title {
+      font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0;
+      background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-align: center; font-size: 44px;
+      text-shadow: 0 1px 0 rgba(255,255,255,.4);
+    }
+    .subtitle { color:#506070; text-align:center; margin-bottom: 20px; }
+
+    /* login card */
+    .login-card {
+      border-radius: 12px; border:1px solid #dde6f3; background: #ffffffcc;
+      box-shadow: 0 8px 24px rgba(25, 60, 120, .12);
+      padding: 18px 18px 10px 18px;
+    }
+    .stTextInput > div > div > input { background: #f8fbff; border-radius: 8px; }
+    .stPassword > div > div > input { background: #f8fbff; border-radius: 8px; }
+    .stButton > button {
+      width: 100%; border-radius: 8px; height: 42px;
+      background: linear-gradient(90deg, #22c55e, #06b6d4); border: none;
+      color: white; font-weight: 600; box-shadow: 0 6px 16px rgba(3, 105, 161, .25);
+    }
+    .stButton > button:hover { filter: brightness(1.03); }
+
+    /* top pills */
+    .top-wrap { margin-top: 10px; margin-bottom: 22px; }
+    .pill {
+      width: min(720px, 90vw);
+      margin: 0 auto 12px auto;
+      border-radius: 9999px;
+      box-shadow: 0 10px 24px rgba(15, 40, 80, .12);
+    }
+    .glass {
+      height: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
+      border: 1px solid #e6eefb;
+      backdrop-filter: blur(6px);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# -------------------- TICKER (HTML component) --------------------
+def render_top_banner():
+    import json as _json  # ป้องกันปัญหา NameError/โมดูลถูกบัง
+    items_json = _json.dumps(TICKER_ITEMS)
+    show_ticker_js = "true" if SHOW_TICKER else "false"
+
     html = f"""
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-:root{{
-  --sep-color:#888;
-  --bg:#ffffff;
-  --text:#111;
-  --gap:12px;
-  --space-end:40px;  /* ช่องว่างท้ายรอบ */
-  --speed:18s;
-}}
-body{{
-  margin:0; color:var(--text); background:var(--bg);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
-}}
-.wrapper{{padding:8px 0;}}
-.tagline{{font-size:14px; color:#555; margin:0 0 6px 0; padding:0 4px;}}
-.ticker{{
-  position:relative; overflow:hidden; white-space:nowrap;
-  border-radius:8px; background:#f8fafc; border:1px solid #e5e7eb;
-}}
-.ticker__track{{
-  display:flex; width:max-content; animation:marquee var(--speed) linear infinite;
-}}
-.ticker:hover .ticker__track{{ animation-play-state:paused; }}
-.ticker__content{{ display:inline-flex; align-items:center; padding:8px 12px; }}
-.item{{ display:inline-flex; align-items:center; }}
-.sep{{ color:var(--sep-color); margin:0 var(--gap); }}
-.spacer{{ display:inline-block; width:var(--space-end); }}
-@keyframes marquee{{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
-</style>
-</head>
-<body>
-<div class="wrapper">
-  <div id="tagline" class="tagline" {"hidden" if not show_tagline else ""}></div>
-  <div class="ticker" id="ticker" {"hidden" if not show_ticker else ""}>
-    <div class="ticker__track" id="ticker-track"></div>
-  </div>
-</div>
-<script>
-const SHOW_TAGLINE = {str(show_tagline).lower()};
-const TAGLINE_TEXT = {json.dumps(tagline_text)};
-const TICKER_ITEMS = {json.dumps(items)};
-const END_SPACE_PX = 40;
-const SEPARATOR = "•";
+    <div class="top-wrap">
+      <!-- Ticker pill -->
+      <div class="pill" style="overflow:hidden; background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb;">
+        <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
+          <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite;"></div>
+        </div>
+      </div>
 
-const taglineEl = document.getElementById("tagline");
-const tickerEl  = document.getElementById("ticker");
-const trackEl   = document.getElementById("ticker-track");
+      <!-- Glass pill (decoration) -->
+      <div class="pill glass"></div>
+    </div>
 
-if (SHOW_TAGLINE) {{
-  taglineEl.textContent = TAGLINE_TEXT;
-  taglineEl.hidden = false;
-}}
+    <style>
+    @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
+    .t-item {{ display:inline-flex; align-items:center; font-weight:600; }}
+    .t-sep {{ color:#94a3b8; margin:0 12px; }}
+    </style>
 
-if ({str(show_ticker).lower()} && TICKER_ITEMS.length) {{
-  function buildContent() {{
-    const frag = document.createDocumentFragment();
-    TICKER_ITEMS.forEach((item, idx) => {{
-      const span = document.createElement("span");
-      span.className = "item";
-      span.style.color = item.color;
-      span.textContent = item.text;
-      frag.appendChild(span);
+    <script>
+    const ENABLE = {show_ticker_js};
+    const ITEMS = {items_json};
+    const SEPARATOR = "•";
+    const END_SPACE_PX = 40;
 
-      if (idx < TICKER_ITEMS.length - 1) {{
-        const sep = document.createElement("span");
-        sep.className = "sep";
-        sep.textContent = SEPARATOR;
-        frag.appendChild(sep);
-      }}
-    }});
-    const spacer = document.createElement("span");
-    spacer.className = "spacer";
-    spacer.style.width = END_SPACE_PX + "px";
-    frag.appendChild(spacer);
-    return frag;
-  }}
+    if (ENABLE && ITEMS.length) {{
+      const track = document.getElementById("track");
+      const make = () => {{
+        const frag = document.createDocumentFragment();
+        ITEMS.forEach((it, i) => {{
+          const s = document.createElement("span");
+          s.className = "t-item";
+          s.style.color = it.color;
+          s.textContent = it.text;
+          frag.appendChild(s);
+          if (i < ITEMS.length - 1) {{
+            const sep = document.createElement("span");
+            sep.className = "t-sep"; sep.textContent = SEPARATOR; frag.appendChild(sep);
+          }}
+        }});
+        const spacer = document.createElement("span");
+        spacer.style.display = "inline-block"; spacer.style.width = END_SPACE_PX + "px";
+        frag.appendChild(spacer);
+        return frag;
+      }};
+      const c1 = document.createElement("div"); c1.appendChild(make());
+      const c2 = document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
+      track.appendChild(c1); track.appendChild(c2);
 
-  const content1 = document.createElement("div");
-  content1.className = "ticker__content";
-  content1.appendChild(buildContent());
+      // auto speed by content width
+      requestAnimationFrame(() => {{
+        const w = c1.getBoundingClientRect().width;
+        const dur = Math.max(16, w / 90);
+        track.style.animationDuration = dur + "s";
+      }});
+    }}
+    </script>
+    """
+    st.components.v1.html(html, height=110, scrolling=False)
 
-  const content2 = document.createElement("div");
-  content2.className = "ticker__content";
-  content2.setAttribute("aria-hidden", "true");
-  content2.appendChild(buildContent());
+# -------------------- LOGIN VIEW --------------------
+def login_view():
+    render_top_banner()
 
-  trackEl.appendChild(content1);
-  trackEl.appendChild(content2);
+    # Logo (วงกลม + เงา)
+    logo_col = st.columns([1,1,1])[1]
+    with logo_col:
+        st.markdown(
+            f'<div style="display:flex;justify-content:center;">'
+            f'<img src="{logo_url}" width="120" '
+            f'style="border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,.25);" />'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
-  tickerEl.hidden = false;
+    # Title + subtitle
+    st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
+    st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="subtitle">{TAGLINE_TEXT}</div>', unsafe_allow_html=True)
 
-  // ปรับความเร็วตามความกว้างเนื้อหา
-  const baseSpeedPxPerSec = 80;
-  requestAnimationFrame(() => {{
-    const singleWidth = content1.getBoundingClientRect().width;
-    const duration = Math.max(12, singleWidth / baseSpeedPxPerSec);
-    trackEl.style.animationDuration = duration + "s";
-  }});
-}}
-</script>
-</body>
-</html>
-"""
-    st.components.v1.html(html, height=120)
+    # Login card
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    with st.form("login_form"):
+        u = st.text_input("Username")
+        show_pw = st.checkbox("Show password", value=False)
+        p = st.text_input("Password", type="default" if show_pw else "password")
+        submitted = st.form_submit_button("Sign in")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------- CALL TICKER --------------------
-render_ticker(SHOW_TICKER, SHOW_TAGLINE, TAGLINE_TEXT, TICKER_ITEMS)
+    if submitted:
+        if u in valid_users and p == valid_users[u]:
+            st.session_state.authenticated = True
+            st.session_state.invalid_login = False
+            st.success("Signed in successfully.")
+            st.rerun()
+        else:
+            st.session_state.invalid_login = True
 
+    if st.session_state.invalid_login:
+        st.error("Invalid username or password.")
+
+# -------------------- MAIN --------------------
+if not st.session_state.authenticated:
+    login_view()
+else:
+    render_top_banner()
+    st.success("You are logged in. Build your app content here.")
 
 # # -------------------- PAGE CONFIG --------------------
 # st.set_page_config(layout="wide")

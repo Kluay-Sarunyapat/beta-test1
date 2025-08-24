@@ -481,26 +481,37 @@ st.success("You are logged in. Build your app content here.")
 # st.success("You are logged in. Build your app content here.")
 
 
-# ---------- TOP NAVIGATION (ellipse pills, equal spacing, no hard reload) ----------
-# 1) อ่านค่าจาก query string ด้วย API ใหม่
-def sync_page_from_query():
-    qp = st.query_params
-    if "page" in qp:
-        st.session_state.page = qp["page"]
+# 0) Ensure default
+if "page" not in st.session_state:
+    st.session_state.page = "Simulation Budget"
 
-# 2) ฟังก์ชันเปลี่ยนหน้า + อัปเดต query string (ไม่รีโหลดทั้งแท็บ)
+# 1) read query string (new API, with fallback)
+def sync_page_from_query():
+    try:
+        qp = st.query_params               # Streamlit >= 1.30
+        if "page" in qp:
+            st.session_state.page = qp["page"]
+    except Exception:
+        qp = st.experimental_get_query_params()
+        if "page" in qp:
+            st.session_state.page = qp["page"][0]
+
+# 2) update page without hard reload, and keep URL in sync
 def set_page(name: str):
     st.session_state.page = name
-    st.query_params.update({"page": name})
+    try:
+        st.query_params.update({"page": name})
+    except Exception:
+        st.experimental_set_query_params(page=name)
     st.rerun()
 
-# 3) สไตล์ปุ่มวงรี (ใช้ st.button + use_container_width ให้กว้างเท่ากัน)
+# 3) styles
 st.markdown("""
 <style>
 .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
 .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 
-/* ปุ่มใน scope นี้เท่านั้น */
+/* scope-only button style */
 .nav-scope div.stButton > button{
   height: 46px; border-radius: 9999px; width: 100%;
   font-weight: 800; letter-spacing: .2px; font-size: 14px; color: #fff;
@@ -508,16 +519,15 @@ st.markdown("""
   box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12);
   transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
 }
-
-/* สีตามปุ่ม */
-.nav-scope .p1 div.stButton > button{ background: linear-gradient(135deg, #22c55e, #06b6d4); }  /* Simulation */
-.nav-scope .p2 div.stButton > button{ background: linear-gradient(135deg, #f97316, #ef4444); }  /* Performance */
-.nav-scope .p3 div.stButton > button{ background: linear-gradient(135deg, #6366f1, #22d3ee); }  /* Optimized */
-
 .nav-scope div.stButton > button:hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.04); }
 .nav-scope div.stButton > button:active{ transform: translateY(0) scale(.98); }
 
-/* ปุ่มที่ถูกเลือก ใช้ disabled=True แล้วสไตล์ด้วย :disabled */
+/* colors */
+.nav-scope .p1 div.stButton > button{ background: linear-gradient(135deg, #22c55e, #06b6d4); }
+.nav-scope .p2 div.stButton > button{ background: linear-gradient(135deg, #f97316, #ef4444); }
+.nav-scope .p3 div.stButton > button{ background: linear-gradient(135deg, #6366f1, #22d3ee); }
+
+/* active (use disabled=True) */
 .nav-scope div.stButton > button:disabled{
   cursor: default; filter: none; transform: none;
   outline: 3px solid rgba(99,102,241,.20);
@@ -526,13 +536,13 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 4) เรนเดอร์ปุ่มแบบเท่ากัน 3 ช่อง
+# 4) render
 sync_page_from_query()
 curr = st.session_state.page
 
 st.markdown('<div class="nav-scope"><div class="nav-grid">', unsafe_allow_html=True)
-c1, c2, c3 = st.columns(3)
 
+c1, c2, c3 = st.columns(3)
 with c1:
     st.markdown('<div class="p1">', unsafe_allow_html=True)
     st.button("📂 Simulation Budget",
@@ -559,7 +569,7 @@ with c3:
 
 st.markdown('</div></div>', unsafe_allow_html=True)
 
-# 5) แสดง current page pill ของคุณต่อได้เลย
+# 5) current page pill (ของเดิมคุณใช้ต่อได้)
 st.markdown(
     f"""
     <div class="page-pill">
@@ -570,6 +580,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 
 #Version3 Nevigate
 # # ---------- SESSION STATE FOR DATA SHARING ----------

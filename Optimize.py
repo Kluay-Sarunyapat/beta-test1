@@ -12,8 +12,9 @@ from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
 import altair as alt
 from textwrap import dedent
 
+
 # -------------------- PAGE CONFIG --------------------
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Optimize", page_icon="⚙️", layout="wide")
 
 # Optional width control
 st.markdown(
@@ -41,12 +42,170 @@ valid_users = {
     "admin": "adminpass"
 }
 
-#-------------------- OPTIONS --------------------
+# -------------------- OPTIONS --------------------
 SHOW_TAGLINE = False
 TAGLINE_TEXT = "Smart solutions for budget optimization"
 
 SHOW_TICKER = True
-TICKER_TEXT = "MBCS AI Optimization Tool  •  Smart budget simulation  •  Influencer optimization"
+# ใช้รายการข้อความพร้อมสี แทน TICKER_TEXT เดิม
+TICKER_ITEMS = [
+    {"text": "MBCS AI Optimization Tool", "color": "#000000"},  # ดำ
+    {"text": "Smart budget simulation",   "color": "#16a34a"},  # เขียว
+    {"text": "Influencer optimization",   "color": "#2563eb"},  # น้ำเงิน
+]
+
+# -------------------- TICKER RENDERER --------------------
+def render_ticker(show_ticker: bool, show_tagline: bool, tagline_text: str, items: list):
+    html = f"""
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{{
+  --sep-color:#888;
+  --bg:#ffffff;
+  --text:#111;
+  --gap:12px;
+  --space-end:40px;  /* ช่องว่างท้ายรอบ */
+  --speed:18s;
+}}
+body{{
+  margin:0; color:var(--text); background:var(--bg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+}}
+.wrapper{{padding:8px 0;}}
+.tagline{{font-size:14px; color:#555; margin:0 0 6px 0; padding:0 4px;}}
+.ticker{{
+  position:relative; overflow:hidden; white-space:nowrap;
+  border-radius:8px; background:#f8fafc; border:1px solid #e5e7eb;
+}}
+.ticker__track{{
+  display:flex; width:max-content; animation:marquee var(--speed) linear infinite;
+}}
+.ticker:hover .ticker__track{{ animation-play-state:paused; }}
+.ticker__content{{ display:inline-flex; align-items:center; padding:8px 12px; }}
+.item{{ display:inline-flex; align-items:center; }}
+.sep{{ color:var(--sep-color); margin:0 var(--gap); }}
+.spacer{{ display:inline-block; width:var(--space-end); }}
+@keyframes marquee{{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <div id="tagline" class="tagline" {"hidden" if not show_tagline else ""}></div>
+  <div class="ticker" id="ticker" {"hidden" if not show_ticker else ""}>
+    <div class="ticker__track" id="ticker-track"></div>
+  </div>
+</div>
+<script>
+const SHOW_TAGLINE = {str(show_tagline).lower()};
+const TAGLINE_TEXT = {json.dumps(tagline_text)};
+const TICKER_ITEMS = {json.dumps(items)};
+const END_SPACE_PX = 40;
+const SEPARATOR = "•";
+
+const taglineEl = document.getElementById("tagline");
+const tickerEl  = document.getElementById("ticker");
+const trackEl   = document.getElementById("ticker-track");
+
+if (SHOW_TAGLINE) {{
+  taglineEl.textContent = TAGLINE_TEXT;
+  taglineEl.hidden = false;
+}}
+
+if ({str(show_ticker).lower()} && TICKER_ITEMS.length) {{
+  function buildContent() {{
+    const frag = document.createDocumentFragment();
+    TICKER_ITEMS.forEach((item, idx) => {{
+      const span = document.createElement("span");
+      span.className = "item";
+      span.style.color = item.color;
+      span.textContent = item.text;
+      frag.appendChild(span);
+
+      if (idx < TICKER_ITEMS.length - 1) {{
+        const sep = document.createElement("span");
+        sep.className = "sep";
+        sep.textContent = SEPARATOR;
+        frag.appendChild(sep);
+      }}
+    }});
+    const spacer = document.createElement("span");
+    spacer.className = "spacer";
+    spacer.style.width = END_SPACE_PX + "px";
+    frag.appendChild(spacer);
+    return frag;
+  }}
+
+  const content1 = document.createElement("div");
+  content1.className = "ticker__content";
+  content1.appendChild(buildContent());
+
+  const content2 = document.createElement("div");
+  content2.className = "ticker__content";
+  content2.setAttribute("aria-hidden", "true");
+  content2.appendChild(buildContent());
+
+  trackEl.appendChild(content1);
+  trackEl.appendChild(content2);
+
+  tickerEl.hidden = false;
+
+  // ปรับความเร็วตามความกว้างเนื้อหา
+  const baseSpeedPxPerSec = 80;
+  requestAnimationFrame(() => {{
+    const singleWidth = content1.getBoundingClientRect().width;
+    const duration = Math.max(12, singleWidth / baseSpeedPxPerSec);
+    trackEl.style.animationDuration = duration + "s";
+  }});
+}}
+</script>
+</body>
+</html>
+"""
+    st.components.v1.html(html, height=120)
+
+# -------------------- CALL TICKER --------------------
+render_ticker(SHOW_TICKER, SHOW_TAGLINE, TAGLINE_TEXT, TICKER_ITEMS)
+
+
+# # -------------------- PAGE CONFIG --------------------
+# st.set_page_config(layout="wide")
+
+# # Optional width control
+# st.markdown(
+#     """
+#     <style>
+#     .appview-container .main { max-width: 1100px !important; margin: auto; }
+#     .block-container { max-width: 1100px !important; margin: auto; }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
+
+# # -------------------- SESSION STATE --------------------
+# if "authenticated" not in st.session_state:
+#     st.session_state.authenticated = False
+# if "invalid_login" not in st.session_state:
+#     st.session_state.invalid_login = False
+# if "welcome_shown" not in st.session_state:
+#     st.session_state.welcome_shown = False
+
+# # -------------------- CREDENTIALS --------------------
+# valid_users = {
+#     "mbcs": "1234",
+#     "mbcs1": "5678",
+#     "admin": "adminpass"
+# }
+
+# #-------------------- OPTIONS --------------------
+# SHOW_TAGLINE = False
+# TAGLINE_TEXT = "Smart solutions for budget optimization"
+
+# SHOW_TICKER = True
+# TICKER_TEXT = "MBCS AI Optimization Tool  •  Smart budget simulation  •  Influencer optimization"
 
 
 

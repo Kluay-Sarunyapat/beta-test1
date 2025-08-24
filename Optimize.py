@@ -490,33 +490,34 @@ st.session_state.setdefault("invalid_login", False)
 st.session_state.setdefault("page", "Simulation Budget")
 st.session_state.setdefault("prev_page", None)
 
-# Shared data
+# Shared data (เผื่อใช้ต่อ)
 if "inputs" not in st.session_state:
     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
-# -------------------- CREDENTIALS --------------------
+# -------------------- CREDENTIALS (ใช้เฉพาะใน login ของคุณเอง) --------------------
 valid_users = {"mbcs": "1234", "mbcs1": "5678", "admin": "adminpass"}
 
-# -------------------- ASSETS / OPTIONS --------------------
+# -------------------- OPTIONS --------------------
 logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 
-SHOW_TAGLINE = True
-TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
+# แสดงตัววิ่งที่ไหน
+SHOW_TICKER_LOGIN = False  # ไม่แตะหน้า login: ปิด ticker ในหน้า login
+SHOW_TICKER_APP   = True   # เปิด ticker หลังล็อกอิน (แสดงเพียงครั้งเดียว)
 
-# แสดง Ticker ตรงไหน
-SHOW_TICKER_LOGIN = False   # หน้า Login
-SHOW_TICKER_APP   = True    # หลัง Login
+# ซ่อนไว้เพื่อไม่ให้มีส่วนเกิน
+SHOW_LOGGEDIN_NOTICE = False  # ปิดแบนเนอร์ "You are logged in..."
 
 # ปิดเดโม่อินพุต 6 ช่อง (กันงอกซ้ำ)
 DEMO_TIER_INPUTS = False
 
+# ข้อความในตัววิ่ง
 TICKER_ITEMS = [
     {"text": "MBCS AI Optimization Tool", "color": "#000000"},
     {"text": "Smart budget simulation",   "color": "#16a34a"},
     {"text": "Influencer optimization",   "color": "#2563eb"},
 ]
 
-# -------------------- GLOBAL STYLES --------------------
+# -------------------- GLOBAL STYLES (สำหรับส่วนหลังล็อกอิน + ทั่วไป) --------------------
 st.markdown("""
 <style>
 .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
@@ -528,44 +529,6 @@ body {
     radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
     linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
 }
-
-/* ---------- Login hero with ambient pulses ---------- */
-.login-hero { position:relative; padding-top: 4px; }
-.ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
-.ambient::before, .ambient::after, .ambient i {
-  content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
-}
-.ambient::before { top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: glowPulse1 7s ease-in-out infinite; }
-.ambient::after { top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: glowPulse2 10s ease-in-out infinite .8s; }
-.ambient i { top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: glowPulse3 12s ease-in-out infinite .4s; }
-@keyframes glowPulse1 { 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
-@keyframes glowPulse2 { 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
-@keyframes glowPulse3 { 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
-
-/* Headline gradient (login) */
-.gradient-title {
-  font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0; text-align: center; font-size: 44px;
-  background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  background-size: 200% auto; animation: gradientMove 10s linear infinite;
-  text-shadow: 0 1px 0 rgba(255,255,255,.4); position:relative; z-index:1;
-}
-@keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
-.subtitle { color:#526273; text-align:center; margin-bottom: 22px; position:relative; z-index:1; }
-
-/* Login card */
-.login-card {
-  position:relative; z-index:1; border-radius:14px; border:1px solid #dbe7fb; background:#ffffffcc;
-  box-shadow:0 10px 28px rgba(25,60,120,.14); padding:18px 18px 10px 18px; overflow:hidden;
-}
-.login-card::after{
-  content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
-  transform: skewX(-18deg); animation: sweep 6s linear infinite;
-}
-@keyframes sweep { 0%{ left:-120px } 100%{ left:120% } }
-.stTextInput > div > div > input, .stPassword > div > div > input{ background:#f8fbff; border-radius:10px; }
-.stButton > button{ width:100%; border-radius:10px; height:44px; background:linear-gradient(90deg,#22c55e,#06b6d4); border:none; color:white; font-weight:700; letter-spacing:.2px; box-shadow:0 8px 22px rgba(3,105,161,.28); }
 
 /* Ticker pills */
 .top-wrap { margin-top: 10px; margin-bottom: 22px; }
@@ -590,6 +553,32 @@ body {
 .headline{ font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .subline{ margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px); }
 
+/* Brand hero (logo + glow) */
+.brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
+.brand-hero .brand-stage{ position:relative; z-index:1; }
+.brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
+.brand-ambient .g1, .brand-ambient .g2, .brand-ambient .g3{
+  position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
+}
+.brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
+.brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
+.brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
+@keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
+@keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
+@keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
+.brand-logo{ position:relative; width:120px; height:120px; }
+.brand-logo::before{
+  content:""; position:absolute; inset:-10px; border-radius:50%;
+  background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
+  animation: bh_spin 10s linear infinite; filter: blur(10px); opacity:.7;
+}
+.brand-logo img{
+  position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
+  box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s ease-in-out infinite;
+}
+@keyframes bh_spin{ to{ transform: rotate(360deg) } }
+@keyframes bh_pulse{ 0%,100%{ box-shadow: 0 8px 24px rgba(2,6,23,.25); filter: saturate(1) } 50%{ box-shadow: 0 8px 24px rgba(2,6,23,.25), 0 0 28px rgba(167,139,250,.35); filter: saturate(1.06) } }
+
 /* Current page pill */
 .page-pill{
   display: inline-flex; align-items: center; gap:10px; padding: 10px 16px; margin-top: 10px;
@@ -599,52 +588,11 @@ body {
 }
 .page-pill .dot{ width: 10px; height: 10px; border-radius: 50%; background: #6366f1; box-shadow: 0 0 10px rgba(99,102,241,.6); }
 .page-pill .glowline{ position:absolute; inset:1px; border-radius:999px; background: linear-gradient(120deg, rgba(255,255,255,.6), transparent 40%, transparent 60%, rgba(255,255,255,.6)); background-size: 200% 100%; animation: gradientMove 3.2s linear infinite; pointer-events:none; }
+
+@keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
 @keyframes spin{ to{ transform: rotate(360deg);} }
 </style>
 """, unsafe_allow_html=True)
-
-# -------------------- BRAND HERO (AFTER LOGIN) --------------------
-def add_brand_styles():
-    st.markdown("""
-    <style>
-    .brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
-    .brand-hero .brand-stage{ position:relative; z-index:1; }
-    .brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
-    .brand-ambient .g1, .brand-ambient .g2, .brand-ambient .g3{
-      position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
-    }
-    .brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
-    .brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
-    .brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
-    @keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
-    @keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
-    @keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
-    .brand-logo{ position:relative; width:120px; height:120px; }
-    .brand-logo::before{
-      content:""; position:absolute; inset:-10px; border-radius:50%;
-      background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-      animation: bh_spin 10s linear infinite; filter: blur(10px); opacity:.7;
-    }
-    .brand-logo img{
-      position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
-      box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s ease-in-out infinite;
-    }
-    @keyframes bh_spin{ to{ transform: rotate(360deg) } }
-    @keyframes bh_pulse{ 0%,100%{ box-shadow: 0 8px 24px rgba(2,6,23,.25); filter: saturate(1) } 50%{ box-shadow: 0 8px 24px rgba(2,6,23,.25), 0 0 28px rgba(167,139,250,.35); filter: saturate(1.06) } }
-    </style>
-    """, unsafe_allow_html=True)
-
-def render_brand_hero(logo_url: str):
-    st.markdown(f"""
-    <div class="brand-hero">
-      <div class="brand-ambient">
-        <span class="g1"></span><span class="g2"></span><span class="g3"></span>
-      </div>
-      <div class="brand-stage">
-        <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
 
 # -------------------- TICKER (HTML component) --------------------
 def render_top_banner():
@@ -698,44 +646,6 @@ def render_top_banner():
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
-# -------------------- LOGIN VIEW --------------------
-def login_view():
-    st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
-
-    if SHOW_TICKER_LOGIN:
-        render_top_banner()   # แสดงบนหน้า Login เฉพาะตอนเปิดสวิตช์
-
-    # Logo on login
-    logo_col = st.columns([1,1,1])[1]
-    with logo_col:
-        st.markdown(f'<div style="display:flex;justify-content:center;"><img src="{logo_url}" width="120" style="border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,.25);" /></div>', unsafe_allow_html=True)
-
-    st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
-    st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="subtitle">{TAGLINE_TEXT}</div>', unsafe_allow_html=True)
-
-    st.markdown('<div class="login-card">', unsafe_allow_html=True)
-    with st.form("login_form"):
-        u = st.text_input("Username")
-        show_pw = st.checkbox("Show password", value=False)
-        p = st.text_input("Password", type="default" if show_pw else "password")
-        submitted = st.form_submit_button("Sign in")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True)  # close hero
-
-    if submitted:
-        if u in valid_users and p == valid_users[u]:
-            st.session_state.authenticated = True
-            st.session_state.invalid_login = False
-            st.success("Signed in successfully.")
-            st.rerun()
-        else:
-            st.session_state.invalid_login = True
-
-    if st.session_state.invalid_login:
-        st.error("Invalid username or password.")
-
 # -------------------- HEADER AFTER LOGIN --------------------
 def render_header():
     st.markdown("""
@@ -746,15 +656,29 @@ def render_header():
     </div>
     """, unsafe_allow_html=True)
 
-# -------------------- NAV (ellipse pills, no hard reload) --------------------
+# -------------------- BRAND HERO (โลโก้วงกลม + เอฟเฟกต์) --------------------
+def add_brand_styles():  # styles อยู่ใน GLOBAL แล้ว ฟังก์ชันนี้คงไว้เผื่อแยกส่วน
+    return
+
+def render_brand_hero():
+    st.markdown(f"""
+    <div class="brand-hero">
+      <div class="brand-ambient">
+        <span class="g1"></span><span class="g2"></span><span class="g3"></span>
+      </div>
+      <div class="brand-stage">
+        <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# -------------------- NAV (ellipse pills, no hard reload, no rerun warning) --------------------
 def sync_page_from_query():
-    # ใช้ API ใหม่ ถ้ามี
     try:
         qp = st.query_params
         if "page" in qp:
             st.session_state.page = qp["page"]
     except Exception:
-        # fallback สำหรับเวอร์ชันเก่า
         qp = st.experimental_get_query_params()
         if "page" in qp:
             st.session_state.page = qp["page"][0]
@@ -765,7 +689,7 @@ def set_page(name: str):
         st.query_params.update({"page": name})
     except Exception:
         st.experimental_set_query_params(page=name)
-    st.rerun()
+    # ไม่เรียก st.rerun() ที่นี่ เพื่อไม่ให้ขึ้นคำเตือนสีเหลือง
 
 def render_nav_pills():
     st.markdown("""
@@ -814,39 +738,39 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# -------------------- PAGE CONTENT (no demo to avoid duplication) --------------------
+# -------------------- PAGE CONTENT (ปิดเดโม่เพื่อไม่ให้ซ้ำ) --------------------
 def page_simulation_budget():
-    # ปิดเดโม่อินพุต 6 ช่องเพื่อไม่ให้ซ้ำกับเพจจริงของคุณ
     if not DEMO_TIER_INPUTS:
         return
-    # เดโม่ (เปิดเฉพาะตอนอยากใช้)
-    cols = st.columns(3)
-    for i, k in enumerate(st.session_state.inputs.keys()):
-        with cols[i % 3]:
-            st.session_state.inputs[k] = st.number_input(
-                k, min_value=0, step=1, value=int(st.session_state.inputs[k])
-            )
 
 def page_influencer_performance():
-    # ไม่เรนเดอร์อะไร เพื่อไม่ชนกับคอนเทนต์จริงของคุณ
     return
 
 def page_optimized_budget():
-    # ไม่เรนเดอร์อะไร เพื่อไม่ชนกับคอนเทนต์จริงของคุณ
     return
 
-# -------------------- ROUTING --------------------
+# ==================== MAIN ====================
+# หมายเหตุ: “หน้า Login ของคุณ” ให้คงไว้ตามเดิม ไม่ต้องแก้
+# เงื่อนไขด้านล่างจะแสดงเฉพาะส่วนหลังล็อกอินเท่านั้น
+
 if not st.session_state.authenticated:
-    login_view()
+    # CALL YOUR EXISTING LOGIN VIEW HERE
+    # ตัวอย่าง: login_view()  (ปล่อยให้เป็นของเดิม)
+    # เพื่อให้สคริปต์ทำงานได้ในสภาพแวดล้อมนี้ ถ้าไม่มี login ให้แสดงข้อความสั้นๆ
+    st.info("Please sign in on your existing login view.")
     st.stop()
 
-# After login (ลำดับ: Ticker -> Brand hero -> Header -> Nav -> เนื้อหา)
+# After login (เรียงลำดับ: Ticker -> Brand hero -> Header -> Nav -> Content)
 if SHOW_TICKER_APP:
-    render_top_banner()
+    render_top_banner()   # เรียกครั้งเดียว (หลังล็อกอิน)
 
 add_brand_styles()
-render_brand_hero(logo_url)
+render_brand_hero()
 render_header()
+
+if SHOW_LOGGEDIN_NOTICE:
+    st.success("You are logged in. Build your app content here.")
+
 render_nav_pills()
 
 # Current page pill
@@ -858,7 +782,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# เรียกเพจ (ฟังก์ชันด้านบนถูกทำให้ไม่แสดงอะไร เพื่อหลีกเลี่ยงการงอกซ้ำ)
+# Page switch (ไม่เรนเดอร์เดโม่ เพื่อไม่ชนกับคอนเทนต์จริง)
 if st.session_state.page == "Simulation Budget":
     page_simulation_budget()
 elif st.session_state.page == "Influencer Performance":

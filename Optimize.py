@@ -494,21 +494,14 @@ st.session_state.setdefault("prev_page", None)
 if "inputs" not in st.session_state:
     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
-# -------------------- CREDENTIALS (ใช้เฉพาะใน login ของคุณเอง) --------------------
-valid_users = {"mbcs": "1234", "mbcs1": "5678", "admin": "adminpass"}
-
 # -------------------- OPTIONS --------------------
 logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 
-# แสดงตัววิ่งที่ไหน
-SHOW_TICKER_LOGIN = False  # ไม่แตะหน้า login: ปิด ticker ในหน้า login
-SHOW_TICKER_APP   = True   # เปิด ticker หลังล็อกอิน (แสดงเพียงครั้งเดียว)
+# อย่าให้มีตัววิ่งในหน้า Login (เราไม่ไปแก้โค้ดหน้า Login ของคุณ)
+SHOW_TICKER_APP = True
 
-# ซ่อนไว้เพื่อไม่ให้มีส่วนเกิน
-SHOW_LOGGEDIN_NOTICE = False  # ปิดแบนเนอร์ "You are logged in..."
-
-# ปิดเดโม่อินพุต 6 ช่อง (กันงอกซ้ำ)
-DEMO_TIER_INPUTS = False
+# ซ่อนเฉพาะแบนเนอร์ “You are logged in…” หลังล็อกอิน
+HIDE_LOGGEDIN_BANNER = True
 
 # ข้อความในตัววิ่ง
 TICKER_ITEMS = [
@@ -517,12 +510,12 @@ TICKER_ITEMS = [
     {"text": "Influencer optimization",   "color": "#2563eb"},
 ]
 
-# -------------------- GLOBAL STYLES (สำหรับส่วนหลังล็อกอิน + ทั่วไป) --------------------
+# -------------------- GLOBAL STYLES (เฉพาะหลังล็อกอิน) --------------------
 st.markdown("""
 <style>
 .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
 
-/* Global background */
+/* พื้นหลังรวม */
 body {
   background:
     radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
@@ -532,13 +525,17 @@ body {
 
 /* Ticker pills */
 .top-wrap { margin-top: 10px; margin-bottom: 22px; }
+.ticker-wrap { margin: 0; }
+/* ถ้ามี ticker-wrap มากกว่า 1 อัน ให้ซ่อนอันถัดไปทั้งหมด (กันซ้ำ) */
+.ticker-wrap ~ .ticker-wrap { display: none !important; }
+
 .pill { width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px; position:relative; overflow:hidden;
   background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
 .pill .sheen{ content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
 @keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg)} 100%{ transform: translateX(250%) skewX(-18deg)} }
 .glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
 
-/* Header after login */
+/* Header หลังล็อกอิน */
 .app-header{
   position: relative; overflow: hidden; padding: 26px 26px 20px; border-radius: 18px;
   background: rgba(255,255,255,.78); backdrop-filter: blur(8px);
@@ -576,8 +573,6 @@ body {
   position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
   box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s ease-in-out infinite;
 }
-@keyframes bh_spin{ to{ transform: rotate(360deg) } }
-@keyframes bh_pulse{ 0%,100%{ box-shadow: 0 8px 24px rgba(2,6,23,.25); filter: saturate(1) } 50%{ box-shadow: 0 8px 24px rgba(2,6,23,.25), 0 0 28px rgba(167,139,250,.35); filter: saturate(1.06) } }
 
 /* Current page pill */
 .page-pill{
@@ -594,19 +589,42 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
+# -------------------- Helper: ซ่อนแบนเนอร์ “You are logged in …” --------------------
+def hide_logged_in_banner():
+    if not HIDE_LOGGEDIN_BANNER:
+        return
+    st.markdown("""
+    <script>
+    // ลบเฉพาะ alert ที่มีข้อความ 'You are logged in. Build your app content here.'
+    const kill = () => {
+      const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
+      alerts.forEach(a => {
+        const t = a.innerText || "";
+        if (t.trim().startsWith('You are logged in. Build your app content here.')) {
+          a.style.display = 'none';
+        }
+      });
+    };
+    // เรียกหลายครั้งเผื่อ DOM ยังโหลดไม่ครบ
+    kill(); setTimeout(kill, 150); setTimeout(kill, 400); setTimeout(kill, 900);
+    </script>
+    """, unsafe_allow_html=True)
+
 # -------------------- TICKER (HTML component) --------------------
 def render_top_banner():
     import json as _json
     items_json = _json.dumps(TICKER_ITEMS)
     html = f"""
-    <div class="top-wrap">
-      <div class="pill">
-        <div class="sheen"></div>
-        <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
-          <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
+    <div class="ticker-wrap">
+      <div class="top-wrap">
+        <div class="pill">
+          <div class="sheen"></div>
+          <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
+            <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
+          </div>
         </div>
+        <div class="glass pill"></div>
       </div>
-      <div class="glass pill"></div>
     </div>
     <style>
       @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
@@ -646,7 +664,7 @@ def render_top_banner():
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
-# -------------------- HEADER AFTER LOGIN --------------------
+# -------------------- HEADER / BRAND HERO --------------------
 def render_header():
     st.markdown("""
     <div class="app-header">
@@ -655,10 +673,6 @@ def render_header():
       <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
     </div>
     """, unsafe_allow_html=True)
-
-# -------------------- BRAND HERO (โลโก้วงกลม + เอฟเฟกต์) --------------------
-def add_brand_styles():  # styles อยู่ใน GLOBAL แล้ว ฟังก์ชันนี้คงไว้เผื่อแยกส่วน
-    return
 
 def render_brand_hero():
     st.markdown(f"""
@@ -672,7 +686,7 @@ def render_brand_hero():
     </div>
     """, unsafe_allow_html=True)
 
-# -------------------- NAV (ellipse pills, no hard reload, no rerun warning) --------------------
+# -------------------- NAV (ellipse pills, no rerun warning) --------------------
 def sync_page_from_query():
     try:
         qp = st.query_params
@@ -689,7 +703,6 @@ def set_page(name: str):
         st.query_params.update({"page": name})
     except Exception:
         st.experimental_set_query_params(page=name)
-    # ไม่เรียก st.rerun() ที่นี่ เพื่อไม่ให้ขึ้นคำเตือนสีเหลือง
 
 def render_nav_pills():
     st.markdown("""
@@ -738,39 +751,27 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# -------------------- PAGE CONTENT (ปิดเดโม่เพื่อไม่ให้ซ้ำ) --------------------
-def page_simulation_budget():
-    if not DEMO_TIER_INPUTS:
-        return
+# -------------------- PAGE CONTENT (เว้นว่าง เพื่อไม่ชนกับคอนเทนต์จริงของคุณ) --------------------
+def page_simulation_budget(): return
+def page_influencer_performance(): return
+def page_optimized_budget(): return
 
-def page_influencer_performance():
-    return
-
-def page_optimized_budget():
-    return
-
-# ==================== MAIN ====================
-# หมายเหตุ: “หน้า Login ของคุณ” ให้คงไว้ตามเดิม ไม่ต้องแก้
-# เงื่อนไขด้านล่างจะแสดงเฉพาะส่วนหลังล็อกอินเท่านั้น
-
+# ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:
-    # CALL YOUR EXISTING LOGIN VIEW HERE
-    # ตัวอย่าง: login_view()  (ปล่อยให้เป็นของเดิม)
-    # เพื่อให้สคริปต์ทำงานได้ในสภาพแวดล้อมนี้ ถ้าไม่มี login ให้แสดงข้อความสั้นๆ
+    # คงหน้า Login ของคุณตามเดิม
     st.info("Please sign in on your existing login view.")
     st.stop()
 
-# After login (เรียงลำดับ: Ticker -> Brand hero -> Header -> Nav -> Content)
-if SHOW_TICKER_APP:
-    render_top_banner()   # เรียกครั้งเดียว (หลังล็อกอิน)
+# ซ่อนแบนเนอร์สีเขียวที่ระบบอื่นๆ แสดง
+hide_logged_in_banner()
 
-add_brand_styles()
+# แสดงตัววิ่ง “แถวเดียว” หลังล็อกอิน (CSS บังคับไม่ให้ซ้ำ)
+if SHOW_TICKER_APP:
+    render_top_banner()
+
+# โลโก้วงกลม + Header + Nav
 render_brand_hero()
 render_header()
-
-if SHOW_LOGGEDIN_NOTICE:
-    st.success("You are logged in. Build your app content here.")
-
 render_nav_pills()
 
 # Current page pill
@@ -782,7 +783,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Page switch (ไม่เรนเดอร์เดโม่ เพื่อไม่ชนกับคอนเทนต์จริง)
+# ตัวอย่างสวิตช์เพจ (ปล่อยว่างเพื่อไม่ทับคอนเทนต์จริงของคุณ)
 if st.session_state.page == "Simulation Budget":
     page_simulation_budget()
 elif st.session_state.page == "Influencer Performance":

@@ -15,7 +15,7 @@ import urllib.parse as _url
 
 # ===================== FRONTGATE V2 (LOGIN + INTRO PAGE) =====================
 
-# Page config (ไม่ error ถ้าตั้งที่อื่นแล้ว)
+# Page config (ignore error if already set later)
 try:
     st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="wide")
 except Exception:
@@ -24,7 +24,7 @@ except Exception:
 # Session keys
 st.session_state.setdefault("authenticated", False)
 st.session_state.setdefault("FG2_invalid_login", False)
-st.session_state.setdefault("FG2_onboard_done", False)  # False = ยังอยู่หน้า Intro
+st.session_state.setdefault("FG2_onboard_done", False)  # False = still show Intro
 
 # Credentials
 FG2_VALID_USERS = {"mbcs": "1234", "mbcs1": "5678", "admin": "adminpass"}
@@ -89,7 +89,7 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-# Ticker (top banner)
+# Ticker
 def FG2_render_top_banner():
     import json as _json
     items_json = _json.dumps(FG2_TICKER_ITEMS)
@@ -132,7 +132,7 @@ def FG2_render_top_banner():
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
-# Cleanup: keep only the first ticker (กันซ้ำใน App View)
+# Cleanup duplicate tickers (keep first)
 def FG2_cleanup_keep_first_ticker():
     st.markdown("""
     <script>
@@ -165,7 +165,7 @@ def FG2_cleanup_keep_first_ticker():
 
 # Login
 def FG2_login_view():
-    # เมื่ออยู่หน้า Login ให้บังคับ intro=1 เพื่อเคลียร์ state ค้าง
+    # Reset intro flag in URL when showing login
     try:
         st.query_params.update({"intro": "1"})
     except Exception:
@@ -194,8 +194,7 @@ def FG2_login_view():
         if u in FG2_VALID_USERS and p == FG2_VALID_USERS[u]:
             st.session_state.authenticated = True
             st.session_state.FG2_invalid_login = False
-            # รีเซ็ต intro ให้แสดงทุกครั้งหลังล็อกอินใหม่
-            st.session_state.FG2_onboard_done = False
+            st.session_state.FG2_onboard_done = False  # always show Intro after login
             try:
                 st.query_params.update({"intro": "1"})
             except Exception:
@@ -249,16 +248,15 @@ def FG2_render_intro():
     """, unsafe_allow_html=True)
 
     st.markdown("<hr/>", unsafe_allow_html=True)
-    # ปุ่ม Next อย่างเดียว
     btn_col = st.columns([3,1])[1]
     with btn_col:
         if st.button("Next →", key="FG2_next", use_container_width=True):
             st.session_state.FG2_onboard_done = True
-            # ตั้ง query param = 0 เพื่อบอกว่า intro ผ่านแล้วในเซสชันนี้
+            st.session_state.page = "Simulation Budget"  # land on Simulation Budget
             try:
-                st.query_params.update({"intro": "0"})
+                st.query_params.update({"intro": "0", "page": "Simulation Budget"})
             except Exception:
-                st.experimental_set_query_params(intro="0")
+                st.experimental_set_query_params(intro="0", page="Simulation Budget")
             st.rerun()
 
 # ROUTING
@@ -266,7 +264,7 @@ if not st.session_state.authenticated:
     FG2_login_view()
     st.stop()
 
-# อ่านค่า intro จาก URL เฉพาะหลังล็อกอินแล้วเท่านั้น
+# Read intro flag from URL only after login
 try:
     qp = st.query_params
     if qp.get("intro") == "0":
@@ -284,9 +282,8 @@ if not st.session_state.FG2_onboard_done:
     FG2_render_intro()
     st.stop()
 else:
-    # เข้าสู่ App View แล้ว (โค้ดของคุณจะเริ่มทำงานต่อจากบล็อกนี้)
     FG2_cleanup_keep_first_ticker()
-    # อย่ารัน ticker อีกใน App View เพื่อไม่ให้ซ้ำ
+    # Do not render extra ticker here; let your App View run below normally.
 
 # ===================== END FRONTGATE V2 =====================
 

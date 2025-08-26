@@ -13,18 +13,15 @@ import altair as alt
 from textwrap import dedent
 import urllib.parse as _url
 
-# ===================== FRONTGATE v2 (fixed logo + intro icon size + nav shine) =====================
-# วางบล็อกนี้ไว้เหนือโค้ดแอปเดิมทั้งหมด
-
-# --- FrontGate state ---
+# ---- State ----
 st.session_state.setdefault("authenticated", False)
 st.session_state.setdefault("fg_intro_done", False)
 st.session_state.setdefault("fg_handoff_once", False)
 
-# --- Credentials ---
+# ---- Credentials ----
 _FG_VALID_USERS = {"mbcs":"1234","mbcs1":"5678","admin":"adminpass"}
 
-# --- Assets / options ---
+# ---- Assets ----
 _FG_LOGO_URL = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 _FG_SHOW_TICKER = True
 _FG_TICKER_ITEMS = [
@@ -34,137 +31,76 @@ _FG_TICKER_ITEMS = [
 ]
 _FG_TAGLINE = "Secure access • Smart budget simulation • Influencer optimization"
 
-# --- SCOPED CSS (ไม่ไปทับสไตล์ในแอปเดิม) + NAV SHINE สำหรับ .nav-scope ---
+# ---- SCOPED CSS (เฉพาะหน้า FrontGate) ----
 st.markdown("""
 <style>
-/* ---------- FrontGate scope ---------- */
-.fg-scope .fg-wrap { position:relative; padding-top:4px; }
-.fg-scope .fg-ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
+.fg-scope .fg-wrap{position:relative;padding-top:4px}
+.fg-scope .fg-ambient{position:absolute;inset:-40px -10px -10px -10px;z-index:0;pointer-events:none}
 .fg-scope .fg-ambient::before,.fg-scope .fg-ambient::after,.fg-scope .fg-ambient i{
-  content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter:blur(20px);
-}
-.fg-scope .fg-ambient::before{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: fg_g1 7s ease-in-out infinite; }
-.fg-scope .fg-ambient::after{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: fg_g2 10s ease-in-out infinite .8s; }
-.fg-scope .fg-ambient i{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: fg_g3 12s ease-in-out infinite .4s; }
-@keyframes fg_g1{0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)}50%{opacity:.55; transform:translateX(-50%) scale(1.06)}}
-@keyframes fg_g2{0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)}50%{opacity:.40; transform:translateX(-50%) scale(1.05)}}
-@keyframes fg_g3{0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)}50%{opacity:.32; transform:translateX(-50%) scale(1.04)}}
+  content:"";position:absolute;left:50%;transform:translateX(-50%);border-radius:50%;filter:blur(20px)}
+.fg-scope .fg-ambient::before{top:-30px;width:520px;height:520px;background:radial-gradient(closest-side,rgba(59,130,246,.40),rgba(59,130,246,0) 70%);opacity:.38;animation:fg_g1 7s ease-in-out infinite}
+.fg-scope .fg-ambient::after{top:40px;width:720px;height:720px;background:radial-gradient(closest-side,rgba(167,139,250,.33),rgba(167,139,250,0) 72%);opacity:.28;animation:fg_g2 10s ease-in-out infinite .8s}
+.fg-scope .fg-ambient i{top:220px;width:420px;height:420px;background:radial-gradient(closest-side,rgba(16,185,129,.28),rgba(16,185,129,0) 70%);opacity:.22;animation:fg_g3 12s ease-in-out infinite .4s}
+@keyframes fg_g1{0%,100%{opacity:.22;transform:translateX(-50%) scale(.96)}50%{opacity:.55;transform:translateX(-50%) scale(1.06)}}
+@keyframes fg_g2{0%,100%{opacity:.18;transform:translateX(-50%) scale(.98)}50%{opacity:.40;transform:translateX(-50%) scale(1.05)}}
+@keyframes fg_g3{0%,100%{opacity:.14;transform:translateX(-50%) scale(.97)}50%{opacity:.32;transform:translateX(-50%) scale(1.04)}}
 
 .fg-scope .fg-title{
-  font-weight:800; line-height:1.1; margin:.1rem 0 .6rem 0; text-align:center; font-size:40px;
-  background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
-  -webkit-background-clip:text; background-clip:text; color:transparent;
-  background-size:200% auto; animation: fg_grad 10s linear infinite;
-  text-shadow:0 1px 0 rgba(255,255,255,.4); position:relative; z-index:1;
-}
+  font-weight:800;line-height:1.1;margin:.1rem 0 .6rem 0;text-align:center;font-size:40px;
+  background:linear-gradient(90deg,#10b981,#22d3ee,#3b82f6,#10b981);
+  -webkit-background-clip:text;background-clip:text;color:transparent;background-size:200% auto;animation:fg_grad 10s linear infinite;
+  text-shadow:0 1px 0 rgba(255,255,255,.4);position:relative;z-index:1}
 @keyframes fg_grad{0%{background-position:0% 50%}100%{background-position:200% 50%}}
-.fg-scope .fg-sub{ color:#526273; text-align:center; margin-bottom:18px; position:relative; z-index:1; }
+.fg-scope .fg-sub{color:#526273;text-align:center;margin-bottom:18px;position:relative;z-index:1}
 
-/* โลโก้กลม + วงแหวน + วิบวับ (บังคับกลมด้วย overflow+object-fit) */
-.fg-scope .fg-logo{
-  position:relative; width:130px; height:130px; margin:0 auto 10px auto; z-index:1;
-  border-radius:50%; overflow:hidden;
-}
+/* โลโก้: กลมแน่นอน + วิบวับ */
+.fg-scope .fg-logo{position:relative;width:130px;height:130px;margin:0 auto 10px auto;z-index:1;border-radius:50%;overflow:hidden}
 .fg-scope .fg-logo::before{
-  content:""; position:absolute; inset:-10px; border-radius:50%;
-  background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-  animation: fg_spin 10s linear infinite; filter: blur(10px); opacity:.7;
-}
+  content:"";position:absolute;inset:-10px;border-radius:50%;
+  background:conic-gradient(from 0deg,#22d3ee,#a78bfa,#22c55e,#22d3ee);
+  animation:fg_spin 10s linear infinite;filter:blur(10px);opacity:.7}
 .fg-scope .fg-logo img{
-  position:relative; z-index:1; width:100%; height:100%;
-  border-radius:50% !important; object-fit:cover; display:block;
-  box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: fg_pulse 4.5s ease-in-out infinite;
-}
+  position:relative;z-index:1;width:100%;height:100%;
+  border-radius:50% !important;object-fit:cover;display:block;
+  box-shadow:0 8px 24px rgba(2,6,23,.25);animation:fg_pulse 4.5s ease-in-out infinite}
 @keyframes fg_spin{to{transform:rotate(360deg)}}
 @keyframes fg_pulse{0%,100%{box-shadow:0 8px 24px rgba(2,6,23,.25)}50%{box-shadow:0 8px 24px rgba(2,6,23,.25),0 0 28px rgba(167,139,250,.35)}}
 
-.fg-scope .fg-card{ position:relative; z-index:1; border-radius:14px; border:1px solid #dbe7fb; background:#ffffffcc;
-  box-shadow:0 10px 28px rgba(25,60,120,.14); padding:18px; overflow:hidden; }
-.fg-scope .fg-card::after{ content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
-  transform: skewX(-18deg); animation: fg_sweep 6s linear infinite; }
+/* การ์ดฟอร์ม */
+.fg-scope .fg-card{position:relative;z-index:1;border-radius:14px;border:1px solid #dbe7fb;background:#ffffffcc;box-shadow:0 10px 28px rgba(25,60,120,.14);padding:18px;overflow:hidden}
+.fg-scope .fg-card::after{content:"";position:absolute;top:0;bottom:0;width:80px;left:-120px;z-index:0;background:linear-gradient(120deg,transparent,rgba(255,255,255,.6),transparent);transform:skewX(-18deg);animation:fg_sweep 6s linear infinite}
 @keyframes fg_sweep{0%{left:-120px}100%{left:120%}}
 
-.fg-scope .fg-pill{ width:min(720px,90vw); margin:0 auto 12px auto; border-radius:9999px; position:relative; overflow:hidden;
-  background:linear-gradient(180deg,#fff,#f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12);}
-.fg-scope .fg-sheen{ position:absolute; inset:0; pointer-events:none; width:80px;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
-  transform: translateX(-150%) skewX(-18deg); animation: fg_sheen 8s linear infinite;}
+/* Ticker pill */
+.fg-scope .fg-pill{width:min(720px,90vw);margin:0 auto 12px auto;border-radius:9999px;position:relative;overflow:hidden;background:linear-gradient(180deg,#fff,#f5f9ff);border:1px solid #e6eefb;box-shadow:0 10px 24px rgba(15,40,80,.12)}
+.fg-scope .fg-sheen{position:absolute;inset:0;pointer-events:none;width:80px;background:linear-gradient(120deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-150%) skewX(-18deg);animation:fg_sheen 8s linear infinite}
 @keyframes fg_sheen{0%{transform:translateX(-150%) skewX(-18deg)}100%{transform:translateX(250%) skewX(-18deg)}}
-.fg-scope .fg-glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
-  border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
+.fg-scope .fg-glass{height:22px;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.7));border:1px solid #e6eefb;border-radius:9999px;backdrop-filter:blur(6px);box-shadow:0 10px 24px rgba(15,40,80,.12)}
 
-/* Intro content */
-.fg-scope .fg-intro{ position:relative; border:1px solid #e6eefb; border-radius:16px; background:rgba(255,255,255,.86);
-  box-shadow:0 14px 30px rgba(21,63,124,.12); padding:20px 22px; overflow:hidden; }
-.fg-scope .fg-intro .fg-spark{
-  content:""; position:absolute; inset:-10px; pointer-events:none;
-  background:
-    radial-gradient(6px 6px at 12% 18%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
-    radial-gradient(6px 6px at 80% 10%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
-    radial-gradient(8px 8px at 90% 62%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
-    radial-gradient(5px 5px at 6% 70%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%);
-  opacity:.45; animation: fg_twinkle 6s ease-in-out infinite;
-}
+/* Intro block */
+.fg-scope .fg-intro{position:relative;border:1px solid #e6eefb;border-radius:16px;background:rgba(255,255,255,.86);box-shadow:0 14px 30px rgba(21,63,124,.12);padding:20px 22px;overflow:hidden}
+.fg-scope .fg-intro .fg-spark{content:"";position:absolute;inset:-10px;pointer-events:none;background:
+  radial-gradient(6px 6px at 12% 18%,rgba(255,255,255,.9),rgba(255,255,255,0) 70%),
+  radial-gradient(6px 6px at 80% 10%,rgba(255,255,255,.9),rgba(255,255,255,0) 70%),
+  radial-gradient(8px 8px at 90% 62%,rgba(255,255,255,.9),rgba(255,255,255,0) 70%),
+  radial-gradient(5px 5px at 6% 70%,rgba(255,255,255,.9),rgba(255,255,255,0) 70%);
+opacity:.45;animation:fg_twinkle 6s ease-in-out infinite}
 @keyframes fg_twinkle{0%,100%{opacity:.18}50%{opacity:.6}}
-.fg-scope .fg-feature{ display:flex; align-items:flex-start; gap:14px; margin: 14px 0 18px 0; }
-.fg-scope .fg-feature .fg-txt{ color:#2b3f4d; line-height:1.5; font-size:16px; }
-/* ขนาดไอคอน bullet ให้เล็กลงแน่นอน */
-.fg-scope .fg-feature .fg-ico{ width:36px; height:36px; flex:0 0 36px; filter: drop-shadow(0 6px 10px rgba(34,197,94,.20)); }
 
-/* SCOPED inputs/buttons ของ FrontGate เท่านั้น */
+/* ให้ไอคอนอยู่บรรทัดเดียวกับข้อความ + ย่อไอคอนให้เล็กจริง */
+.fg-scope .fg-feature{display:flex;align-items:center;gap:12px;margin:14px 0 18px 0}
+.fg-scope .fg-feature .fg-ico{width:22px;height:22px;flex:0 0 22px;filter:drop-shadow(0 6px 10px rgba(34,197,94,.20))}
+.fg-scope .fg-feature .fg-txt{color:#2b3f4d;line-height:1.5;font-size:16px}
+
+/* ปุ่มของ FrontGate เท่านั้น */
 .fg-scope .stTextInput > div > div > input,
-.fg-scope .stPassword > div > div > input { background:#f8fbff; border-radius:10px; }
-.fg-scope .stButton > button{
-  width:100%; border-radius:10px; height:44px; position:relative; z-index:1;
-  background:linear-gradient(90deg, #22c55e, #06b6d4); border:none; color:white; font-weight:700; letter-spacing:.2px;
-  box-shadow:0 8px 22px rgba(3,105,161,.28);
-}
-.fg-scope .stButton > button:hover{ filter:brightness(1.04); transform:translateY(-1px); }
-
-/* ---------- NAV SHINE ADD-ON สำหรับแอปเดิม (เฉพาะ .nav-scope) ---------- */
-.nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
-.nav-scope .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-
-.nav-scope .p1 div.stButton > button,
-.nav-scope .p2 div.stButton > button,
-.nav-scope .p3 div.stButton > button{
-  position: relative; overflow: hidden; border-radius: 9999px;
-  font-weight: 800; letter-spacing: .2px; font-size: 14px;
-  border: 1px solid rgba(17,24,39,.08) !important;
-  box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12) !important;
-  transition: transform .15s ease, filter .2s ease;
-}
-
-/* เปิดสี gradient ตอนปุ่มกดได้ */
-.nav-scope .p1 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #22c55e, #06b6d4) !important; color:#fff !important; }
-.nav-scope .p2 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #f59e0b, #ef4444) !important; color:#fff !important; }
-.nav-scope .p3 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #6366f1, #22d3ee) !important; color:#fff !important; }
-
-/* วิบวับ */
-.nav-scope div.stButton > button::after{
-  content:""; position:absolute; inset:0; pointer-events:none;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
-  transform: translateX(-150%) skewX(-18deg); animation: navSheen 6s linear infinite;
-}
-@keyframes navSheen{ 0%{ transform: translateX(-150%) skewX(-18deg) } 100%{ transform: translateX(250%)  skewX(-18deg) } }
-.nav-scope div.stButton > button:not(:disabled):hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.05); }
-
-/* ปุ่มของหน้าปัจจุบัน (disabled) — สไตล์ KOL tag สีเขียว */
-.nav-scope div.stButton > button:disabled{
-  background: linear-gradient(180deg, #ecfdf5, #eafff7) !important;
-  color:#0b1f16 !important;
-  border: 2px solid #22c55e !important;
-  box-shadow: 0 6px 16px rgba(16,185,129,.18) !important;
-}
-.nav-scope div.stButton > button:disabled::before{
-  content:""; position:absolute; inset:0; border-radius:inherit;
-  box-shadow: 0 0 0 2px rgba(34,197,94,.12) inset;
-}
+.fg-scope .stPassword > div > div > input{background:#f8fbff;border-radius:10px}
+.fg-scope .stButton > button{width:100%;border-radius:10px;height:44px;position:relative;z-index:1;background:linear-gradient(90deg,#22c55e,#06b6d4);border:none;color:white;font-weight:700;letter-spacing:.2px;box-shadow:0 8px 22px rgba(3,105,161,.28)}
+.fg-scope .stButton > button:hover{filter:brightness(1.04);transform:translateY(-1px)}
 </style>
 """, unsafe_allow_html=True)
 
-# --- Ticker สำหรับหน้า FrontGate เท่านั้น ---
+# ---- Ticker (FrontGate only) ----
 def _fg_banner():
     import json as _json
     items = _json.dumps(_FG_TICKER_ITEMS)
@@ -178,59 +114,44 @@ def _fg_banner():
     </div>
     <div class="fg-glass"></div>
     <style>
-      @keyframes fg_marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
-      .fg-item {{ display:inline-flex; align-items:center; font-weight:600; }}
-      .fg-sep {{ color:#94a3b8; margin:0 12px; }}
-      #fg-track::after {{
-        content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
-        background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
-        transform: skewX(-18deg); animation: fg_sweepT 7s linear infinite;
-      }}
-      @keyframes fg_sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
+      @keyframes fg_marq {{0%{{transform:translateX(0)}}100%{{transform:translateX(-50%)}}}}
+      .fg-item{{display:inline-flex;align-items:center;font-weight:600}}
+      .fg-sep{{color:#94a3b8;margin:0 12px}}
+      #fg-track::after{{content:"";position:absolute;top:0;bottom:0;width:60px;left:-120px;pointer-events:none;background:linear-gradient(120deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);animation:fg_sweepT 7s linear infinite}}
+      @keyframes fg_sweepT {{0%{{left:-120px}}100%{{left:120%}}}}
     </style>
     <script>
-      const FG_ITEMS = {items};
-      const FG_SEP = "•";
-      const END_SPACE_PX = 40;
-      const track = document.getElementById("fg-track");
-      if (track && FG_ITEMS.length){{
-        const make = () => {{
-          const frag = document.createDocumentFragment();
-          FG_ITEMS.forEach((it,i) => {{
-            const s = document.createElement("span"); s.className="fg-item"; s.style.color=it.color; s.textContent=it.text; frag.appendChild(s);
-            if (i<FG_ITEMS.length-1){{ const sep=document.createElement("span"); sep.className="fg-sep"; sep.textContent=FG_SEP; frag.appendChild(sep); }}
-          }});
-          const spacer=document.createElement("span"); spacer.style.display="inline-block"; spacer.style.width=END_SPACE_PX+"px"; frag.appendChild(spacer);
-          return frag;
-        }};
-        const c1=document.createElement("div"); c1.appendChild(make());
-        const c2=document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
-        track.appendChild(c1); track.appendChild(c2);
-        requestAnimationFrame(()=>{{ const w=c1.getBoundingClientRect().width; const dur=Math.max(16, w/90); track.style.animationDuration = dur + "s"; }});
+      const ITEMS={items}, SEP="•", SPACE=40, track=document.getElementById("fg-track");
+      if(track && ITEMS.length){{
+        const make=()=>{{const f=document.createDocumentFragment();
+          ITEMS.forEach((it,i)=>{{const s=document.createElement("span");s.className="fg-item";s.style.color=it.color;s.textContent=it.text;f.appendChild(s);
+            if(i<ITEMS.length-1){{const sep=document.createElement("span");sep.className="fg-sep";sep.textContent=SEP;f.appendChild(sep);}}}});
+          const sp=document.createElement("span");sp.style.display="inline-block";sp.style.width=SPACE+"px";f.appendChild(sp);return f;}};
+        const a=document.createElement("div");a.appendChild(make());const b=document.createElement("div");b.setAttribute("aria-hidden","true");b.appendChild(make());
+        track.appendChild(a);track.appendChild(b);
+        requestAnimationFrame(()=>{{const w=a.getBoundingClientRect().width;track.style.animationDuration=Math.max(16,w/90)+"s";}});
       }}
     </script>
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
-# --- Login ---
+# ---- Login ----
 def _fg_login():
     st.markdown('<div class="fg-scope"><div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
     _fg_banner()
-    col = st.columns([1,1,1])[1]
-    with col:
-        # บังคับให้เป็นวงกลมแน่นอนด้วย style ตรง
-        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo" /></div>', unsafe_allow_html=True)
+    mid = st.columns([1,1,1])[1]
+    with mid:
+        # inline style บังคับให้กลม
+        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo" style="border-radius:50% !important;object-fit:cover;display:block;width:100%;height:100%;"/></div>', unsafe_allow_html=True)
     st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
     st.markdown('<div class="fg-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="fg-sub">{_FG_TAGLINE}</div>', unsafe_allow_html=True)
-
     st.markdown('<div class="fg-card">', unsafe_allow_html=True)
     with st.form("fg_login_form"):
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
         ok = st.form_submit_button("Sign in")
     st.markdown('</div></div></div>', unsafe_allow_html=True)
-
     if ok:
         if u in _FG_VALID_USERS and p == _FG_VALID_USERS[u]:
             st.session_state.authenticated = True
@@ -240,15 +161,15 @@ def _fg_login():
         else:
             st.error("Invalid username or password.")
 
-# --- Introduction ---
+# ---- Intro ----
 def _fg_intro():
     st.markdown('<div class="fg-scope"><div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
     _fg_banner()
-    col = st.columns([1,1,1])[1]
-    with col:
-        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo" /></div>', unsafe_allow_html=True)
-
+    mid = st.columns([1,1,1])[1]
+    with mid:
+        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo" style="border-radius:50% !important;object-fit:cover;display:block;width:100%;height:100%;"/></div>', unsafe_allow_html=True)
     st.markdown('<div class="fg-title" style="font-size:36px;margin-bottom:6px;">Introducing NEST OPTIMIZER</div>', unsafe_allow_html=True)
+
     st.markdown("""
       <div class="fg-intro">
         <div class="fg-spark"></div>
@@ -258,8 +179,7 @@ def _fg_intro():
         </p>
 
         <div class="fg-feature">
-          <!-- icon 36x36 แน่นอน -->
-          <svg class="fg-ico" width="36" height="36" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg class="fg-ico" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <polygon points="32,8 52,44 12,44" fill="#16a34a" opacity=".85"/>
             <rect x="10" y="48" width="44" height="6" rx="3" fill="#10b981" opacity=".8"/>
           </svg>
@@ -270,7 +190,7 @@ def _fg_intro():
         </div>
 
         <div class="fg-feature">
-          <svg class="fg-ico" width="36" height="36" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg class="fg-ico" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle cx="16" cy="20" r="6" fill="#22c55e"/>
             <circle cx="48" cy="20" r="6" fill="#22c55e"/>
             <circle cx="32" cy="46" r="7" fill="#16a34a"/>
@@ -297,35 +217,78 @@ def _fg_intro():
         if st.button("Next ▶", use_container_width=True, key="fg_next"):
             st.session_state.fg_intro_done = True
             st.rerun()
-
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# --- Router (เหมือน v2 เดิม) ---
+# ---- Router (เหมือน v2 เดิม) ----
 def frontgate():
     if not st.session_state.get("authenticated", False):
-        _fg_login()
-        st.stop()
-
+        _fg_login(); st.stop()
     if not st.session_state.get("fg_intro_done", False):
-        _fg_intro()
-        st.stop()
+        _fg_intro(); st.stop()
 
-    # ให้ตัววิ่งของแอปเดิมแสดงเสมอ
+    # ให้ตัววิ่งของแอปเดิมขึ้นเสมอ
     st.session_state.ticker_rendered_once = False
 
-    # ครั้งแรกเข้าสู่แอปเดิม -> บังคับหน้า Simulation Budget
+    # ครั้งแรกเข้าหน้าแอป -> ไป Simulation Budget
     if not st.session_state.get("fg_handoff_once", False):
         try:
             st.session_state.page = "Simulation Budget"
-            try:
-                st.query_params.clear()
-            except Exception:
-                st.experimental_set_query_params()
+            try: st.query_params.clear()
+            except Exception: st.experimental_set_query_params()
         finally:
             st.session_state.fg_handoff_once = True
     return
 
 frontgate()
+
+# ---- NAV SHINE INJECTOR (ฉีด CSS หลังแอปเดิมเรนเดอร์ เพื่อชนะลำดับ CSS เดิม) ----
+st.markdown("""
+<script>
+(function(){
+  const css = `
+  .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
+  .nav-scope .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .nav-scope .p1 div.stButton > button,
+  .nav-scope .p2 div.stButton > button,
+  .nav-scope .p3 div.stButton > button{
+    position: relative; overflow: hidden; border-radius: 9999px;
+    font-weight: 800; letter-spacing: .2px; font-size: 14px;
+    border: 1px solid rgba(17,24,39,.08) !important;
+    box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12) !important;
+    transition: transform .15s ease, filter .2s ease;
+  }
+  .nav-scope .p1 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #22c55e, #06b6d4) !important; color:#fff !important; }
+  .nav-scope .p2 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #f59e0b, #ef4444) !important; color:#fff !important; }
+  .nav-scope .p3 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #6366f1, #22d3ee) !important; color:#fff !important; }
+  @keyframes navSheen{ 0%{ transform: translateX(-150%) skewX(-18deg) } 100%{ transform: translateX(250%) skewX(-18deg) } }
+  .nav-scope div.stButton > button::after{
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
+    transform: translateX(-150%) skewX(-18deg); animation: navSheen 6s linear infinite;
+  }
+  .nav-scope div.stButton > button:not(:disabled):hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.05); }
+  .nav-scope div.stButton > button:disabled{
+    background: linear-gradient(180deg, #ecfdf5, #eafff7) !important;
+    color:#0b1f16 !important; border: 2px solid #22c55e !important;
+    box-shadow: 0 6px 16px rgba(16,185,129,.18) !important;
+  }
+  .nav-scope div.stButton > button:disabled::before{
+    content:""; position:absolute; inset:0; border-radius:inherit;
+    box-shadow: 0 0 0 2px rgba(34,197,94,.12) inset;
+  }`;
+  function inject(){
+    const id = "nav-shine-style";
+    if(!document.getElementById(id)){
+      const s = document.createElement('style');
+      s.id = id; s.textContent = css;
+      document.head.appendChild(s);
+    }
+  }
+  // inject หลัง DOM พร้อม เพื่อให้ชนะสไตล์เดิม
+  if (document.readyState !== 'loading'){ inject(); } else { document.addEventListener('DOMContentLoaded', inject); }
+})();
+</script>
+""", unsafe_allow_html=True)
 # ===================== END FRONTGATE =====================
 
 

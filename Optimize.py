@@ -19,8 +19,8 @@ st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="w
 # -------------------- SESSION STATE --------------------
 st.session_state.setdefault("authenticated", False)
 st.session_state.setdefault("invalid_login", False)
-st.session_state.setdefault("route", "login")        # login -> intro -> app
-st.session_state.setdefault("_banner_rendered", False)  # prevent duplicate ticker per page render
+st.session_state.setdefault("route", "login")           # 'login' -> 'intro' -> 'app'
+st.session_state.setdefault("_banner_rendered", False)  # prevent duplicate ticker per render
 
 # -------------------- CREDENTIALS --------------------
 valid_users = {
@@ -153,7 +153,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# -------------------- Ticker and guard --------------------
+# -------------------- TICKER --------------------
 def render_top_banner():
     import json as _json
     items_json = _json.dumps(TICKER_ITEMS)
@@ -225,14 +225,12 @@ def render_top_banner_once():
 
 # -------------------- LOGIN VIEW --------------------
 def login_view():
-    # reset ticker guard for this page
-    st.session_state["_banner_rendered"] = False
+    st.session_state["_banner_rendered"] = False  # fresh per page
 
     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
 
     render_top_banner_once()
 
-    # Logo
     logo_col = st.columns([1,1,1])[1]
     with logo_col:
         st.markdown(f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>', unsafe_allow_html=True)
@@ -242,21 +240,20 @@ def login_view():
     if SHOW_TAGLINE:
         st.markdown(f'<div class="subtitle">{TAGLINE_TEXT}</div>', unsafe_allow_html=True)
 
-    # Login card
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     with st.form("login_form"):
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Sign in")
     st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)  # close hero
 
     if submitted:
         if u in valid_users and p == valid_users[u]:
             st.session_state.authenticated = True
             st.session_state.invalid_login = False
-            st.session_state.route = "intro"   # go to intro first
-            st.success("Signed in successfully.")
+            st.session_state.route = "intro"
             st.rerun()
         else:
             st.session_state.invalid_login = True
@@ -266,13 +263,12 @@ def login_view():
 
 # -------------------- INTRO VIEW --------------------
 def intro_view():
-    st.session_state["_banner_rendered"] = False  # reset guard per page
+    st.session_state["_banner_rendered"] = False  # fresh per page
 
     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
 
     render_top_banner_once()
 
-    # Logo
     logo_col = st.columns([1,1,1])[1]
     with logo_col:
         st.markdown(f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>', unsafe_allow_html=True)
@@ -311,6 +307,7 @@ def intro_view():
         background: linear-gradient(120deg, transparent, rgba(255,255,255,.65), transparent);
         transform: translateX(-120%) skewX(-18deg); animation: sheenTag 5.2s linear infinite;
       }
+      @keyframes sheenTag { 0%{ transform: translateX(-120%) skewX(-18deg) } 100%{ transform: translateX(220%) skewX(-18deg) } }
     </style>
     """, unsafe_allow_html=True)
 
@@ -360,42 +357,37 @@ def intro_view():
     st.write("")
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        if st.button("Next", use_container_width=True):
-            st.session_state.route = "app"
+        if st.button("Next ▶", use_container_width=True):
+            st.session_state.route = "app"  # handoff to your existing app
             st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)  # close hero
 
-# -------------------- MAIN APP --------------------
-def main_app():
-    # If your existing main page already renders a ticker, DON'T call render_top_banner_once() again.
-    # If it doesn't, uncomment the next two lines:
-    # st.session_state["_banner_rendered"] = False
-    # render_top_banner_once()
-
-    st.success("You are logged in. Build your app content here.")
-    # Put your existing main app content below (your “Welcome to MBCS Optimize Tool”, tabs, etc.)
-    # Ensure that page-level code lives inside this function so router control works.
+# -------------------- HANDOFF PLACEHOLDER --------------------
+def handoff_to_your_old_app():
+    # Do NOT render the ticker here to avoid duplication with your old app.
+    # This placeholder shows you reached the 'app' route.
+    st.success("Intro complete. Load your main app here.")
+    st.info("Integrate by calling your existing post-login code in this route.\n"
+            "- Option A: wrap your old app into a function main_app() and call it here.\n"
+            "- Option B: paste your old post-login section here directly.")
 
 # -------------------- ROUTER --------------------
 def router():
-    if not st.session_state.authenticated:
+    if not st.session_state.get("authenticated", False):
         st.session_state.route = "login"
         login_view()
         st.stop()
 
-    # Authenticated
     if st.session_state.route == "intro":
         intro_view()
         st.stop()
 
-    # Default to main app
-    st.session_state.route = "app"
-    main_app()
+    # Default route -> your main app (not included here)
+    handoff_to_your_old_app()
     st.stop()
 
 router()
-
 
 
 

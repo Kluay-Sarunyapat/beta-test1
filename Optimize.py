@@ -19,7 +19,8 @@ st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="w
 # -------------------- SESSION STATE --------------------
 st.session_state.setdefault("authenticated", False)
 st.session_state.setdefault("invalid_login", False)
-st.session_state.setdefault("page", "intro")  # after login, land on intro first
+st.session_state.setdefault("route", "login")        # login -> intro -> app
+st.session_state.setdefault("_banner_rendered", False)  # prevent duplicate ticker per page render
 
 # -------------------- CREDENTIALS --------------------
 valid_users = {
@@ -29,7 +30,7 @@ valid_users = {
 }
 
 # -------------------- ASSETS --------------------
-logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"  # replace with your latest logo if needed
+logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 
 # -------------------- OPTIONS --------------------
 SHOW_TAGLINE = True
@@ -152,7 +153,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# -------------------- TICKER (HTML component) --------------------
+# -------------------- Ticker and guard --------------------
 def render_top_banner():
     import json as _json
     items_json = _json.dumps(TICKER_ITEMS)
@@ -217,12 +218,19 @@ def render_top_banner():
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
+def render_top_banner_once():
+    if not st.session_state.get("_banner_rendered", False):
+        render_top_banner()
+        st.session_state["_banner_rendered"] = True
+
 # -------------------- LOGIN VIEW --------------------
 def login_view():
-    # hero + ambient glow layers
+    # reset ticker guard for this page
+    st.session_state["_banner_rendered"] = False
+
     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
 
-    render_top_banner()
+    render_top_banner_once()
 
     # Logo
     logo_col = st.columns([1,1,1])[1]
@@ -241,15 +249,13 @@ def login_view():
         p = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Sign in")
     st.markdown('</div>', unsafe_allow_html=True)
-
-    # close hero
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)  # close hero
 
     if submitted:
         if u in valid_users and p == valid_users[u]:
             st.session_state.authenticated = True
             st.session_state.invalid_login = False
-            st.session_state.page = "intro"   # route to intro page first
+            st.session_state.route = "intro"   # go to intro first
             st.success("Signed in successfully.")
             st.rerun()
         else:
@@ -258,28 +264,26 @@ def login_view():
     if st.session_state.invalid_login:
         st.error("Invalid username or password.")
 
-# -------------------- INTRO VIEW (between login and main) --------------------
+# -------------------- INTRO VIEW --------------------
 def intro_view():
-    # ambient container start
+    st.session_state["_banner_rendered"] = False  # reset guard per page
+
     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
 
-    # Top ticker
-    render_top_banner()
+    render_top_banner_once()
 
-    # Logo (same as login)
+    # Logo
     logo_col = st.columns([1,1,1])[1]
     with logo_col:
         st.markdown(f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>', unsafe_allow_html=True)
 
-    # Extra styles for intro page (tags, icons, shimmer/twinkle)
     st.markdown("""
     <style>
       .intro-card {
         position:relative; z-index:1;
         border-radius: 16px; border:1px solid #e6eefb; background: rgba(255,255,255,.86);
         box-shadow: 0 14px 30px rgba(21,63,124,.12);
-        padding: 20px 22px;
-        overflow:hidden;
+        padding: 20px 22px; overflow:hidden;
       }
       .intro-card .spark {
         content:""; position:absolute; inset:-10px; pointer-events:none;
@@ -292,11 +296,7 @@ def intro_view():
       }
       @keyframes twinkle { 0%,100% { opacity:.18 } 50% { opacity:.6 } }
 
-      .intro-title {
-        font-weight: 800; line-height:1.15; margin: 4px 0 12px 0; text-align:left; font-size: 28px;
-      }
       .intro-p { color:#344b5c; line-height:1.55; font-size:16px; margin: 0 0 16px 0; }
-
       .feature { display:flex; align-items:flex-start; gap:14px; margin: 14px 0 18px 0; }
       .feature .icon { width:36px; height:36px; flex:0 0 36px; filter: drop-shadow(0 6px 10px rgba(34,197,94,.20)); }
       .feature .txt { color:#2b3f4d; line-height:1.5; font-size:16px; }
@@ -311,14 +311,11 @@ def intro_view():
         background: linear-gradient(120deg, transparent, rgba(255,255,255,.65), transparent);
         transform: translateX(-120%) skewX(-18deg); animation: sheenTag 5.2s linear infinite;
       }
-      @keyframes sheenTag { 0%{ transform: translateX(-120%) skewX(-18deg) } 100%{ transform: translateX(220%) skewX(-18deg) } }
     </style>
     """, unsafe_allow_html=True)
 
-    # Title
     st.markdown('<div class="gradient-title" style="font-size:36px;margin-bottom:6px;">Introducing NEST OPTIMIZER</div>', unsafe_allow_html=True)
 
-    # Content card with sparkly effects
     st.markdown("""
       <div class="intro-card">
         <div class="spark"></div>
@@ -328,7 +325,6 @@ def intro_view():
         </p>
 
         <div class="feature">
-          <!-- Tier icon -->
           <svg class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <polygon points="32,8 52,44 12,44" fill="#16a34a" opacity=".85"/>
             <rect x="10" y="48" width="44" height="6" rx="3" fill="#10b981" opacity=".8"/>
@@ -340,7 +336,6 @@ def intro_view():
         </div>
 
         <div class="feature">
-          <!-- List/network icon -->
           <svg class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle cx="16" cy="20" r="6" fill="#22c55e"/>
             <circle cx="48" cy="20" r="6" fill="#22c55e"/>
@@ -362,37 +357,44 @@ def intro_view():
       </div>
     """, unsafe_allow_html=True)
 
-    # Next button
     st.write("")
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
         if st.button("Next", use_container_width=True):
-            st.session_state.page = "main"
+            st.session_state.route = "app"
             st.rerun()
 
-    # close ambient wrapper
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)  # close hero
 
-# -------------------- MAIN APP (original post-login page) --------------------
+# -------------------- MAIN APP --------------------
 def main_app():
-    render_top_banner()
+    # If your existing main page already renders a ticker, DON'T call render_top_banner_once() again.
+    # If it doesn't, uncomment the next two lines:
+    # st.session_state["_banner_rendered"] = False
+    # render_top_banner_once()
+
     st.success("You are logged in. Build your app content here.")
-    # Add your real app content below
+    # Put your existing main app content below (your “Welcome to MBCS Optimize Tool”, tabs, etc.)
+    # Ensure that page-level code lives inside this function so router control works.
 
+# -------------------- ROUTER --------------------
+def router():
+    if not st.session_state.authenticated:
+        st.session_state.route = "login"
+        login_view()
+        st.stop()
 
-# -------------------- MAIN ROUTING --------------------
-if not st.session_state.authenticated:
-    login_view()
+    # Authenticated
+    if st.session_state.route == "intro":
+        intro_view()
+        st.stop()
+
+    # Default to main app
+    st.session_state.route = "app"
+    main_app()
     st.stop()
 
-# After login, land on the intro page first
-if st.session_state.page == "intro":
-    intro_view()
-    st.stop()
-
-# Then go to your main app
-main_app()
-```
+router()
 
 
 

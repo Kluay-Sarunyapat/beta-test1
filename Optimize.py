@@ -19,6 +19,7 @@ st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="w
 # -------------------- SESSION STATE --------------------
 st.session_state.setdefault("authenticated", False)
 st.session_state.setdefault("invalid_login", False)
+st.session_state.setdefault("page", "intro")  # after login, land on intro first
 
 # -------------------- CREDENTIALS --------------------
 valid_users = {
@@ -28,7 +29,7 @@ valid_users = {
 }
 
 # -------------------- ASSETS --------------------
-logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"  # replace with your latest logo if needed
 
 # -------------------- OPTIONS --------------------
 SHOW_TAGLINE = True
@@ -230,13 +231,14 @@ def login_view():
 
     st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
     st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="subtitle">{TAGLINE_TEXT}</div>', unsafe_allow_html=True)
+    if SHOW_TAGLINE:
+        st.markdown(f'<div class="subtitle">{TAGLINE_TEXT}</div>', unsafe_allow_html=True)
 
     # Login card
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     with st.form("login_form"):
         u = st.text_input("Username")
-        p = st.text_input("Password", type="password")  # ซ่อนเสมอ ไม่ใช้ checkbox แล้ว
+        p = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Sign in")
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -247,6 +249,7 @@ def login_view():
         if u in valid_users and p == valid_users[u]:
             st.session_state.authenticated = True
             st.session_state.invalid_login = False
+            st.session_state.page = "intro"   # route to intro page first
             st.success("Signed in successfully.")
             st.rerun()
         else:
@@ -255,14 +258,142 @@ def login_view():
     if st.session_state.invalid_login:
         st.error("Invalid username or password.")
 
+# -------------------- INTRO VIEW (between login and main) --------------------
+def intro_view():
+    # ambient container start
+    st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
+
+    # Top ticker
+    render_top_banner()
+
+    # Logo (same as login)
+    logo_col = st.columns([1,1,1])[1]
+    with logo_col:
+        st.markdown(f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>', unsafe_allow_html=True)
+
+    # Extra styles for intro page (tags, icons, shimmer/twinkle)
+    st.markdown("""
+    <style>
+      .intro-card {
+        position:relative; z-index:1;
+        border-radius: 16px; border:1px solid #e6eefb; background: rgba(255,255,255,.86);
+        box-shadow: 0 14px 30px rgba(21,63,124,.12);
+        padding: 20px 22px;
+        overflow:hidden;
+      }
+      .intro-card .spark {
+        content:""; position:absolute; inset:-10px; pointer-events:none;
+        background:
+          radial-gradient(6px 6px at 12% 18%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+          radial-gradient(6px 6px at 80% 10%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+          radial-gradient(8px 8px at 90% 62%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+          radial-gradient(5px 5px at 6% 70%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%);
+        opacity:.45; animation: twinkle 6s ease-in-out infinite;
+      }
+      @keyframes twinkle { 0%,100% { opacity:.18 } 50% { opacity:.6 } }
+
+      .intro-title {
+        font-weight: 800; line-height:1.15; margin: 4px 0 12px 0; text-align:left; font-size: 28px;
+      }
+      .intro-p { color:#344b5c; line-height:1.55; font-size:16px; margin: 0 0 16px 0; }
+
+      .feature { display:flex; align-items:flex-start; gap:14px; margin: 14px 0 18px 0; }
+      .feature .icon { width:36px; height:36px; flex:0 0 36px; filter: drop-shadow(0 6px 10px rgba(34,197,94,.20)); }
+      .feature .txt { color:#2b3f4d; line-height:1.5; font-size:16px; }
+      .tag {
+        display:inline-block; margin-right:8px; padding:6px 12px; border-radius: 10px;
+        background:#ecfdf5; border:2px solid #22c55e; color:#0b1f16; font-weight:900; letter-spacing:.3px;
+        text-transform:uppercase; position:relative; overflow:hidden;
+        box-shadow: 0 0 0 2px rgba(34,197,94,.10) inset, 0 6px 16px rgba(16,185,129,.18);
+      }
+      .tag::after {
+        content:""; position:absolute; inset:-1px; pointer-events:none;
+        background: linear-gradient(120deg, transparent, rgba(255,255,255,.65), transparent);
+        transform: translateX(-120%) skewX(-18deg); animation: sheenTag 5.2s linear infinite;
+      }
+      @keyframes sheenTag { 0%{ transform: translateX(-120%) skewX(-18deg) } 100%{ transform: translateX(220%) skewX(-18deg) } }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Title
+    st.markdown('<div class="gradient-title" style="font-size:36px;margin-bottom:6px;">Introducing NEST OPTIMIZER</div>', unsafe_allow_html=True)
+
+    # Content card with sparkly effects
+    st.markdown("""
+      <div class="intro-card">
+        <div class="spark"></div>
+        <p class="intro-p">
+          In a world with countless influencers across countless platforms, knowing where to begin is the biggest challenge.
+          "NEST OPTIMIZER" is our proprietary KOL engine, designed to bring precision to influencer marketing and solve the two biggest challenges in the industry:
+        </p>
+
+        <div class="feature">
+          <!-- Tier icon -->
+          <svg class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <polygon points="32,8 52,44 12,44" fill="#16a34a" opacity=".85"/>
+            <rect x="10" y="48" width="44" height="6" rx="3" fill="#10b981" opacity=".8"/>
+          </svg>
+          <div class="txt">
+            <span class="tag">KOL TIER OPTIMIZATION</span>
+            Strategically allocates your budget across influencer tiers to ensure maximum impact and cost efficiency.
+          </div>
+        </div>
+
+        <div class="feature">
+          <!-- List/network icon -->
+          <svg class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <circle cx="16" cy="20" r="6" fill="#22c55e"/>
+            <circle cx="48" cy="20" r="6" fill="#22c55e"/>
+            <circle cx="32" cy="46" r="7" fill="#16a34a"/>
+            <line x1="20" y1="24" x2="28" y2="40" stroke="#16a34a" stroke-width="3" />
+            <line x1="44" y1="24" x2="36" y2="40" stroke="#16a34a" stroke-width="3" />
+          </svg>
+          <div class="txt">
+            <span class="tag">KOL LIST OPTIMIZATION</span>
+            Selects the most effective creators within each tier, based on their performance and relevance.
+          </div>
+        </div>
+
+        <p class="intro-p">
+          This is where we bring science to the art of influencer marketing. Our platform allows us to combine human
+          expertise with data-driven insights. It provides a scientifically-backed KOL strategy that ensures every dollar
+          spent delivers maximum effectiveness and cost efficiency, giving us a unique competitive advantage in the market.
+        </p>
+      </div>
+    """, unsafe_allow_html=True)
+
+    # Next button
+    st.write("")
+    c1, c2, c3 = st.columns([1,2,1])
+    with c2:
+        if st.button("Next", use_container_width=True):
+            st.session_state.page = "main"
+            st.rerun()
+
+    # close ambient wrapper
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# -------------------- MAIN APP (original post-login page) --------------------
+def main_app():
+    render_top_banner()
+    st.success("You are logged in. Build your app content here.")
+    # Add your real app content below
+
+
 # -------------------- MAIN ROUTING --------------------
 if not st.session_state.authenticated:
     login_view()
     st.stop()
 
-# หลังล็อกอิน
-render_top_banner()
-st.success("You are logged in. Build your app content here.")
+# After login, land on the intro page first
+if st.session_state.page == "intro":
+    intro_view()
+    st.stop()
+
+# Then go to your main app
+main_app()
+```
+
 
 
 

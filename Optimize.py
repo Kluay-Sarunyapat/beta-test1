@@ -13,12 +13,15 @@ import altair as alt
 from textwrap import dedent
 import urllib.parse as _url
 
+# ===================== FRONTGATE v2 (fixed logo + intro icon size + nav shine) =====================
+# วางบล็อกนี้ไว้เหนือโค้ดแอปเดิมทั้งหมด
+
 # --- FrontGate state ---
 st.session_state.setdefault("authenticated", False)
-st.session_state.setdefault("fg_intro_done", False)      # เคยผ่านหน้า Intro แล้วหรือยัง
-st.session_state.setdefault("fg_handoff_once", False)    # เข้าหน้าแอปจริงครั้งแรกแล้วหรือยัง
+st.session_state.setdefault("fg_intro_done", False)
+st.session_state.setdefault("fg_handoff_once", False)
 
-# --- Credentials (แก้ได้) ---
+# --- Credentials ---
 _FG_VALID_USERS = {"mbcs":"1234","mbcs1":"5678","admin":"adminpass"}
 
 # --- Assets / options ---
@@ -31,12 +34,13 @@ _FG_TICKER_ITEMS = [
 ]
 _FG_TAGLINE = "Secure access • Smart budget simulation • Influencer optimization"
 
-# --- FrontGate CSS (SCOPED: กระทบเฉพาะหน้า Login/Intro เท่านั้น) ---
+# --- SCOPED CSS (ไม่ไปทับสไตล์ในแอปเดิม) + NAV SHINE สำหรับ .nav-scope ---
 st.markdown("""
 <style>
+/* ---------- FrontGate scope ---------- */
 .fg-scope .fg-wrap { position:relative; padding-top:4px; }
 .fg-scope .fg-ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
-.fg-scope .fg-ambient::before, .fg-scope .fg-ambient::after, .fg-scope .fg-ambient i {
+.fg-scope .fg-ambient::before,.fg-scope .fg-ambient::after,.fg-scope .fg-ambient i{
   content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter:blur(20px);
 }
 .fg-scope .fg-ambient::before{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: fg_g1 7s ease-in-out infinite; }
@@ -56,12 +60,21 @@ st.markdown("""
 @keyframes fg_grad{0%{background-position:0% 50%}100%{background-position:200% 50%}}
 .fg-scope .fg-sub{ color:#526273; text-align:center; margin-bottom:18px; position:relative; z-index:1; }
 
-.fg-scope .fg-logo{ position:relative; width:130px; height:130px; margin:0 auto 10px auto; z-index:1; }
-.fg-scope .fg-logo::before{ content:""; position:absolute; inset:-10px; border-radius:50%;
+/* โลโก้กลม + วงแหวน + วิบวับ (บังคับกลมด้วย overflow+object-fit) */
+.fg-scope .fg-logo{
+  position:relative; width:130px; height:130px; margin:0 auto 10px auto; z-index:1;
+  border-radius:50%; overflow:hidden;
+}
+.fg-scope .fg-logo::before{
+  content:""; position:absolute; inset:-10px; border-radius:50%;
   background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-  animation: fg_spin 10s linear infinite; filter: blur(10px); opacity:.7; }
-.fg-scope .fg-logo img{ position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
-  box-shadow:0 8px 24px rgba(2,6,23,.25); animation: fg_pulse 4.5s ease-in-out infinite; }
+  animation: fg_spin 10s linear infinite; filter: blur(10px); opacity:.7;
+}
+.fg-scope .fg-logo img{
+  position:relative; z-index:1; width:100%; height:100%;
+  border-radius:50% !important; object-fit:cover; display:block;
+  box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: fg_pulse 4.5s ease-in-out infinite;
+}
 @keyframes fg_spin{to{transform:rotate(360deg)}}
 @keyframes fg_pulse{0%,100%{box-shadow:0 8px 24px rgba(2,6,23,.25)}50%{box-shadow:0 8px 24px rgba(2,6,23,.25),0 0 28px rgba(167,139,250,.35)}}
 
@@ -81,6 +94,7 @@ st.markdown("""
 .fg-scope .fg-glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
   border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
 
+/* Intro content */
 .fg-scope .fg-intro{ position:relative; border:1px solid #e6eefb; border-radius:16px; background:rgba(255,255,255,.86);
   box-shadow:0 14px 30px rgba(21,63,124,.12); padding:20px 22px; overflow:hidden; }
 .fg-scope .fg-intro .fg-spark{
@@ -93,8 +107,12 @@ st.markdown("""
   opacity:.45; animation: fg_twinkle 6s ease-in-out infinite;
 }
 @keyframes fg_twinkle{0%,100%{opacity:.18}50%{opacity:.6}}
+.fg-scope .fg-feature{ display:flex; align-items:flex-start; gap:14px; margin: 14px 0 18px 0; }
+.fg-scope .fg-feature .fg-txt{ color:#2b3f4d; line-height:1.5; font-size:16px; }
+/* ขนาดไอคอน bullet ให้เล็กลงแน่นอน */
+.fg-scope .fg-feature .fg-ico{ width:36px; height:36px; flex:0 0 36px; filter: drop-shadow(0 6px 10px rgba(34,197,94,.20)); }
 
-/* SCOPED inputs/buttons ของ FrontGate เท่านั้น (ไม่ไปแตะปุ่มในแอปเดิม) */
+/* SCOPED inputs/buttons ของ FrontGate เท่านั้น */
 .fg-scope .stTextInput > div > div > input,
 .fg-scope .stPassword > div > div > input { background:#f8fbff; border-radius:10px; }
 .fg-scope .stButton > button{
@@ -104,7 +122,7 @@ st.markdown("""
 }
 .fg-scope .stButton > button:hover{ filter:brightness(1.04); transform:translateY(-1px); }
 
-/* ===== NAV SHINE ADD-ON (เฉพาะ .nav-scope ของแอปเดิม) ===== */
+/* ---------- NAV SHINE ADD-ON สำหรับแอปเดิม (เฉพาะ .nav-scope) ---------- */
 .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
 .nav-scope .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 
@@ -118,16 +136,10 @@ st.markdown("""
   transition: transform .15s ease, filter .2s ease;
 }
 
-/* สีปุ่ม (ตอนกดได้) */
-.nav-scope .p1 div.stButton > button:not(:disabled){
-  background: linear-gradient(135deg, #22c55e, #06b6d4) !important; color:#fff !important;
-}
-.nav-scope .p2 div.stButton > button:not(:disabled){
-  background: linear-gradient(135deg, #f59e0b, #ef4444) !important; color:#fff !important;
-}
-.nav-scope .p3 div.stButton > button:not(:disabled){
-  background: linear-gradient(135deg, #6366f1, #22d3ee) !important; color:#fff !important;
-}
+/* เปิดสี gradient ตอนปุ่มกดได้ */
+.nav-scope .p1 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #22c55e, #06b6d4) !important; color:#fff !important; }
+.nav-scope .p2 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #f59e0b, #ef4444) !important; color:#fff !important; }
+.nav-scope .p3 div.stButton > button:not(:disabled){ background: linear-gradient(135deg, #6366f1, #22d3ee) !important; color:#fff !important; }
 
 /* วิบวับ */
 .nav-scope div.stButton > button::after{
@@ -135,17 +147,10 @@ st.markdown("""
   background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
   transform: translateX(-150%) skewX(-18deg); animation: navSheen 6s linear infinite;
 }
-@keyframes navSheen{
-  0%{ transform: translateX(-150%) skewX(-18deg) }
-  100%{ transform: translateX(250%)  skewX(-18deg) }
-}
+@keyframes navSheen{ 0%{ transform: translateX(-150%) skewX(-18deg) } 100%{ transform: translateX(250%)  skewX(-18deg) } }
+.nav-scope div.stButton > button:not(:disabled):hover{ transform: translateY(-2px) scale(1.01); filter: brightness(1.05); }
 
-/* Hover ยกนิดหน่อย */
-.nav-scope div.stButton > button:not(:disabled):hover{
-  transform: translateY(-2px) scale(1.01); filter: brightness(1.05);
-}
-
-/* ปุ่มของหน้าปัจจุบัน (disabled) — สไตล์เหมือน KOL tag สีเขียว */
+/* ปุ่มของหน้าปัจจุบัน (disabled) — สไตล์ KOL tag สีเขียว */
 .nav-scope div.stButton > button:disabled{
   background: linear-gradient(180deg, #ecfdf5, #eafff7) !important;
   color:#0b1f16 !important;
@@ -213,7 +218,8 @@ def _fg_login():
     _fg_banner()
     col = st.columns([1,1,1])[1]
     with col:
-        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
+        # บังคับให้เป็นวงกลมแน่นอนด้วย style ตรง
+        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo" /></div>', unsafe_allow_html=True)
     st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
     st.markdown('<div class="fg-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="fg-sub">{_FG_TAGLINE}</div>', unsafe_allow_html=True)
@@ -240,7 +246,7 @@ def _fg_intro():
     _fg_banner()
     col = st.columns([1,1,1])[1]
     with col:
-        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo" /></div>', unsafe_allow_html=True)
 
     st.markdown('<div class="fg-title" style="font-size:36px;margin-bottom:6px;">Introducing NEST OPTIMIZER</div>', unsafe_allow_html=True)
     st.markdown("""
@@ -252,26 +258,27 @@ def _fg_intro():
         </p>
 
         <div class="fg-feature">
-          <svg class="fg-ico" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- icon 36x36 แน่นอน -->
+          <svg class="fg-ico" width="36" height="36" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <polygon points="32,8 52,44 12,44" fill="#16a34a" opacity=".85"/>
             <rect x="10" y="48" width="44" height="6" rx="3" fill="#10b981" opacity=".8"/>
           </svg>
-          <div class="txt" style="color:#2b3f4d;line-height:1.5;font-size:16px;">
-            <span class="fg-tag" style="display:inline-block;padding:6px 12px;border-radius:10px;background:#ecfdf5;border:2px solid #22c55e;font-weight:900;letter-spacing:.3px;text-transform:uppercase;position:relative;overflow:hidden;box-shadow:0 0 0 2px rgba(34,197,94,.10) inset, 0 6px 16px rgba(16,185,129,.18);">KOL TIER OPTIMIZATION</span>
+          <div class="fg-txt">
+            <span style="display:inline-block;padding:6px 12px;border-radius:10px;background:#ecfdf5;border:2px solid #22c55e;color:#0b1f16;font-weight:900;letter-spacing:.3px;text-transform:uppercase;position:relative;overflow:hidden;box-shadow:0 0 0 2px rgba(34,197,94,.10) inset, 0 6px 16px rgba(16,185,129,.18);">KOL TIER OPTIMIZATION</span>
             Strategically allocates your budget across influencer tiers to ensure maximum impact and cost efficiency.
           </div>
         </div>
 
         <div class="fg-feature">
-          <svg class="fg-ico" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <svg class="fg-ico" width="36" height="36" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle cx="16" cy="20" r="6" fill="#22c55e"/>
             <circle cx="48" cy="20" r="6" fill="#22c55e"/>
             <circle cx="32" cy="46" r="7" fill="#16a34a"/>
             <line x1="20" y1="24" x2="28" y2="40" stroke="#16a34a" stroke-width="3" />
             <line x1="44" y1="24" x2="36" y2="40" stroke="#16a34a" stroke-width="3" />
           </svg>
-          <div class="txt" style="color:#2b3f4d;line-height:1.5;font-size:16px;">
-            <span class="fg-tag" style="display:inline-block;padding:6px 12px;border-radius:10px;background:#ecfdf5;border:2px solid #22c55e;font-weight:900;letter-spacing:.3px;text-transform:uppercase;position:relative;overflow:hidden;box-shadow:0 0 0 2px rgba(34,197,94,.10) inset, 0 6px 16px rgba(16,185,129,.18);">KOL LIST OPTIMIZATION</span>
+          <div class="fg-txt">
+            <span style="display:inline-block;padding:6px 12px;border-radius:10px;background:#ecfdf5;border:2px solid #22c55e;color:#0b1f16;font-weight:900;letter-spacing:.3px;text-transform:uppercase;position:relative;overflow:hidden;box-shadow:0 0 0 2px rgba(34,197,94,.10) inset, 0 6px 16px rgba(16,185,129,.18);">KOL LIST OPTIMIZATION</span>
             Selects the most effective creators within each tier, based on their performance and relevance.
           </div>
         </div>
@@ -293,22 +300,20 @@ def _fg_intro():
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# --- Router ---
+# --- Router (เหมือน v2 เดิม) ---
 def frontgate():
-    # 1) ยังไม่ login
     if not st.session_state.get("authenticated", False):
         _fg_login()
         st.stop()
 
-    # 2) login แล้วแต่ยังไม่ผ่าน Intro
     if not st.session_state.get("fg_intro_done", False):
         _fg_intro()
         st.stop()
 
-    # 3) ให้ตัววิ่งของแอปเดิมโชว์ทุกครั้งหลัง Intro
+    # ให้ตัววิ่งของแอปเดิมแสดงเสมอ
     st.session_state.ticker_rendered_once = False
 
-    # 4) ครั้งแรกที่เข้าหน้าแอปเดิม -> บังคับไปหน้า Simulation Budget
+    # ครั้งแรกเข้าสู่แอปเดิม -> บังคับหน้า Simulation Budget
     if not st.session_state.get("fg_handoff_once", False):
         try:
             st.session_state.page = "Simulation Budget"
@@ -320,9 +325,8 @@ def frontgate():
             st.session_state.fg_handoff_once = True
     return
 
-# เรียกใช้งาน FrontGate
 frontgate()
-# ===================== END FRONTGATE v2 =====================
+# ===================== END FRONTGATE =====================
 
 
 # -------------------- PAGE CONFIG --------------------

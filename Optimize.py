@@ -13,23 +13,23 @@ import altair as alt
 from textwrap import dedent
 import urllib.parse as _url
 
-# ===================== FRONTGATE V2 (LOGIN + INTRO ATTACHED) ====================
+# ===================== FRONTGATE V2 (LOGIN + INTRO PAGE) =====================
 
-# ---- page config (ignore if already set below)
+# 1) Page config (จะไม่ error ถ้าตั้งไว้แล้วที่อื่น)
 try:
     st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="wide")
 except Exception:
     pass
 
-# ---- session keys
+# 2) Session keys
 st.session_state.setdefault("authenticated", False)
 st.session_state.setdefault("FG2_invalid_login", False)
-st.session_state.setdefault("FG2_show_app_below", False)  # กด Next แล้วเปิด App View ใต้ Intro
+st.session_state.setdefault("FG2_onboard_done", False)  # กด Next แล้วจะข้าม Intro
 
-# ---- credentials
+# 3) Credentials
 FG2_VALID_USERS = {"mbcs": "1234", "mbcs1": "5678", "admin": "adminpass"}
 
-# ---- assets / options
+# 4) Assets / Options
 FG2_LOGO_URL = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 FG2_TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
 FG2_TICKER_ITEMS = [
@@ -38,7 +38,7 @@ FG2_TICKER_ITEMS = [
     {"text": "Influencer optimization",   "color": "#2563eb"},
 ]
 
-# ---- base styles (scoped to frontgate)
+# 5) Base styles
 st.markdown("""
 <style>
 .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
@@ -77,21 +77,19 @@ body {
 }
 @keyframes spin {to{transform:rotate(360deg)}}
 .logo-wrap img{ position:relative; z-index:1; width:100%; height:100%; border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,.25); }
-.login-card{ position:relative; z-index:1; border-radius:14px; border:1px solid #dbe7fb; background:#ffffffcc; box-shadow:0 10px 28px rgba(25,60,120,.14); padding:18px; overflow:hidden; }
-.login-card::after{ content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent); transform: skewX(-18deg); animation: sweep 6s linear infinite; }
-@keyframes sweep {0%{left:-120px} 100%{left:120%}}
 
 .top-wrap { margin-top:10px; margin-bottom:22px; }
 .pill { width:min(720px, 90vw); margin:0 auto 12px; border-radius:9999px; position:relative; overflow:hidden; background:linear-gradient(180deg,#fff,#f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
 .pill .sheen { position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
 @keyframes sheenMove {0%{ transform:translateX(-150%) skewX(-18deg)} 100%{ transform:translateX(250%) skewX(-18deg)}}
 .glass{ height:22px; background:linear-gradient(180deg,rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
+
 .stButton > button{ width:100%; border-radius:10px; height:44px; background: linear-gradient(90deg, #22c55e, #06b6d4); border:none; color:#fff; font-weight:700; letter-spacing:.2px; box-shadow:0 8px 22px rgba(3,105,161,.28); }
 .stButton > button:hover{ filter:brightness(1.04); transform: translateY(-1px); }
 </style>
 """, unsafe_allow_html=True)
 
-# ---- ticker
+# 6) Ticker
 def FG2_render_top_banner():
     import json as _json
     items_json = _json.dumps(FG2_TICKER_ITEMS)
@@ -134,7 +132,7 @@ def FG2_render_top_banner():
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
-# ---- cleanup: keep only first ticker (ถ้า App View ข้างล่างก็มี)
+# 7) Cleanup: keep only the first ticker (กันซ้ำใน App View)
 def FG2_cleanup_keep_first_ticker():
     st.markdown("""
     <script>
@@ -165,13 +163,14 @@ def FG2_cleanup_keep_first_ticker():
     </script>
     """, unsafe_allow_html=True)
 
-# ---- login
+# 8) Login view
 def FG2_login_view():
     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
     FG2_render_top_banner()
 
-    logo_col = st.columns([1,1,1])[1]
-    with logo_col:
+    # logo
+    mid = st.columns([1,1,1])[1]
+    with mid:
         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo" /></div>', unsafe_allow_html=True)
 
     st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
@@ -197,15 +196,16 @@ def FG2_login_view():
     if st.session_state.FG2_invalid_login:
         st.error("Invalid username or password.")
 
-# ---- introduction (attached; มีโลโก้ + ตัววิ่ง + Next)
-def FG2_render_introduction_attached():
+# 9) Introduction page (มีโลโก้ + ตัววิ่ง + ปุ่ม Next)
+def FG2_render_intro():
     FG2_render_top_banner()
+
     # logo
-    logo_col = st.columns([1,1,1])[1]
-    with logo_col:
+    mid = st.columns([1,1,1])[1]
+    with mid:
         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
 
-    # text
+    # title + body
     st.markdown("<h3>Introducing NEST OPTIMIZER</h3>", unsafe_allow_html=True)
     st.markdown("""
     <div style="font-size:16px; line-height:1.7; color:#111827;">
@@ -240,30 +240,42 @@ def FG2_render_introduction_attached():
     """, unsafe_allow_html=True)
 
     st.markdown("<hr/>", unsafe_allow_html=True)
-    c1, c2 = st.columns([2,1])
-    with c1:
-        st.info("พร้อมเริ่มใช้งาน — กด Next เพื่อไปยัง App View ใต้หน้านี้")
-    with c2:
+    # ปุ่ม Next อย่างเดียว
+    btn_col = st.columns([3,1])[1]
+    with btn_col:
         if st.button("Next →", key="FG2_next", use_container_width=True):
-            st.session_state.FG2_show_app_below = True
+            st.session_state.FG2_onboard_done = True
+            # ใส่ query param ไว้กัน rerun/refresh
+            try:
+                st.query_params.update({"intro": "0"})
+            except Exception:
+                st.experimental_set_query_params(intro="0")
             st.rerun()
 
-# ---- routing (Frontgate)
+# 10) Sync จาก query param (ถ้าเคยกด Next แล้ว)
+try:
+    qp = st.query_params
+    if qp.get("intro") == "0":
+        st.session_state.FG2_onboard_done = True
+except Exception:
+    qp = st.experimental_get_query_params()
+    if qp.get("intro", ["1"])[0] == "0":
+        st.session_state.FG2_onboard_done = True
+
+# 11) Routing (Frontgate only; อย่าแตะ App View)
 if not st.session_state.authenticated:
     FG2_login_view()
     st.stop()
 
-# แสดง Introduction เสมอ (เป็นส่วนหัวติดกับหน้า)
-FG2_render_introduction_attached()
-
-# ถ้ากด Next ให้ปล่อยให้ App View (โค้ดของคุณด้านล่าง) รันต่อ และซ่อน ticker ที่ซ้ำ
-if st.session_state.get("FG2_show_app_below", False):
-    FG2_cleanup_keep_first_ticker()
-else:
-    # ยังไม่กด Next ให้หยุดก่อน เพื่อไม่ให้ App View ด้านล่างรัน
+if not st.session_state.FG2_onboard_done:
+    FG2_render_intro()
     st.stop()
+else:
+    # เข้าสู่ App View แล้ว (โค้ดของคุณด้านล่างนี้จะรันต่อ)
+    FG2_cleanup_keep_first_ticker()
+    # ไม่ render ticker ในส่วนนี้ เพื่อไม่ให้ซ้ำกับของ App View
 
-# ===================== END FRONTGATE V2 ====================
+# ===================== END FRONTGATE V2 =====================
 
 
 # -------------------- PAGE CONFIG --------------------

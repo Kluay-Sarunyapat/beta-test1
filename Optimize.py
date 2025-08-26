@@ -13,340 +13,218 @@ import altair as alt
 from textwrap import dedent
 import urllib.parse as _url
 
-# -------------------- PAGE CONFIG --------------------
-st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="wide")
+# --- FrontGate state ---
+st.session_state.setdefault("authenticated", False)   # your old code already uses this
+st.session_state.setdefault("fg_intro_done", False)   # new: marks intro as completed
 
-# -------------------- SESSION STATE --------------------
-st.session_state.setdefault("authenticated", False)
-st.session_state.setdefault("invalid_login", False)
-st.session_state.setdefault("route", "login")           # 'login' -> 'intro' -> 'app'
-st.session_state.setdefault("_banner_rendered", False)  # prevent duplicate ticker per render
-
-# -------------------- CREDENTIALS --------------------
-valid_users = {
+# --- Credentials (edit as needed) ---
+_FG_VALID_USERS = {
     "mbcs": "1234",
     "mbcs1": "5678",
     "admin": "adminpass",
 }
 
-# -------------------- ASSETS --------------------
-logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-
-# -------------------- OPTIONS --------------------
-SHOW_TAGLINE = True
-TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
-
-SHOW_TICKER = True
-TICKER_ITEMS = [
+# --- Assets / options (use different names to avoid collisions) ---
+_FG_LOGO_URL = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+_FG_SHOW_TICKER = True
+_FG_TICKER_ITEMS = [
     {"text": "MBCS AI Optimization Tool", "color": "#000000"},
     {"text": "Smart budget simulation",   "color": "#16a34a"},
     {"text": "Influencer optimization",   "color": "#2563eb"},
 ]
+_FG_TAGLINE = "Secure access • Smart budget simulation • Influencer optimization"
 
-# -------------------- GLOBAL STYLES --------------------
-st.markdown(
-    """
-    <style>
-    .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
+# --- Scoped styles (prefixed with fg- to avoid conflicts) ---
+st.markdown("""
+<style>
+.fg-wrap { position:relative; padding-top: 4px; }
+.fg-ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
+.fg-ambient::before, .fg-ambient::after, .fg-ambient i {
+  content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter:blur(20px);
+}
+.fg-ambient::before{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: fg_g1 7s ease-in-out infinite; }
+.fg-ambient::after{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: fg_g2 10s ease-in-out infinite .8s; }
+.fg-ambient i{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: fg_g3 12s ease-in-out infinite .4s; }
+@keyframes fg_g1{0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)}50%{opacity:.55; transform:translateX(-50%) scale(1.06)}}
+@keyframes fg_g2{0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)}50%{opacity:.40; transform:translateX(-50%) scale(1.05)}}
+@keyframes fg_g3{0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)}50%{opacity:.32; transform:translateX(-50%) scale(1.04)}}
 
-    body {
-      background:
-        radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
-        radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
-        linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
-    }
+.fg-title {
+  font-weight:800; line-height:1.1; margin: 0.1rem 0 0.6rem 0; text-align:center; font-size: 40px;
+  background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  background-size:200% auto; animation: fg_grad 10s linear infinite;
+  text-shadow:0 1px 0 rgba(255,255,255,.4); position:relative; z-index:1;
+}
+@keyframes fg_grad{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+.fg-sub { color:#526273; text-align:center; margin-bottom: 18px; position:relative; z-index:1; }
 
-    .login-hero { position:relative; padding-top: 4px; }
-    .ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
-    .ambient::before, .ambient::after, .ambient i {
-      content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%;
-      filter: blur(20px);
-    }
-    .ambient::before {
-      top: -30px; width: 520px; height: 520px;
-      background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%);
-      opacity:.38; animation: glowPulse1 7s ease-in-out infinite;
-    }
-    .ambient::after {
-      top: 40px; width: 720px; height: 720px;
-      background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%);
-      opacity:.28; animation: glowPulse2 10s ease-in-out infinite 0.8s;
-    }
-    .ambient i {
-      top: 220px; width: 420px; height: 420px;
-      background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%);
-      opacity:.22; animation: glowPulse3 12s ease-in-out infinite 0.4s;
-    }
+.fg-logo { position:relative; width:130px; height:130px; margin: 0 auto 10px auto; z-index:1; }
+.fg-logo::before{
+  content:""; position:absolute; inset:-10px; border-radius:50%;
+  background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
+  animation: fg_spin 10s linear infinite; filter: blur(10px); opacity:.7;
+}
+.fg-logo img{ position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
+  box-shadow:0 8px 24px rgba(2,6,23,.25); animation: fg_pulse 4.5s ease-in-out infinite; }
+@keyframes fg_spin{to{transform:rotate(360deg)}}
+@keyframes fg_pulse{0%,100%{box-shadow:0 8px 24px rgba(2,6,23,.25)}50%{box-shadow:0 8px 24px rgba(2,6,23,.25),0 0 28px rgba(167,139,250,.35)}}
 
-    @keyframes glowPulse1 { 0%,100% { opacity:.22; transform:translateX(-50%) scale(0.96) } 50% { opacity:.55; transform:translateX(-50%) scale(1.06) } }
-    @keyframes glowPulse2 { 0%,100% { opacity:.18; transform:translateX(-50%) scale(0.98) } 50% { opacity:.40; transform:translateX(-50%) scale(1.05) } }
-    @keyframes glowPulse3 { 0%,100% { opacity:.14; transform:translateX(-50%) scale(0.97) } 50% { opacity:.32; transform:translateX(-50%) scale(1.04) } }
+.fg-card{ position:relative; z-index:1; border-radius:14px; border:1px solid #dbe7fb; background:#ffffffcc;
+  box-shadow:0 10px 28px rgba(25,60,120,.14); padding:18px; overflow:hidden; }
+.fg-card::after{ content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
+  transform: skewX(-18deg); animation: fg_sweep 6s linear infinite;}
+@keyframes fg_sweep{0%{left:-120px}100%{left:120%}}
 
-    .gradient-title {
-      font-weight: 800; line-height: 1.1; margin: 0.1rem 0 0.6rem 0; text-align: center; font-size: 44px;
-      background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-      background-size: 200% auto; animation: gradientMove 10s linear infinite;
-      text-shadow: 0 1px 0 rgba(255,255,255,.4);
-      position:relative; z-index:1;
-    }
-    @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
-    .subtitle { color:#526273; text-align:center; margin-bottom: 22px; position:relative; z-index:1; }
+.fg-pill { width:min(720px,90vw); margin:0 auto 12px auto; border-radius:9999px; position:relative; overflow:hidden;
+  background:linear-gradient(180deg,#fff,#f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12);}
+.fg-pill .fg-sheen{ position:absolute; inset:0; pointer-events:none; width:80px;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: translateX(-150%) skewX(-18deg); animation: fg_sheen 8s linear infinite;}
+@keyframes fg_sheen{0%{transform:translateX(-150%) skewX(-18deg)}100%{transform:translateX(250%) skewX(-18deg)}}
+.fg-glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
+  border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
 
-    .logo-wrap { position:relative; width:130px; height:130px; margin: 0 auto 10px auto; z-index:1; }
-    .logo-wrap::before {
-      content:""; position:absolute; inset:-10px; border-radius:50%;
-      background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-      animation: spin 10s linear infinite; filter: blur(10px); opacity:.7;
-    }
-    .logo-wrap img {
-      position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
-      box-shadow: 0 8px 24px rgba(2,6,23,.25);
-      animation: softPulse 4.5s ease-in-out infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg) } }
-    @keyframes softPulse {
-      0%,100% { box-shadow: 0 8px 24px rgba(2,6,23,.25); filter: saturate(1) }
-      50%     { box-shadow: 0 8px 24px rgba(2,6,23,.25), 0 0 28px rgba(167,139,250,.35); filter: saturate(1.06) }
-    }
+.fg-intro { position:relative; border:1px solid #e6eefb; border-radius:16px; background:rgba(255,255,255,.86);
+  box-shadow:0 14px 30px rgba(21,63,124,.12); padding:20px 22px; overflow:hidden; }
+.fg-intro .fg-spark{
+  content:""; position:absolute; inset:-10px; pointer-events:none;
+  background:
+    radial-gradient(6px 6px at 12% 18%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    radial-gradient(6px 6px at 80% 10%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    radial-gradient(8px 8px at 90% 62%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    radial-gradient(5px 5px at 6% 70%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%);
+  opacity:.45; animation: fg_twinkle 6s ease-in-out infinite;
+}
+@keyframes fg_twinkle{0%,100%{opacity:.18}50%{opacity:.6}}
+.fg-feature{ display:flex; align-items:flex-start; gap:14px; margin: 14px 0 18px 0; }
+.fg-feature .fg-ico{ width:36px; height:36px; flex:0 0 36px; filter: drop-shadow(0 6px 10px rgba(34,197,94,.20)); }
+.fg-tag{ display:inline-block; margin-right:8px; padding:6px 12px; border-radius:10px;
+  background:#ecfdf5; border:2px solid #22c55e; color:#0b1f16; font-weight:900; letter-spacing:.3px; text-transform:uppercase;
+  box-shadow: 0 0 0 2px rgba(34,197,94,.10) inset, 0 6px 16px rgba(16,185,129,.18); position:relative; overflow:hidden;}
+.fg-tag::after{ content:""; position:absolute; inset:-1px; background: linear-gradient(120deg, transparent, rgba(255,255,255,.65), transparent);
+  transform: translateX(-120%) skewX(-18deg); animation: fg_tag 5.2s linear infinite;}
+@keyframes fg_tag{0%{transform: translateX(-120%) skewX(-18deg)}100%{transform: translateX(220%) skewX(-18deg)}}
+</style>
+""", unsafe_allow_html=True)
 
-    .login-card {
-      position:relative; z-index:1;
-      border-radius: 14px; border:1px solid #dbe7fb; background: #ffffffcc;
-      box-shadow: 0 10px 28px rgba(25, 60, 120, .14);
-      padding: 18px 18px 10px 18px; overflow:hidden;
-    }
-    .login-card::after{
-      content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
-      background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
-      transform: skewX(-18deg); animation: sweep 6s linear infinite;
-    }
-
-    .stTextInput > div > div > input,
-    .stPassword > div > div > input { background: #f8fbff; border-radius: 10px; }
-    .stButton > button {
-      width: 100%; border-radius: 10px; height: 44px; position:relative; z-index:1;
-      background: linear-gradient(90deg, #22c55e, #06b6d4); border: none;
-      color: white; font-weight: 700; letter-spacing:.2px;
-      box-shadow: 0 8px 22px rgba(3, 105, 161, .28);
-    }
-    .stButton > button:hover { filter: brightness(1.04); transform: translateY(-1px); }
-
-    .top-wrap { margin-top: 10px; margin-bottom: 22px; }
-    .pill {
-      width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px;
-      box-shadow: 0 10px 24px rgba(15, 40, 80, .12);
-      position:relative; overflow:hidden;
-      background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb;
-    }
-    .pill .sheen {
-      content:""; position:absolute; inset:0; pointer-events:none;
-      background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
-      width: 80px; transform: translateX(-150%) skewX(-18deg);
-      animation: sheenMove 8s linear infinite;
-    }
-    @keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg) } 100%{ transform: translateX(250%) skewX(-18deg) } }
-    .glass { height: 22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
-      border: 1px solid #e6eefb; backdrop-filter: blur(6px); border-radius: 9999px; box-shadow: 0 10px 24px rgba(15,40,80,.12); }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-# -------------------- TICKER --------------------
-def render_top_banner():
+def _fg_banner():
     import json as _json
-    items_json = _json.dumps(TICKER_ITEMS)
-    show_ticker_js = "true" if SHOW_TICKER else "false"
-
+    items = _json.dumps(_FG_TICKER_ITEMS)
+    if not _FG_SHOW_TICKER: 
+        return
     html = f"""
-    <div class="top-wrap">
-      <div class="pill">
-        <div class="sheen"></div>
-        <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
-          <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
-        </div>
+    <div class="fg-pill"><div class="fg-sheen"></div>
+      <div id="fg-ticker" style="white-space:nowrap; position:relative; height:32px;">
+        <div id="fg-track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:fg_marq 22s linear infinite; position:relative;"></div>
       </div>
-      <div class="glass pill"></div>
     </div>
+    <div class="fg-glass"></div>
     <style>
-      @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
-      .t-item {{ display:inline-flex; align-items:center; font-weight:600; }}
-      .t-sep {{ color:#94a3b8; margin:0 12px; }}
-      #track::after {{
+      @keyframes fg_marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
+      .fg-item {{ display:inline-flex; align-items:center; font-weight:600; }}
+      .fg-sep {{ color:#94a3b8; margin:0 12px; }}
+      #fg-track::after {{
         content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
         background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
-        transform: skewX(-18deg); animation: sweepT 7s linear infinite;
+        transform: skewX(-18deg); animation: fg_sweepT 7s linear infinite;
       }}
-      @keyframes sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
+      @keyframes fg_sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
     </style>
     <script>
-      const ENABLE = {show_ticker_js};
-      const ITEMS = {items_json};
-      const SEPARATOR = "•";
+      const FG_ITEMS = {items};
+      const FG_SEP = "•";
       const END_SPACE_PX = 40;
-      if (ENABLE && ITEMS.length) {{
-        const track = document.getElementById("track");
+      const track = document.getElementById("fg-track");
+      if (track && FG_ITEMS.length){{
         const make = () => {{
           const frag = document.createDocumentFragment();
-          ITEMS.forEach((it, i) => {{
-            const s = document.createElement("span");
-            s.className = "t-item";
-            s.style.color = it.color;
-            s.textContent = it.text;
-            frag.appendChild(s);
-            if (i < ITEMS.length - 1) {{
-              const sep = document.createElement("span");
-              sep.className = "t-sep"; sep.textContent = SEPARATOR; frag.appendChild(sep);
-            }}
+          FG_ITEMS.forEach((it,i) => {{
+            const s = document.createElement("span"); s.className="fg-item"; s.style.color=it.color; s.textContent=it.text; frag.appendChild(s);
+            if (i<FG_ITEMS.length-1){{ const sep=document.createElement("span"); sep.className="fg-sep"; sep.textContent=FG_SEP; frag.appendChild(sep); }}
           }});
-          const spacer = document.createElement("span");
-          spacer.style.display = "inline-block"; spacer.style.width = END_SPACE_PX + "px";
-          frag.appendChild(spacer);
+          const spacer=document.createElement("span"); spacer.style.display="inline-block"; spacer.style.width=END_SPACE_PX+"px"; frag.appendChild(spacer);
           return frag;
         }};
-        const c1 = document.createElement("div"); c1.appendChild(make());
-        const c2 = document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
+        const c1=document.createElement("div"); c1.appendChild(make());
+        const c2=document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
         track.appendChild(c1); track.appendChild(c2);
-        requestAnimationFrame(() => {{
-          const w = c1.getBoundingClientRect().width;
-          const dur = Math.max(16, w / 90);
-          track.style.animationDuration = dur + "s";
-        }});
+        requestAnimationFrame(()=>{{ const w=c1.getBoundingClientRect().width; const dur=Math.max(16, w/90); track.style.animationDuration = dur + "s"; }});
       }}
     </script>
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
-def render_top_banner_once():
-    if not st.session_state.get("_banner_rendered", False):
-        render_top_banner()
-        st.session_state["_banner_rendered"] = True
-
-# -------------------- LOGIN VIEW --------------------
-def login_view():
-    st.session_state["_banner_rendered"] = False  # fresh per page
-
-    st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
-
-    render_top_banner_once()
-
-    logo_col = st.columns([1,1,1])[1]
-    with logo_col:
-        st.markdown(f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>', unsafe_allow_html=True)
-
+def _fg_login():
+    st.markdown('<div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
+    _fg_banner()
+    col = st.columns([1,1,1])[1]
+    with col:
+        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
     st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
-    st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
-    if SHOW_TAGLINE:
-        st.markdown(f'<div class="subtitle">{TAGLINE_TEXT}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="fg-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="fg-sub">{_FG_TAGLINE}</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="login-card">', unsafe_allow_html=True)
-    with st.form("login_form"):
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Sign in")
+    st.markdown('<div class="fg-card">', unsafe_allow_html=True)
+    with st.form("fg_login_form"):
+        u = st.text_input("Username", key="fg_user")
+        p = st.text_input("Password", type="password", key="fg_pass")
+        ok = st.form_submit_button("Sign in")
+    st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)  # close hero
-
-    if submitted:
-        if u in valid_users and p == valid_users[u]:
+    if ok:
+        if u in _FG_VALID_USERS and p == _FG_VALID_USERS[u]:
             st.session_state.authenticated = True
-            st.session_state.invalid_login = False
-            st.session_state.route = "intro"
+            st.session_state.fg_intro_done = False
+            st.success("Signed in successfully.")
             st.rerun()
         else:
-            st.session_state.invalid_login = True
+            st.error("Invalid username or password.")
 
-    if st.session_state.invalid_login:
-        st.error("Invalid username or password.")
+def _fg_intro():
+    st.markdown('<div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
+    _fg_banner()
+    col = st.columns([1,1,1])[1]
+    with col:
+        st.markdown(f'<div class="fg-logo"><img src="{_FG_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
 
-# -------------------- INTRO VIEW --------------------
-def intro_view():
-    st.session_state["_banner_rendered"] = False  # fresh per page
-
-    st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
-
-    render_top_banner_once()
-
-    logo_col = st.columns([1,1,1])[1]
-    with logo_col:
-        st.markdown(f'<div class="logo-wrap"><img src="{logo_url}" alt="logo" /></div>', unsafe_allow_html=True)
-
+    st.markdown('<div class="fg-title" style="font-size:36px;margin-bottom:6px;">Introducing NEST OPTIMIZER</div>', unsafe_allow_html=True)
     st.markdown("""
-    <style>
-      .intro-card {
-        position:relative; z-index:1;
-        border-radius: 16px; border:1px solid #e6eefb; background: rgba(255,255,255,.86);
-        box-shadow: 0 14px 30px rgba(21,63,124,.12);
-        padding: 20px 22px; overflow:hidden;
-      }
-      .intro-card .spark {
-        content:""; position:absolute; inset:-10px; pointer-events:none;
-        background:
-          radial-gradient(6px 6px at 12% 18%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
-          radial-gradient(6px 6px at 80% 10%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
-          radial-gradient(8px 8px at 90% 62%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
-          radial-gradient(5px 5px at 6% 70%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%);
-        opacity:.45; animation: twinkle 6s ease-in-out infinite;
-      }
-      @keyframes twinkle { 0%,100% { opacity:.18 } 50% { opacity:.6 } }
-
-      .intro-p { color:#344b5c; line-height:1.55; font-size:16px; margin: 0 0 16px 0; }
-      .feature { display:flex; align-items:flex-start; gap:14px; margin: 14px 0 18px 0; }
-      .feature .icon { width:36px; height:36px; flex:0 0 36px; filter: drop-shadow(0 6px 10px rgba(34,197,94,.20)); }
-      .feature .txt { color:#2b3f4d; line-height:1.5; font-size:16px; }
-      .tag {
-        display:inline-block; margin-right:8px; padding:6px 12px; border-radius: 10px;
-        background:#ecfdf5; border:2px solid #22c55e; color:#0b1f16; font-weight:900; letter-spacing:.3px;
-        text-transform:uppercase; position:relative; overflow:hidden;
-        box-shadow: 0 0 0 2px rgba(34,197,94,.10) inset, 0 6px 16px rgba(16,185,129,.18);
-      }
-      .tag::after {
-        content:""; position:absolute; inset:-1px; pointer-events:none;
-        background: linear-gradient(120deg, transparent, rgba(255,255,255,.65), transparent);
-        transform: translateX(-120%) skewX(-18deg); animation: sheenTag 5.2s linear infinite;
-      }
-      @keyframes sheenTag { 0%{ transform: translateX(-120%) skewX(-18deg) } 100%{ transform: translateX(220%) skewX(-18deg) } }
-    </style>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="gradient-title" style="font-size:36px;margin-bottom:6px;">Introducing NEST OPTIMIZER</div>', unsafe_allow_html=True)
-
-    st.markdown("""
-      <div class="intro-card">
-        <div class="spark"></div>
-        <p class="intro-p">
+      <div class="fg-intro">
+        <div class="fg-spark"></div>
+        <p style="color:#344b5c;line-height:1.55;font-size:16px;margin:0 0 16px 0;">
           In a world with countless influencers across countless platforms, knowing where to begin is the biggest challenge.
           "NEST OPTIMIZER" is our proprietary KOL engine, designed to bring precision to influencer marketing and solve the two biggest challenges in the industry:
         </p>
 
-        <div class="feature">
-          <svg class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <div class="fg-feature">
+          <svg class="fg-ico" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <polygon points="32,8 52,44 12,44" fill="#16a34a" opacity=".85"/>
             <rect x="10" y="48" width="44" height="6" rx="3" fill="#10b981" opacity=".8"/>
           </svg>
-          <div class="txt">
-            <span class="tag">KOL TIER OPTIMIZATION</span>
+          <div class="txt" style="color:#2b3f4d;line-height:1.5;font-size:16px;">
+            <span class="fg-tag">KOL TIER OPTIMIZATION</span>
             Strategically allocates your budget across influencer tiers to ensure maximum impact and cost efficiency.
           </div>
         </div>
 
-        <div class="feature">
-          <svg class="icon" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <div class="fg-feature">
+          <svg class="fg-ico" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <circle cx="16" cy="20" r="6" fill="#22c55e"/>
             <circle cx="48" cy="20" r="6" fill="#22c55e"/>
             <circle cx="32" cy="46" r="7" fill="#16a34a"/>
             <line x1="20" y1="24" x2="28" y2="40" stroke="#16a34a" stroke-width="3" />
             <line x1="44" y1="24" x2="36" y2="40" stroke="#16a34a" stroke-width="3" />
           </svg>
-          <div class="txt">
-            <span class="tag">KOL LIST OPTIMIZATION</span>
+          <div class="txt" style="color:#2b3f4d;line-height:1.5;font-size:16px;">
+            <span class="fg-tag">KOL LIST OPTIMIZATION</span>
             Selects the most effective creators within each tier, based on their performance and relevance.
           </div>
         </div>
 
-        <p class="intro-p">
+        <p style="color:#344b5c;line-height:1.55;font-size:16px;margin:0;">
           This is where we bring science to the art of influencer marketing. Our platform allows us to combine human
           expertise with data-driven insights. It provides a scientifically-backed KOL strategy that ensures every dollar
           spent delivers maximum effectiveness and cost efficiency, giving us a unique competitive advantage in the market.
@@ -357,38 +235,29 @@ def intro_view():
     st.write("")
     c1, c2, c3 = st.columns([1,2,1])
     with c2:
-        if st.button("Next ▶", use_container_width=True):
-            st.session_state.route = "app"  # handoff to your existing app
-            st.rerun()
+        if st.button("Next ▶", use_container_width=True, key="fg_next"):
+            st.session_state.fg_intro_done = True
+            st.experimental_rerun() if hasattr(st, "experimental_rerun") else st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)  # close hero
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------- HANDOFF PLACEHOLDER --------------------
-def handoff_to_your_old_app():
-    # Do NOT render the ticker here to avoid duplication with your old app.
-    # This placeholder shows you reached the 'app' route.
-    st.success("Intro complete. Load your main app here.")
-    st.info("Integrate by calling your existing post-login code in this route.\n"
-            "- Option A: wrap your old app into a function main_app() and call it here.\n"
-            "- Option B: paste your old post-login section here directly.")
-
-# -------------------- ROUTER --------------------
-def router():
+def frontgate():
+    # If not authenticated -> show login and stop the script (old app will not render)
     if not st.session_state.get("authenticated", False):
-        st.session_state.route = "login"
-        login_view()
+        _fg_login()
         st.stop()
 
-    if st.session_state.route == "intro":
-        intro_view()
+    # If authenticated but intro not done -> show intro and stop
+    if not st.session_state.get("fg_intro_done", False):
+        _fg_intro()
         st.stop()
 
-    # Default route -> your main app (not included here)
-    handoff_to_your_old_app()
-    st.stop()
+    # Else: intro done -> allow the rest of the script (your old app) to run
+    return
 
-router()
-
+# Run frontgate now. If it shows a page it will st.stop() and your old code won't run yet.
+frontgate()
+# ===================== END FRONTGATE =====================
 
 
 # -------------------- PAGE CONFIG --------------------

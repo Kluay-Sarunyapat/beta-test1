@@ -13,18 +13,20 @@ import altair as alt
 from textwrap import dedent
 import urllib.parse as _url
 
+# ===================== FRONTGATE v2 (scoped, default to Simulation) =====================
+# Paste this block ABOVE your existing app code. You do not need to edit your old code.
+
+import streamlit as st
+
 # --- FrontGate state ---
-st.session_state.setdefault("authenticated", False)   # your old code already uses this
-st.session_state.setdefault("fg_intro_done", False)   # new: marks intro as completed
+st.session_state.setdefault("authenticated", False)
+st.session_state.setdefault("fg_intro_done", False)        # intro completed
+st.session_state.setdefault("fg_handoff_once", False)      # first time entering your app
 
-# --- Credentials (edit as needed) ---
-_FG_VALID_USERS = {
-    "mbcs": "1234",
-    "mbcs1": "5678",
-    "admin": "adminpass",
-}
+# --- Credentials (edit if needed) ---
+_FG_VALID_USERS = {"mbcs":"1234","mbcs1":"5678","admin":"adminpass"}
 
-# --- Assets / options (use different names to avoid collisions) ---
+# --- Assets / options ---
 _FG_LOGO_URL = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 _FG_SHOW_TICKER = True
 _FG_TICKER_ITEMS = [
@@ -34,61 +36,59 @@ _FG_TICKER_ITEMS = [
 ]
 _FG_TAGLINE = "Secure access • Smart budget simulation • Influencer optimization"
 
-# --- Scoped styles (prefixed with fg- to avoid conflicts) ---
+# --- FrontGate styles (SCOPED to .fg-scope so they won't touch your app) ---
 st.markdown("""
 <style>
-.fg-wrap { position:relative; padding-top: 4px; }
-.fg-ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
-.fg-ambient::before, .fg-ambient::after, .fg-ambient i {
+.fg-scope .fg-wrap { position:relative; padding-top:4px; }
+.fg-scope .fg-ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
+.fg-scope .fg-ambient::before, .fg-scope .fg-ambient::after, .fg-scope .fg-ambient i {
   content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter:blur(20px);
 }
-.fg-ambient::before{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: fg_g1 7s ease-in-out infinite; }
-.fg-ambient::after{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: fg_g2 10s ease-in-out infinite .8s; }
-.fg-ambient i{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: fg_g3 12s ease-in-out infinite .4s; }
+.fg-scope .fg-ambient::before{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: fg_g1 7s ease-in-out infinite; }
+.fg-scope .fg-ambient::after{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: fg_g2 10s ease-in-out infinite .8s; }
+.fg-scope .fg-ambient i{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: fg_g3 12s ease-in-out infinite .4s; }
 @keyframes fg_g1{0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)}50%{opacity:.55; transform:translateX(-50%) scale(1.06)}}
 @keyframes fg_g2{0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)}50%{opacity:.40; transform:translateX(-50%) scale(1.05)}}
 @keyframes fg_g3{0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)}50%{opacity:.32; transform:translateX(-50%) scale(1.04)}}
 
-.fg-title {
-  font-weight:800; line-height:1.1; margin: 0.1rem 0 0.6rem 0; text-align:center; font-size: 40px;
+.fg-scope .fg-title{
+  font-weight:800; line-height:1.1; margin:.1rem 0 .6rem 0; text-align:center; font-size:40px;
   background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
   -webkit-background-clip:text; background-clip:text; color:transparent;
   background-size:200% auto; animation: fg_grad 10s linear infinite;
   text-shadow:0 1px 0 rgba(255,255,255,.4); position:relative; z-index:1;
 }
 @keyframes fg_grad{0%{background-position:0% 50%}100%{background-position:200% 50%}}
-.fg-sub { color:#526273; text-align:center; margin-bottom: 18px; position:relative; z-index:1; }
+.fg-scope .fg-sub{ color:#526273; text-align:center; margin-bottom:18px; position:relative; z-index:1; }
 
-.fg-logo { position:relative; width:130px; height:130px; margin: 0 auto 10px auto; z-index:1; }
-.fg-logo::before{
-  content:""; position:absolute; inset:-10px; border-radius:50%;
+.fg-scope .fg-logo{ position:relative; width:130px; height:130px; margin:0 auto 10px auto; z-index:1; }
+.fg-scope .fg-logo::before{ content:""; position:absolute; inset:-10px; border-radius:50%;
   background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-  animation: fg_spin 10s linear infinite; filter: blur(10px); opacity:.7;
-}
-.fg-logo img{ position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
+  animation: fg_spin 10s linear infinite; filter: blur(10px); opacity:.7; }
+.fg-scope .fg-logo img{ position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
   box-shadow:0 8px 24px rgba(2,6,23,.25); animation: fg_pulse 4.5s ease-in-out infinite; }
 @keyframes fg_spin{to{transform:rotate(360deg)}}
 @keyframes fg_pulse{0%,100%{box-shadow:0 8px 24px rgba(2,6,23,.25)}50%{box-shadow:0 8px 24px rgba(2,6,23,.25),0 0 28px rgba(167,139,250,.35)}}
 
-.fg-card{ position:relative; z-index:1; border-radius:14px; border:1px solid #dbe7fb; background:#ffffffcc;
+.fg-scope .fg-card{ position:relative; z-index:1; border-radius:14px; border:1px solid #dbe7fb; background:#ffffffcc;
   box-shadow:0 10px 28px rgba(25,60,120,.14); padding:18px; overflow:hidden; }
-.fg-card::after{ content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
+.fg-scope .fg-card::after{ content:""; position:absolute; top:0; bottom:0; width:80px; left:-120px; z-index:0;
   background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
-  transform: skewX(-18deg); animation: fg_sweep 6s linear infinite;}
+  transform: skewX(-18deg); animation: fg_sweep 6s linear infinite; }
 @keyframes fg_sweep{0%{left:-120px}100%{left:120%}}
 
-.fg-pill { width:min(720px,90vw); margin:0 auto 12px auto; border-radius:9999px; position:relative; overflow:hidden;
+.fg-scope .fg-pill{ width:min(720px,90vw); margin:0 auto 12px auto; border-radius:9999px; position:relative; overflow:hidden;
   background:linear-gradient(180deg,#fff,#f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12);}
-.fg-pill .fg-sheen{ position:absolute; inset:0; pointer-events:none; width:80px;
+.fg-scope .fg-sheen{ position:absolute; inset:0; pointer-events:none; width:80px;
   background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent);
   transform: translateX(-150%) skewX(-18deg); animation: fg_sheen 8s linear infinite;}
 @keyframes fg_sheen{0%{transform:translateX(-150%) skewX(-18deg)}100%{transform:translateX(250%) skewX(-18deg)}}
-.fg-glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
+.fg-scope .fg-glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7));
   border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
 
-.fg-intro { position:relative; border:1px solid #e6eefb; border-radius:16px; background:rgba(255,255,255,.86);
+.fg-scope .fg-intro{ position:relative; border:1px solid #e6eefb; border-radius:16px; background:rgba(255,255,255,.86);
   box-shadow:0 14px 30px rgba(21,63,124,.12); padding:20px 22px; overflow:hidden; }
-.fg-intro .fg-spark{
+.fg-scope .fg-intro .fg-spark{
   content:""; position:absolute; inset:-10px; pointer-events:none;
   background:
     radial-gradient(6px 6px at 12% 18%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
@@ -98,21 +98,23 @@ st.markdown("""
   opacity:.45; animation: fg_twinkle 6s ease-in-out infinite;
 }
 @keyframes fg_twinkle{0%,100%{opacity:.18}50%{opacity:.6}}
-.fg-feature{ display:flex; align-items:flex-start; gap:14px; margin: 14px 0 18px 0; }
-.fg-feature .fg-ico{ width:36px; height:36px; flex:0 0 36px; filter: drop-shadow(0 6px 10px rgba(34,197,94,.20)); }
-.fg-tag{ display:inline-block; margin-right:8px; padding:6px 12px; border-radius:10px;
-  background:#ecfdf5; border:2px solid #22c55e; color:#0b1f16; font-weight:900; letter-spacing:.3px; text-transform:uppercase;
-  box-shadow: 0 0 0 2px rgba(34,197,94,.10) inset, 0 6px 16px rgba(16,185,129,.18); position:relative; overflow:hidden;}
-.fg-tag::after{ content:""; position:absolute; inset:-1px; background: linear-gradient(120deg, transparent, rgba(255,255,255,.65), transparent);
-  transform: translateX(-120%) skewX(-18deg); animation: fg_tag 5.2s linear infinite;}
-@keyframes fg_tag{0%{transform: translateX(-120%) skewX(-18deg)}100%{transform: translateX(220%) skewX(-18deg)}}
+
+ /* SCOPE INPUTS/BUTTONS so your app’s buttons are untouched */
+.fg-scope .stTextInput > div > div > input,
+.fg-scope .stPassword > div > div > input { background:#f8fbff; border-radius:10px; }
+.fg-scope .stButton > button{
+  width:100%; border-radius:10px; height:44px; position:relative; z-index:1;
+  background:linear-gradient(90deg, #22c55e, #06b6d4); border:none; color:white; font-weight:700; letter-spacing:.2px;
+  box-shadow:0 8px 22px rgba(3,105,161,.28);
+}
+.fg-scope .stButton > button:hover{ filter:brightness(1.04); transform:translateY(-1px); }
 </style>
 """, unsafe_allow_html=True)
 
 def _fg_banner():
     import json as _json
     items = _json.dumps(_FG_TICKER_ITEMS)
-    if not _FG_SHOW_TICKER: 
+    if not _FG_SHOW_TICKER:
         return
     html = f"""
     <div class="fg-pill"><div class="fg-sheen"></div>
@@ -157,7 +159,7 @@ def _fg_banner():
     st.components.v1.html(html, height=110, scrolling=False)
 
 def _fg_login():
-    st.markdown('<div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
+    st.markdown('<div class="fg-scope"><div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
     _fg_banner()
     col = st.columns([1,1,1])[1]
     with col:
@@ -168,11 +170,10 @@ def _fg_login():
 
     st.markdown('<div class="fg-card">', unsafe_allow_html=True)
     with st.form("fg_login_form"):
-        u = st.text_input("Username", key="fg_user")
-        p = st.text_input("Password", type="password", key="fg_pass")
+        u = st.text_input("Username")
+        p = st.text_input("Password", type="password")
         ok = st.form_submit_button("Sign in")
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div></div></div>', unsafe_allow_html=True)
 
     if ok:
         if u in _FG_VALID_USERS and p == _FG_VALID_USERS[u]:
@@ -184,7 +185,7 @@ def _fg_login():
             st.error("Invalid username or password.")
 
 def _fg_intro():
-    st.markdown('<div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
+    st.markdown('<div class="fg-scope"><div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
     _fg_banner()
     col = st.columns([1,1,1])[1]
     with col:
@@ -237,27 +238,41 @@ def _fg_intro():
     with c2:
         if st.button("Next ▶", use_container_width=True, key="fg_next"):
             st.session_state.fg_intro_done = True
-            st.experimental_rerun() if hasattr(st, "experimental_rerun") else st.rerun()
+            st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 def frontgate():
-    # If not authenticated -> show login and stop the script (old app will not render)
+    # 1) Not authenticated -> Login
     if not st.session_state.get("authenticated", False):
         _fg_login()
         st.stop()
 
-    # If authenticated but intro not done -> show intro and stop
+    # 2) Authenticated but intro not done -> Intro
     if not st.session_state.get("fg_intro_done", False):
         _fg_intro()
         st.stop()
 
-    # Else: intro done -> allow the rest of the script (your old app) to run
+    # 3) First time handing off to your app -> force Simulation page and ensure ticker shows
+    if not st.session_state.get("fg_handoff_once", False):
+        try:
+            # Force first landing page
+            st.session_state.page = "Simulation Budget"
+            # Make sure your app's ticker renders
+            st.session_state.ticker_rendered_once = False
+            # Clear any query param that might force another page
+            try:
+                st.query_params.clear()
+            except Exception:
+                st.experimental_set_query_params()
+        finally:
+            st.session_state.fg_handoff_once = True
+    # Return and let your app render
     return
 
-# Run frontgate now. If it shows a page it will st.stop() and your old code won't run yet.
+# Run FrontGate now
 frontgate()
-# ===================== END FRONTGATE =====================
+# ===================== END FRONTGATE v2 =====================
 
 
 # -------------------- PAGE CONFIG --------------------

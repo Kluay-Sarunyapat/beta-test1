@@ -13,18 +13,18 @@ import altair as alt
 from textwrap import dedent
 import urllib.parse as _url
 
-# ===================== FRONTGATE v2 (scoped, default to Simulation) =====================
-# Paste this block ABOVE your existing app code. You do not need to edit your old code.
+# ===================== FRONTGATE v3 (Login + Intro + default Simulation + Nav Shine) =====================
+# Paste this block ABOVE your existing app code. Do not modify your old code.
 
 import streamlit as st
 
-# --- FrontGate state ---
-st.session_state.setdefault("authenticated", False)
-st.session_state.setdefault("fg_intro_done", False)        # intro completed
-st.session_state.setdefault("fg_handoff_once", False)      # first time entering your app
+# --- FrontGate state (separate from your app state) ---
+st.session_state.setdefault("authenticated", False)     # your app also uses this; we keep it consistent
+st.session_state.setdefault("fg_intro_done", False)     # intro completed flag
+st.session_state.setdefault("fg_handoff_once", False)   # first time entering your app after intro?
 
-# --- Credentials (edit if needed) ---
-_FG_VALID_USERS = {"mbcs":"1234","mbcs1":"5678","admin":"adminpass"}
+# --- Credentials (edit as needed) ---
+_FG_VALID_USERS = {"mbcs":"1234", "mbcs1":"5678", "admin":"adminpass"}
 
 # --- Assets / options ---
 _FG_LOGO_URL = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
@@ -99,7 +99,7 @@ st.markdown("""
 }
 @keyframes fg_twinkle{0%,100%{opacity:.18}50%{opacity:.6}}
 
- /* SCOPE INPUTS/BUTTONS so your app’s buttons are untouched */
+/* SCOPED inputs/buttons so app styles remain untouched */
 .fg-scope .stTextInput > div > div > input,
 .fg-scope .stPassword > div > div > input { background:#f8fbff; border-radius:10px; }
 .fg-scope .stButton > button{
@@ -108,9 +108,61 @@ st.markdown("""
   box-shadow:0 8px 22px rgba(3,105,161,.28);
 }
 .fg-scope .stButton > button:hover{ filter:brightness(1.04); transform:translateY(-1px); }
+
+/* ===== NAV SHINE ADD-ON for your app's nav-scope ===== */
+.nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
+.nav-scope .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+
+.nav-scope .p1 div.stButton > button,
+.nav-scope .p2 div.stButton > button,
+.nav-scope .p3 div.stButton > button{
+  position: relative; overflow: hidden; border-radius: 9999px;
+  font-weight: 800; letter-spacing: .2px; font-size: 14px;
+  border: 1px solid rgba(17,24,39,.08) !important;
+  box-shadow: 0 10px 22px rgba(2,132,199,.18), inset 0 0 12px rgba(255,255,255,.12) !important;
+  transition: transform .15s ease, filter .2s ease;
+}
+
+/* Gradient colors for enabled buttons */
+.nav-scope .p1 div.stButton > button:not(:disabled){
+  background: linear-gradient(135deg, #22c55e, #06b6d4) !important; color:#fff !important;
+}
+.nav-scope .p2 div.stButton > button:not(:disabled){
+  background: linear-gradient(135deg, #f59e0b, #ef4444) !important; color:#fff !important;
+}
+.nav-scope .p3 div.stButton > button:not(:disabled){
+  background: linear-gradient(135deg, #6366f1, #22d3ee) !important; color:#fff !important;
+}
+
+/* Shimmer sheen on all nav buttons */
+.nav-scope div.stButton > button::after{
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.6), transparent);
+  transform: translateX(-150%) skewX(-18deg); animation: navSheen 6s linear infinite;
+}
+@keyframes navSheen{
+  0%{ transform: translateX(-150%) skewX(-18deg) }
+  100%{ transform: translateX(250%)  skewX(-18deg) }
+}
+.nav-scope div.stButton > button:not(:disabled):hover{
+  transform: translateY(-2px) scale(1.01); filter: brightness(1.05);
+}
+
+/* Current page (disabled) — green KOL-style tag */
+.nav-scope div.stButton > button:disabled{
+  background: linear-gradient(180deg, #ecfdf5, #eafff7) !important;
+  color:#0b1f16 !important;
+  border: 2px solid #22c55e !important;
+  box-shadow: 0 6px 16px rgba(16,185,129,.18) !important;
+}
+.nav-scope div.stButton > button:disabled::before{
+  content:""; position:absolute; inset:0; border-radius:inherit;
+  box-shadow: 0 0 0 2px rgba(34,197,94,.12) inset;
+}
 </style>
 """, unsafe_allow_html=True)
 
+# --- Small HTML ticker for FrontGate pages only ---
 def _fg_banner():
     import json as _json
     items = _json.dumps(_FG_TICKER_ITEMS)
@@ -158,6 +210,7 @@ def _fg_banner():
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
+# --- Login page ---
 def _fg_login():
     st.markdown('<div class="fg-scope"><div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
     _fg_banner()
@@ -184,6 +237,7 @@ def _fg_login():
         else:
             st.error("Invalid username or password.")
 
+# --- Introduction interstitial ---
 def _fg_intro():
     st.markdown('<div class="fg-scope"><div class="fg-wrap"><div class="fg-ambient"></div><i class="fg-ambient"></i>', unsafe_allow_html=True)
     _fg_banner()
@@ -242,6 +296,7 @@ def _fg_intro():
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
+# --- FrontGate router: shows one page and stops; otherwise lets your app render ---
 def frontgate():
     # 1) Not authenticated -> Login
     if not st.session_state.get("authenticated", False):
@@ -253,26 +308,25 @@ def frontgate():
         _fg_intro()
         st.stop()
 
-    # 3) First time handing off to your app -> force Simulation page and ensure ticker shows
+    # 3) Ensure your app's ticker renders (your app uses ticker_rendered_once)
+    st.session_state.ticker_rendered_once = False
+
+    # 4) First handoff -> force Simulation page and clear query params
     if not st.session_state.get("fg_handoff_once", False):
         try:
-            # Force first landing page
             st.session_state.page = "Simulation Budget"
-            # Make sure your app's ticker renders
-            st.session_state.ticker_rendered_once = False
-            # Clear any query param that might force another page
             try:
-                st.query_params.clear()
+                st.query_params.clear()     # new API
             except Exception:
-                st.experimental_set_query_params()
+                st.experimental_set_query_params()  # fallback
         finally:
             st.session_state.fg_handoff_once = True
-    # Return and let your app render
+    # Return and let your app render normally
     return
 
-# Run FrontGate now
+# Run FrontGate now. If it shows a page it will st.stop(); your old code will not run yet.
 frontgate()
-# ===================== END FRONTGATE v2 =====================
+# ===================== END FRONTGATE v3 =====================
 
 
 # -------------------- PAGE CONFIG --------------------

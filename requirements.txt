@@ -7,3 +7,5 @@ scipy
 pulp
 altair
 dedent
+openpyxl
+xlrd

@@ -1993,18 +1993,11 @@ elif st.session_state.page == "Optimized Budget":
 #Page4 
 if st.session_state.page == "Upload Data":
     st.title("KOL Upload Data")
-    # ---------------------------
-    # Config
-    # ---------------------------
     REQUIRED_COLS = [
         "Kol", "Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"
     ]
     
-    # ---------------------------
-    # Helpers
-    # ---------------------------
     def normalize_and_rename_columns(df):
-        # Robust header matching (case/spacing/slash variations)
         canonical = {
             "kol": "Kol",
             "cost": "Cost",
@@ -2023,7 +2016,7 @@ if st.session_state.page == "Upload Data":
         ren = {}
         for c in df.columns:
             key = c.strip().lower()
-            key = key.replace("\\", "/")  # IMPORTANT: backslash must be escaped
+            key = key.replace("\\", "/")
             key = " ".join(key.split())
             ren[c] = canonical.get(key, c)
         return df.rename(columns=ren)
@@ -2031,7 +2024,6 @@ if st.session_state.page == "Upload Data":
     def clean_numeric_cols(df, cols):
         for c in cols:
             if c in df.columns:
-                # Remove commas, currency, spaces, etc.
                 df[c] = pd.to_numeric(
                     df[c].astype(str).str.replace(r"[^\d\.\-]", "", regex=True),
                     errors="coerce"
@@ -2044,13 +2036,11 @@ if st.session_state.page == "Upload Data":
         return df
     
     def assign_quadrant(x, y, xt, yt, scheme="classic"):
-        # classic: Q1 top-right, Q2 top-left, Q3 bottom-left, Q4 bottom-right
         if scheme == "classic":
             if x >= xt and y >= yt: return "Q1"
             if x <  xt and y >= yt: return "Q2"
             if x <  xt and y <  yt: return "Q3"
             return "Q4"
-        # LL_is_Q4: bottom-left is Q4 (best for low-low)
         if x >= xt and y >= yt: return "Q1"
         if x <  xt and y >= yt: return "Q2"
         if x >= xt and y <  yt: return "Q3"
@@ -2075,11 +2065,9 @@ if st.session_state.page == "Upload Data":
                                xanchor="center", yanchor="middle", opacity=0.75))
         return quads, annots
     
-    def make_scatter_with_quadrants(df, x_col, y_col, label_col, scheme, best_quadrant_label):
+    def make_scatter_with_quadrants(df, x_col, y_col, label_col, scheme, best_quadrant_label, symmetric=True):
         df = df.copy()
         x, y = df[x_col], df[y_col]
-        xt, yt = np.nanmedian(x), np.nanmedian(y)
-        df["Quadrant"] = [assign_quadrant(a, b, xt, yt, scheme) for a, b in zip(x, y)]
     
         x_min, x_max = np.nanmin(x), np.nanmax(x)
         y_min, y_max = np.nanmin(y), np.nanmax(y)
@@ -2088,6 +2076,16 @@ if st.session_state.page == "Upload Data":
         x_min, x_max = x_min - x_pad, x_max + x_pad
         y_min, y_max = y_min - y_pad, y_max + y_pad
     
+        # Symmetric split => use midpoints; else use medians
+        if symmetric:
+            xt = (x_min + x_max) / 2.0
+            yt = (y_min + y_max) / 2.0
+        else:
+            xt = np.nanmedian(x)
+            yt = np.nanmedian(y)
+    
+        df["Quadrant"] = [assign_quadrant(a, b, xt, yt, scheme) for a, b in zip(x, y)]
+    
         fig = px.scatter(
             df,
             x=x_col, y=y_col,
@@ -2095,6 +2093,7 @@ if st.session_state.page == "Upload Data":
             hover_name=label_col,
             hover_data={"Cost": ":,.0f", "Engagement": ":,.0f", "Share": ":,.0f", x_col: ":,.2f", y_col: ":,.2f"},
         )
+    
         rects, annots = quadrant_shapes_and_annotations(x_min, x_max, y_min, y_max, xt, yt, best_quadrant_label, scheme)
         fig.update_layout(shapes=rects, annotations=annots, title=None, margin=dict(l=10, r=10, t=10, b=10))
         fig.add_vline(x=xt, line_width=1, line_dash="dash", line_color="gray")
@@ -2113,16 +2112,11 @@ if st.session_state.page == "Upload Data":
         st.error("Unsupported file type. Please upload .csv or .xlsx.")
         st.stop()
     
-    # ---------------------------
-    # UI: only show results after upload
-    # ---------------------------
     uploaded = st.file_uploader("Upload CSV or Excel (.xlsx)", type=["csv", "xlsx"])
-    
     if uploaded is None:
         st.info("Please upload a CSV or Excel (.xlsx) to see results.")
         st.stop()
     
-    # Read and prepare
     try:
         df = read_uploaded_file(uploaded)
     except Exception as e:
@@ -2130,7 +2124,6 @@ if st.session_state.page == "Upload Data":
         st.stop()
     
     df = normalize_and_rename_columns(df)
-    
     missing = [c for c in REQUIRED_COLS if c not in df.columns]
     if missing:
         st.error(f"Missing required columns: {missing}")
@@ -2139,7 +2132,6 @@ if st.session_state.page == "Upload Data":
     df = clean_numeric_cols(df, ["Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"])
     df = compute_metrics(df)
     
-    # Raw data toggle
     if st.checkbox("Show raw data"):
         st.dataframe(
             df.style.format({
@@ -2154,24 +2146,22 @@ if st.session_state.page == "Upload Data":
             use_container_width=True
         )
     
-    # Download processed data
     buffer = io.BytesIO()
     df.to_csv(buffer, index=False)
     st.download_button("Download processed CSV", data=buffer.getvalue(), file_name="processed.csv", mime="text/csv")
     
-    # Charts (no titles/subheaders above)
     col1, col2 = st.columns(2)
     
     with col1:
         fig1 = make_scatter_with_quadrants(
             df, "Average Engagement/Post", "Average SHARE / post", "Kol",
-            scheme="classic", best_quadrant_label="Q1"
+            scheme="classic", best_quadrant_label="Q1", symmetric=True  # symmetric quarters
         )
         st.plotly_chart(fig1, use_container_width=True)
     
     with col2:
         fig2 = make_scatter_with_quadrants(
             df, "CPE", "CPS", "Kol",
-            scheme="LL_is_Q4", best_quadrant_label="Q4"
+            scheme="LL_is_Q4", best_quadrant_label="Q4", symmetric=True  # symmetric quarters
         )
         st.plotly_chart(fig2, use_container_width=True)

@@ -1992,4 +1992,214 @@ elif st.session_state.page == "Optimized Budget":
 
 #Page4 
 if st.session_state.page == "Upload Data":
-    st.title(" COMMING SOON...")
+        st.markdown(
+        "Upload a CSV or Excel with columns: "
+        "'Kol', 'Cost', 'Average Engagement/Post', 'Average SHARE / post', 'Engagement', 'Share'. "
+        "Numbers may include commas (e.g., 20,000)."
+    )
+    
+    # Sample fallback data
+    sample_data = pd.DataFrame({
+        "Kol": ["Off chainon", "Thairath", "Facebook", "Tiktok"],
+        "Cost": ["20,000", "200,000", "95,000", "45,000"],
+        "Average Engagement/Post": ["110,000", "200,000", "95,000", "45,000"],
+        "Average SHARE / post": ["7,700", "1,500", "4,750", "2,250"],
+        "Engagement": ["7,700", "14,000", "6,650", "3,150"],
+        "Share": ["125,400", "215,500", "106,400", "50,400"],
+    })
+    
+    def clean_numeric_cols(df, cols):
+        for c in cols:
+            if c in df.columns:
+                df[c] = pd.to_numeric(df[c].astype(str).str.replace(",", "").str.strip(), errors="coerce")
+        return df
+    
+    def compute_metrics(df):
+        # Avoid divide-by-zero by using NaN
+        df["CPE"] = df["Cost"] / df["Engagement"].replace({0: np.nan})
+        df["CPS"] = df["Cost"] / df["Share"].replace({0: np.nan})
+        return df
+    
+    def assign_quadrant(x, y, xt, yt, scheme="classic"):
+        # classic scheme (used for Average Engagement/Post vs Average SHARE / post)
+        # Q1: top-right, Q2: top-left, Q3: bottom-left, Q4: bottom-right
+        if scheme == "classic":
+            if x >= xt and y >= yt:
+                return "Q1"
+            elif x < xt and y >= yt:
+                return "Q2"
+            elif x < xt and y < yt:
+                return "Q3"
+            else:
+                return "Q4"
+        # LL_is_Q4 scheme (used for CPE vs CPS so that low-low is Q4)
+        # Q1: top-right, Q2: top-left, Q3: bottom-right, Q4: bottom-left
+        elif scheme == "LL_is_Q4":
+            if x >= xt and y >= yt:
+                return "Q1"
+            elif x < xt and y >= yt:
+                return "Q2"
+            elif x >= xt and y < yt:
+                return "Q3"
+            else:
+                return "Q4"
+    
+    def quadrant_shapes_and_annotations(x_min, x_max, y_min, y_max, xt, yt, best_quadrant_label, scheme):
+        # Build background rectangles for quadrants, highlight the best
+        quads = []
+        annots = []
+    
+        # Define rectangles per scheme
+        # Rect format: (name, x0, x1, y0, y1)
+        if scheme == "classic":
+            rects = [
+                ("Q1", xt, x_max, yt, y_max),  # top-right
+                ("Q2", x_min, xt, yt, y_max),  # top-left
+                ("Q3", x_min, xt, y_min, yt),  # bottom-left
+                ("Q4", xt, x_max, y_min, yt),  # bottom-right
+            ]
+        else:  # LL_is_Q4
+            rects = [
+                ("Q1", xt, x_max, yt, y_max),  # top-right
+                ("Q2", x_min, xt, yt, y_max),  # top-left
+                ("Q3", xt, x_max, y_min, yt),  # bottom-right
+                ("Q4", x_min, xt, y_min, yt),  # bottom-left
+            ]
+    
+        for name, x0, x1, y0, y1 in rects:
+            fill = "rgba(0, 200, 0, 0.10)" if name == best_quadrant_label else "rgba(0,0,0,0.03)"
+            quads.append(dict(
+                type="rect",
+                xref="x", yref="y",
+                x0=x0, x1=x1, y0=y0, y1=y1,
+                fillcolor=fill,
+                line=dict(width=0),
+                layer="below"
+            ))
+            # Place label near center
+            annots.append(dict(
+                x=(x0 + x1) / 2,
+                y=(y0 + y1) / 2,
+                text=name + (" (Best)" if name == best_quadrant_label else ""),
+                showarrow=False,
+                font=dict(size=12, color="#1f1f1f"),
+                xanchor="center",
+                yanchor="middle",
+                opacity=0.7
+            ))
+    
+        return quads, annots
+    
+    def make_scatter_with_quadrants(df, x_col, y_col, label_col, scheme, best_quadrant_label, title):
+        x = df[x_col]
+        y = df[y_col]
+    
+        # Thresholds: medians split the space into quadrants
+        xt = np.nanmedian(x)
+        yt = np.nanmedian(y)
+    
+        # Assign quadrant labels
+        df = df.copy()
+        df["Quadrant"] = [assign_quadrant(a, b, xt, yt, scheme) for a, b in zip(x, y)]
+    
+        # Scales and padding
+        x_min, x_max = np.nanmin(x), np.nanmax(x)
+        y_min, y_max = np.nanmin(y), np.nanmax(y)
+        x_pad = (x_max - x_min) * 0.05 if x_max > x_min else 1
+        y_pad = (y_max - y_min) * 0.05 if y_max > y_min else 1
+        x_min, x_max = x_min - x_pad, x_max + x_pad
+        y_min, y_max = y_min - y_pad, y_max + y_pad
+    
+        fig = px.scatter(
+            df,
+            x=x_col,
+            y=y_col,
+            color="Quadrant",
+            hover_data=[label_col, "Cost", "Engagement", "Share"],
+            symbol="Quadrant",
+            title=title
+        )
+    
+        # Background quadrant rectangles and labels
+        rects, annots = quadrant_shapes_and_annotations(x_min, x_max, y_min, y_max, xt, yt, best_quadrant_label, scheme)
+        fig.update_layout(shapes=rects, annotations=annots)
+    
+        # Threshold lines
+        fig.add_vline(x=xt, line_width=1, line_dash="dash", line_color="gray")
+        fig.add_hline(y=yt, line_width=1, line_dash="dash", line_color="gray")
+    
+        fig.update_xaxes(range=[x_min, x_max], zeroline=False, showgrid=True, gridcolor="rgba(0,0,0,0.05)")
+        fig.update_yaxes(range=[y_min, y_max], zeroline=False, showgrid=True, gridcolor="rgba(0,0,0,0.05)")
+        fig.update_layout(legend_title_text="Quadrant", margin=dict(l=20, r=20, t=60, b=20))
+    
+        return fig
+    
+    uploaded = st.file_uploader("Upload CSV or Excel (.csv, .xlsx)", type=["csv", "xlsx"])
+    
+    if uploaded is not None:
+        if uploaded.name.lower().endswith(".csv"):
+            df = pd.read_csv(uploaded)
+        else:
+            df = pd.read_excel(uploaded, engine="openpyxl")
+    else:
+        st.info("No file uploaded. Using sample data.")
+        df = sample_data.copy()
+    
+    required_cols = ["Kol", "Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"]
+    missing = [c for c in required_cols if c not in df.columns]
+    if missing:
+        st.error(f"Missing required columns: {missing}")
+        st.stop()
+    
+    # Clean numeric columns
+    df = clean_numeric_cols(df, ["Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"])
+    df = compute_metrics(df)
+    
+    # Show raw data button
+    show_raw = st.checkbox("Show raw data")
+    if show_raw:
+        st.subheader("Raw data")
+        st.dataframe(df)
+    
+    # Optional: download processed data
+    buffer = io.BytesIO()
+    df.to_csv(buffer, index=False)
+    st.download_button("Download processed CSV", data=buffer.getvalue(), file_name="processed.csv", mime="text/csv")
+    
+    st.markdown("---")
+    
+    # Plot 1: Average Engagement/Post vs Average SHARE / post (Q1 best: high-high)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Average Engagement/Post vs Average SHARE / post (Q1 best)")
+        fig1 = make_scatter_with_quadrants(
+            df=df,
+            x_col="Average Engagement/Post",
+            y_col="Average SHARE / post",
+            label_col="Kol",
+            scheme="classic",            # Q1 = top-right (high-high)
+            best_quadrant_label="Q1",
+            title="Average Engagement/Post vs Average SHARE / post"
+        )
+        st.plotly_chart(fig1, use_container_width=True)
+    
+    # Plot 2: CPE vs CPS (Q4 best: low-low)
+    with col2:
+        st.subheader("CPE vs CPS (Q4 best)")
+        fig2 = make_scatter_with_quadrants(
+            df=df,
+            x_col="CPE",
+            y_col="CPS",
+            label_col="Kol",
+            scheme="LL_is_Q4",           # Q4 = bottom-left (low-low)
+            best_quadrant_label="Q4",
+            title="CPE vs CPS"
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+    
+    st.caption(
+        "Notes: Thresholds are medians of each axis. Best areas are highlighted in green: "
+        "Q1 for Average Engagement/Post vs Average SHARE / post (high-high), "
+        "Q4 for CPE vs CPS (low-low). CPE = Cost / Engagement, CPS = Cost / Share."
+    )

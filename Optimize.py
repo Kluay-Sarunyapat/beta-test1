@@ -2033,7 +2033,7 @@ if st.session_state.page == "Upload Data":
     ren = {}
     for c in df.columns:
     key = c.strip().lower()
-    key = key.replace("\", "/")
+    key = key.replace("", "/")
     key = " ".join(key.split())
     ren[c] = canonical.get(key, c)
     return df.rename(columns=ren)

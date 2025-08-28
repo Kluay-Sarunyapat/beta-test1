@@ -575,9 +575,9 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
     with c4:
-    st.markdown('<div class="4">', unsafe_allow_html=True)
-    st.button("🧾 Upload Data", use_container_width=True,
-                  disabled=(curr == "Upload Data"), on_click=set_page, args=("Upload Data",))
+        st.markdown('<div class="4">', unsafe_allow_html=True)
+        st.button("🧾 Upload Data", use_container_width=True,
+                      disabled=(curr == "Upload Data"), on_click=set_page, args=("Upload Data",))
         st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 

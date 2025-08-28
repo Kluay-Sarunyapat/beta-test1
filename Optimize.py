@@ -1996,7 +1996,7 @@ if st.session_state.page == "Upload Data":
     st.write(
         "Upload a CSV or Excel file with columns: "
         "'Kol', 'Cost', 'Average Engagement/Post', 'Average SHARE / post', 'Engagement', 'Share'. "
-        "Numbers can include commas."
+        "Numbers can include commas or currency symbols."
     )
     
     # ---------------------------
@@ -2015,7 +2015,7 @@ if st.session_state.page == "Upload Data":
     # Helpers
     # ---------------------------
     def normalize_and_rename_columns(df):
-        # Optional: make column matching more robust (case-insensitive, spacing/slash variations)
+        # Make column matching more robust (case-insensitive, spacing/slash variations)
         canonical = {
             "kol": "Kol",
             "cost": "Cost",
@@ -2042,7 +2042,7 @@ if st.session_state.page == "Upload Data":
     def clean_numeric_cols(df, cols):
         for c in cols:
             if c in df.columns:
-                # remove anything that's not digit, dot, or minus
+                # Remove anything that's not digit, dot, or minus (handles commas, spaces, currencies)
                 df[c] = pd.to_numeric(
                     df[c].astype(str).str.replace(r"[^\d\.\-]", "", regex=True),
                     errors="coerce"
@@ -2142,7 +2142,13 @@ if st.session_state.page == "Upload Data":
             y=y_col,
             color="Quadrant",
             hover_name=label_col,
-            hover_data={"Cost": ":,.0f", "Engagement": ":,.0f", "Share": ":,.0f", x_col: ":,.2f", y_col: ":,.2f"},
+            hover_data={
+                "Cost": ":,.0f",
+                "Engagement": ":,.0f",
+                "Share": ":,.0f",
+                x_col: ":,.2f",
+                y_col: ":,.2f"
+            },
             title=title
         )
     
@@ -2169,27 +2175,25 @@ if st.session_state.page == "Upload Data":
             return pd.read_csv(uploaded_file)
     
         if name.endswith(".xlsx"):
-            # Prefer openpyxl; fallback to calamine if available
-            try:
-                import openpyxl  # noqa: F401
-                return pd.read_excel(uploaded_file, engine="openpyxl")
-            except ImportError:
+            # Try whichever engine is installed
+            for eng in ["openpyxl", "calamine"]:
                 try:
-                    import calamine  # noqa: F401
-                    return pd.read_excel(uploaded_file, engine="calamine")
+                    return pd.read_excel(uploaded_file, engine=eng)
+                except ImportError:
+                    continue
                 except Exception:
-                    st.error(
-                        "To read .xlsx, install 'openpyxl' (recommended) or 'calamine'. "
-                        "Or upload a CSV instead."
-                    )
-                    st.stop()
+                    continue
+            st.error(
+                "Cannot read .xlsx. Please install 'openpyxl' (recommended) or 'calamine' "
+                "in your environment (requirements.txt), or upload a CSV."
+            )
+            st.stop()
     
         if name.endswith(".xls"):
             try:
-                import xlrd  # noqa: F401
                 return pd.read_excel(uploaded_file, engine="xlrd")
             except ImportError:
-                st.error("To read .xls, install 'xlrd' or convert your file to .xlsx/.csv.")
+                st.error("Cannot read .xls. Install 'xlrd' or convert to .xlsx/.csv.")
                 st.stop()
     
         st.error("Unsupported file type. Please upload .csv, .xlsx, or .xls.")
@@ -2200,6 +2204,27 @@ if st.session_state.page == "Upload Data":
     else:
         st.info("No file uploaded. Using sample data.")
         df = sample_data.copy()
+    
+    # Optional: show which Excel engines are installed (useful on Streamlit Cloud)
+    def engine_status():
+        try:
+            import openpyxl  # noqa
+            a = "openpyxl OK"
+        except Exception:
+            a = "openpyxl missing"
+        try:
+            import calamine  # noqa
+            b = "calamine OK"
+        except Exception:
+            b = "calamine missing"
+        try:
+            import xlrd  # noqa
+            c = "xlrd OK"
+        except Exception:
+            c = "xlrd missing"
+        return f"Excel engines: {a} | {b} | {c}"
+    
+    st.caption(engine_status())
     
     # ---------------------------
     # Validate and prepare data
@@ -2216,22 +2241,10 @@ if st.session_state.page == "Upload Data":
     df = compute_metrics(df)
     
     # ---------------------------
-    # Raw data show/hide button
+    # Raw data show/hide
     # ---------------------------
-    if "show_raw" not in st.session_state:
-        st.session_state.show_raw = False
-    
-    btn_cols = st.columns([1, 1, 6])
-    with btn_cols[0]:
-        if not st.session_state.show_raw:
-            if st.button("Show raw data"):
-                st.session_state.show_raw = True
-    with btn_cols[1]:
-        if st.session_state.show_raw:
-            if st.button("Hide raw data"):
-                st.session_state.show_raw = False
-    
-    if st.session_state.show_raw:
+    show_raw = st.checkbox("Show raw data")
+    if show_raw:
         st.subheader("Raw data")
         st.dataframe(
             df.style.format({

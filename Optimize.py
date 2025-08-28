@@ -1992,8 +1992,7 @@ elif st.session_state.page == "Optimized Budget":
 
 #Page4 
 if st.session_state.page == "Upload Data":
-    st.title("KOL Upload Data")
-    
+        st.title("KOL Upload Data")
     st.write(
         "Upload a CSV or Excel file with columns: "
         "'Kol', 'Cost', 'Average Engagement/Post', 'Average SHARE / post', 'Engagement', 'Share'. "
@@ -2015,11 +2014,37 @@ if st.session_state.page == "Upload Data":
     # ---------------------------
     # Helpers
     # ---------------------------
+    def normalize_and_rename_columns(df):
+        # Optional: make column matching more robust (case-insensitive, spacing/slash variations)
+        canonical = {
+            "kol": "Kol",
+            "cost": "Cost",
+            "average engagement/post": "Average Engagement/Post",
+            "avg engagement/post": "Average Engagement/Post",
+            "average engagement per post": "Average Engagement/Post",
+            "avg engagement per post": "Average Engagement/Post",
+            "average share / post": "Average SHARE / post",
+            "average share/post": "Average SHARE / post",
+            "avg share / post": "Average SHARE / post",
+            "avg share/post": "Average SHARE / post",
+            "average share per post": "Average SHARE / post",
+            "engagement": "Engagement",
+            "share": "Share",
+        }
+        ren = {}
+        for c in df.columns:
+            key = c.strip().lower()
+            key = key.replace("\\", "/")
+            key = " ".join(key.split())
+            ren[c] = canonical.get(key, c)
+        return df.rename(columns=ren)
+    
     def clean_numeric_cols(df, cols):
         for c in cols:
             if c in df.columns:
+                # remove anything that's not digit, dot, or minus
                 df[c] = pd.to_numeric(
-                    df[c].astype(str).str.replace(",", "", regex=False).str.strip(),
+                    df[c].astype(str).str.replace(r"[^\d\.\-]", "", regex=True),
                     errors="coerce"
                 )
         return df
@@ -2041,7 +2066,7 @@ if st.session_state.page == "Upload Data":
                 return "Q3"
             else:
                 return "Q4"
-        # LL_is_Q4: make bottom-left = Q4 (best for low-low)
+        # LL_is_Q4: bottom-left is Q4 (best for low-low)
         elif scheme == "LL_is_Q4":
             if x >= xt and y >= yt:
                 return "Q1"
@@ -2117,7 +2142,7 @@ if st.session_state.page == "Upload Data":
             y=y_col,
             color="Quadrant",
             hover_name=label_col,
-            hover_data={"Cost": True, "Engagement": True, "Share": True, x_col: ":,.2f", y_col: ":,.2f"},
+            hover_data={"Cost": ":,.0f", "Engagement": ":,.0f", "Share": ":,.0f", x_col: ":,.2f", y_col: ":,.2f"},
             title=title
         )
     
@@ -2134,15 +2159,44 @@ if st.session_state.page == "Upload Data":
         return fig
     
     # ---------------------------
-    # Upload
+    # Upload (robust)
     # ---------------------------
-    uploaded = st.file_uploader("Upload CSV or Excel (.csv, .xlsx)", type=["csv", "xlsx"])
+    uploaded = st.file_uploader("Upload CSV or Excel (.csv, .xlsx, .xls)", type=["csv", "xlsx", "xls"])
+    
+    def read_uploaded_file(uploaded_file):
+        name = uploaded_file.name.lower()
+        if name.endswith(".csv"):
+            return pd.read_csv(uploaded_file)
+    
+        if name.endswith(".xlsx"):
+            # Prefer openpyxl; fallback to calamine if available
+            try:
+                import openpyxl  # noqa: F401
+                return pd.read_excel(uploaded_file, engine="openpyxl")
+            except ImportError:
+                try:
+                    import calamine  # noqa: F401
+                    return pd.read_excel(uploaded_file, engine="calamine")
+                except Exception:
+                    st.error(
+                        "To read .xlsx, install 'openpyxl' (recommended) or 'calamine'. "
+                        "Or upload a CSV instead."
+                    )
+                    st.stop()
+    
+        if name.endswith(".xls"):
+            try:
+                import xlrd  # noqa: F401
+                return pd.read_excel(uploaded_file, engine="xlrd")
+            except ImportError:
+                st.error("To read .xls, install 'xlrd' or convert your file to .xlsx/.csv.")
+                st.stop()
+    
+        st.error("Unsupported file type. Please upload .csv, .xlsx, or .xls.")
+        st.stop()
     
     if uploaded is not None:
-        if uploaded.name.lower().endswith(".csv"):
-            df = pd.read_csv(uploaded)
-        else:
-            df = pd.read_excel(uploaded, engine="openpyxl")
+        df = read_uploaded_file(uploaded)
     else:
         st.info("No file uploaded. Using sample data.")
         df = sample_data.copy()
@@ -2150,6 +2204,8 @@ if st.session_state.page == "Upload Data":
     # ---------------------------
     # Validate and prepare data
     # ---------------------------
+    df = normalize_and_rename_columns(df)
+    
     required_cols = ["Kol", "Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"]
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
@@ -2177,7 +2233,18 @@ if st.session_state.page == "Upload Data":
     
     if st.session_state.show_raw:
         st.subheader("Raw data")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(
+            df.style.format({
+                "Cost": "{:,.0f}",
+                "Average Engagement/Post": "{:,.0f}",
+                "Average SHARE / post": "{:,.0f}",
+                "Engagement": "{:,.0f}",
+                "Share": "{:,.0f}",
+                "CPE": "{:,.4f}",
+                "CPS": "{:,.4f}",
+            }),
+            use_container_width=True
+        )
     
     # Download processed data
     buffer = io.BytesIO()

@@ -1994,449 +1994,210 @@ elif st.session_state.page == "Optimized Budget":
 if st.session_state.page == "Upload Data":
     st.title("KOL Upload Data")
     st.write(
-    "Upload a CSV or Excel file with columns: "
-    "'Kol', 'Cost', 'Average Engagement/Post', 'Average SHARE / post', 'Engagement', 'Share'. "
-    "Numbers can include commas or currency symbols."
+        "Upload CSV or Excel (.xlsx) with columns: "
+        "'Kol', 'Cost', 'Average Engagement/Post', 'Average SHARE / post', 'Engagement', 'Share'. "
+        "Numbers may include commas or currency symbols."
     )
     
-    ---------------------------
-    Sample data (used when no upload)
-    ---------------------------
+    # Sample data used when no file is uploaded
     sample_data = pd.DataFrame({
-    "Kol": ["Off chainon", "Thairath", "Facebook", "Tiktok"],
-    "Cost": ["20,000", "200,000", "95,000", "45,000"],
-    "Average Engagement/Post": ["110,000", "200,000", "95,000", "45,000"],
-    "Average SHARE / post": ["7,700", "1,500", "4,750", "2,250"],
-    "Engagement": ["7,700", "14,000", "6,650", "3,150"],
-    "Share": ["125,400", "215,500", "106,400", "50,400"],
+        "Kol": ["Off chainon", "Thairath", "Facebook", "Tiktok"],
+        "Cost": ["20,000", "200,000", "95,000", "45,000"],
+        "Average Engagement/Post": ["110,000", "200,000", "95,000", "45,000"],
+        "Average SHARE / post": ["7,700", "1,500", "4,750", "2,250"],
+        "Engagement": ["7,700", "14,000", "6,650", "3,150"],
+        "Share": ["125,400", "215,500", "106,400", "50,400"],
     })
     
-    ---------------------------
-    Helpers
-    ---------------------------
+    required_cols = [
+        "Kol", "Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"
+    ]
+    
+    # ---------------------------
+    # Helpers
+    # ---------------------------
     def normalize_and_rename_columns(df):
-    canonical = {
-    "kol": "Kol",
-    "cost": "Cost",
-    "average engagement/post": "Average Engagement/Post",
-    "avg engagement/post": "Average Engagement/Post",
-    "average engagement per post": "Average Engagement/Post",
-    "avg engagement per post": "Average Engagement/Post",
-    "average share / post": "Average SHARE / post",
-    "average share/post": "Average SHARE / post",
-    "avg share / post": "Average SHARE / post",
-    "avg share/post": "Average SHARE / post",
-    "average share per post": "Average SHARE / post",
-    "engagement": "Engagement",
-    "share": "Share",
-    }
-    ren = {}
-    for c in df.columns:
-    key = c.strip().lower()
-    key = key.replace("\", "/")
-    key = " ".join(key.split())
-    ren[c] = canonical.get(key, c)
-    return df.rename(columns=ren)
+        # Robust header matching
+        canonical = {
+            "kol": "Kol",
+            "cost": "Cost",
+            "average engagement/post": "Average Engagement/Post",
+            "avg engagement/post": "Average Engagement/Post",
+            "average engagement per post": "Average Engagement/Post",
+            "avg engagement per post": "Average Engagement/Post",
+            "average share / post": "Average SHARE / post",
+            "average share/post": "Average SHARE / post",
+            "avg share / post": "Average SHARE / post",
+            "avg share/post": "Average SHARE / post",
+            "average share per post": "Average SHARE / post",
+            "engagement": "Engagement",
+            "share": "Share",
+        }
+        ren = {}
+        for c in df.columns:
+            key = c.strip().lower()
+            key = key.replace("\\", "/")  # IMPORTANT: keep the double backslash here
+            key = " ".join(key.split())
+            ren[c] = canonical.get(key, c)
+        return df.rename(columns=ren)
     
     def clean_numeric_cols(df, cols):
-    for c in cols:
-    if c in df.columns:
-    df[c] = pd.to_numeric(
-    df[c].astype(str).str.replace(r"[^\d.-]", "", regex=True),
-    errors="coerce"
-    )
-    return df
+        for c in cols:
+            if c in df.columns:
+                df[c] = pd.to_numeric(
+                    df[c].astype(str).str.replace(r"[^\d\.\-]", "", regex=True),
+                    errors="coerce"
+                )
+        return df
     
     def compute_metrics(df):
-    df["CPE"] = df["Cost"] / df["Engagement"].replace({0: np.nan})
-    df["CPS"] = df["Cost"] / df["Share"].replace({0: np.nan})
-    return df
+        df["CPE"] = df["Cost"] / df["Engagement"].replace({0: np.nan})
+        df["CPS"] = df["Cost"] / df["Share"].replace({0: np.nan})
+        return df
     
     def assign_quadrant(x, y, xt, yt, scheme="classic"):
-    if scheme == "classic":  # Q1 top-right, Q2 top-left, Q3 bottom-left, Q4 bottom-right
-    if x >= xt and y >= yt:
-    return "Q1"
-    elif x < xt and y >= yt:
-    return "Q2"
-    elif x < xt and y < yt:
-    return "Q3"
-    else:
-    return "Q4"
-    elif scheme == "LL_is_Q4":  # bottom-left is Q4 (best for low-low)
-    if x >= xt and y >= yt:
-    return "Q1"
-    elif x < xt and y >= yt:
-    return "Q2"
-    elif x >= xt and y < yt:
-    return "Q3"
-    else:
-    return "Q4"
+        if scheme == "classic":  # Q1 top-right, Q2 top-left, Q3 bottom-left, Q4 bottom-right
+            if x >= xt and y >= yt: return "Q1"
+            if x <  xt and y >= yt: return "Q2"
+            if x <  xt and y <  yt: return "Q3"
+            return "Q4"
+        else:  # LL_is_Q4: bottom-left is Q4 (best for low-low)
+            if x >= xt and y >= yt: return "Q1"
+            if x <  xt and y >= yt: return "Q2"
+            if x >= xt and y <  yt: return "Q3"
+            return "Q4"
     
     def quadrant_shapes_and_annotations(x_min, x_max, y_min, y_max, xt, yt, best_quadrant_label, scheme):
-    quads = []
-    annots = []
-    if scheme == "classic":
-    rects = [
-    ("Q1", xt, x_max, yt, y_max),  # top-right
-    ("Q2", x_min, xt, yt, y_max),  # top-left
-    ("Q3", x_min, xt, y_min, yt),  # bottom-left
-    ("Q4", xt, x_max, y_min, yt),  # bottom-right
-    ]
-    else:  # LL_is_Q4
-    rects = [
-    ("Q1", xt, x_max, yt, y_max),
-    ("Q2", x_min, xt, yt, y_max),
-    ("Q3", xt, x_max, y_min, yt),
-    ("Q4", x_min, xt, y_min, yt),
-    ]
-    for name, x0, x1, y0, y1 in rects:
-    fill = "rgba(0, 200, 0, 0.12)" if name == best_quadrant_label else "rgba(0,0,0,0.03)"
-    quads.append(dict(type="rect", xref="x", yref="y", x0=x0, x1=x1, y0=y0, y1=y1,
-    fillcolor=fill, line=dict(width=0), layer="below"))
-    annots.append(dict(x=(x0 + x1) / 2, y=(y0 + y1) / 2,
-    text=name + (" (Best)" if name == best_quadrant_label else ""),
-    showarrow=False, font=dict(size=12, color="#1f1f1f"),
-    xanchor="center", yanchor="middle", opacity=0.75))
-    return quads, annots
+        if scheme == "classic":
+            rects = [("Q1", xt, x_max, yt, y_max), ("Q2", x_min, xt, yt, y_max),
+                     ("Q3", x_min, xt, y_min, yt), ("Q4", xt, x_max, y_min, yt)]
+        else:
+            rects = [("Q1", xt, x_max, yt, y_max), ("Q2", x_min, xt, yt, y_max),
+                     ("Q3", xt, x_max, y_min, yt), ("Q4", x_min, xt, y_min, yt)]
+        quads, annots = [], []
+        for name, x0, x1, y0, y1 in rects:
+            fill = "rgba(0, 200, 0, 0.12)" if name == best_quadrant_label else "rgba(0,0,0,0.03)"
+            quads.append(dict(type="rect", xref="x", yref="y",
+                              x0=x0, x1=x1, y0=y0, y1=y1,
+                              fillcolor=fill, line=dict(width=0), layer="below"))
+            annots.append(dict(x=(x0 + x1) / 2, y=(y0 + y1) / 2,
+                               text=name + (" (Best)" if name == best_quadrant_label else ""),
+                               showarrow=False, font=dict(size=12),
+                               xanchor="center", yanchor="middle", opacity=0.75))
+        return quads, annots
     
     def make_scatter_with_quadrants(df, x_col, y_col, label_col, scheme, best_quadrant_label, title):
-    df = df.copy()
-    x = df[x_col]
-    y = df[y_col]
-    xt = np.nanmedian(x)
-    yt = np.nanmedian(y)
-    df["Quadrant"] = [assign_quadrant(a, b, xt, yt, scheme) for a, b in zip(x, y)]
+        df = df.copy()
+        x, y = df[x_col], df[y_col]
+        xt, yt = np.nanmedian(x), np.nanmedian(y)
+        df["Quadrant"] = [assign_quadrant(a, b, xt, yt, scheme) for a, b in zip(x, y)]
     
-    x_min, x_max = np.nanmin(x), np.nanmax(x)
-    y_min, y_max = np.nanmin(y), np.nanmax(y)
-    x_pad = (x_max - x_min) * 0.05 if x_max > x_min else 1
-    y_pad = (y_max - y_min) * 0.05 if y_max > y_min else 1
-    x_min, x_max = x_min - x_pad, x_max + x_pad
-    y_min, y_max = y_min - y_pad, y_max + y_pad
+        x_min, x_max = np.nanmin(x), np.nanmax(x)
+        y_min, y_max = np.nanmin(y), np.nanmax(y)
+        x_pad = (x_max - x_min) * 0.05 if x_max > x_min else 1
+        y_pad = (y_max - y_min) * 0.05 if y_max > y_min else 1
+        x_min, x_max = x_min - x_pad, x_max + x_pad
+        y_min, y_max = y_min - y_pad, y_max + y_pad
     
-    fig = px.scatter(
-        df,
-        x=x_col,
-        y=y_col,
-        color="Quadrant",
-        hover_name=label_col,
-        hover_data={"Cost": ":,.0f", "Engagement": ":,.0f", "Share": ":,.0f", x_col: ":,.2f", y_col: ":,.2f"},
-        title=title
-    )
+        fig = px.scatter(
+            df,
+            x=x_col, y=y_col,
+            color="Quadrant",
+            hover_name=label_col,
+            hover_data={"Cost": ":,.0f", "Engagement": ":,.0f", "Share": ":,.0f", x_col: ":,.2f", y_col: ":,.2f"},
+            title=title
+        )
     
-    rects, annots = quadrant_shapes_and_annotations(x_min, x_max, y_min, y_max, xt, yt, best_quadrant_label, scheme)
-    fig.update_layout(shapes=rects, annotations=annots)
-    fig.add_vline(x=xt, line_width=1, line_dash="dash", line_color="gray")
-    fig.add_hline(y=yt, line_width=1, line_dash="dash", line_color="gray")
-    fig.update_xaxes(range=[x_min, x_max], showgrid=True, gridcolor="rgba(0,0,0,0.06)")
-    fig.update_yaxes(range=[y_min, y_max], showgrid=True, gridcolor="rgba(0,0,0,0.06)")
-    fig.update_layout(legend_title_text="Quadrant", margin=dict(l=10, r=10, t=60, b=10))
-    return fig
-    ---------------------------
-    Upload (CSV, .xlsx via openpyxl, .xls via xlrd)
-    ---------------------------
-    uploaded = st.file_uploader("Upload CSV or Excel (.csv, .xlsx, .xls)", type=["csv", "xlsx", "xls"])
+        rects, annots = quadrant_shapes_and_annotations(x_min, x_max, y_min, y_max, xt, yt, best_quadrant_label, scheme)
+        fig.update_layout(shapes=rects, annotations=annots)
+        fig.add_vline(x=xt, line_width=1, line_dash="dash", line_color="gray")
+        fig.add_hline(y=yt, line_width=1, line_dash="dash", line_color="gray")
+        fig.update_xaxes(range=[x_min, x_max], showgrid=True, gridcolor="rgba(0,0,0,0.06)")
+        fig.update_yaxes(range=[y_min, y_max], showgrid=True, gridcolor="rgba(0,0,0,0.06)")
+        fig.update_layout(legend_title_text="Quadrant", margin=dict(l=10, r=10, t=60, b=10))
+        return fig
     
-    def read_uploaded_file(uploaded_file):
-    name = uploaded_file.name.lower()
-    if name.endswith(".csv"):
-    return pd.read_csv(uploaded_file)
-    if name.endswith(".xlsx"):
-    try:
-    return pd.read_excel(uploaded_file, engine="openpyxl")
-    except Exception as e:
-    st.error(f"Cannot read .xlsx. Ensure openpyxl is installed. Details: {e}")
-    st.stop()
-    if name.endswith(".xls"):
-    try:
-    return pd.read_excel(uploaded_file, engine="xlrd")
-    except Exception as e:
-    st.error(f"Cannot read .xls. Ensure xlrd is installed. Details: {e}")
-    st.stop()
-    st.error("Unsupported file type. Please upload .csv, .xlsx, or .xls.")
-    st.stop()
-    
-    if uploaded is not None:
-    df = read_uploaded_file(uploaded)
-    else:
-    st.info("No file uploaded. Using sample data.")
-    df = sample_data.copy()
-    
-    st.caption(f"Versions — Streamlit {st.version} | Pandas {pd.version}")
-    
-    ---------------------------
-    Validate and prepare data
-    ---------------------------
-    df = normalize_and_rename_columns(df)
-    required_cols = ["Kol", "Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"]
-    missing = [c for c in required_cols if c not in df.columns]
-    if missing:
-    st.error(f"Missing required columns: {missing}")
-    st.stop()
-    
-    df = clean_numeric_cols(df, ["Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"])
-    df = compute_metrics(df)
-    
-    ---------------------------
-    Raw data show/hide
-    ---------------------------
-    show_raw = st.checkbox("Show raw data")
-    if show_raw:
-    st.subheader("Raw data")
-    st.dataframe(
-    df.style.format({
-    "Cost": "{:,.0f}",
-    "Average Engagement/Post": "{:,.0f}",
-    "Average SHARE / post": "{:,.0f}",
-    "Engagement": "{:,.0f}",
-    "Share": "{:,.0f}",
-    "CPE": "{:,.4f}",
-    "CPS": "{:,.4f}",
-    }),
-    use_container_width=True
-    )
-    
-    Download processed data
-    buffer = io.BytesIO()
-    df.to_csv(buffer, index=False)
-    st.download_button("Download processed CSV", data=buffer.getvalue(), file_name="processed.csv", mime="text/csv")
-    
-    st.markdown("---")
-    
-    ---------------------------
-    Plots
-    ---------------------------
-    col1, col2 = st.columns(2)
-    
-    with col1:
-    st.subheader("Average Engagement/Post vs Average SHARE / post (Q1 best: high-high)")
-    fig1 = make_scatter_with_quadrants(
-    df=df,
-    x_col="Average Engagement/Post",
-    y_col="Average SHARE / post",
-    label_col="Kol",
-    scheme="classic",
-    best_quadrant_label="Q1",
-    title="Average Engagement/Post vs Average SHARE / post"
-    )
-    st.plotly_chart(fig1, use_container_width=True)
-    
-    with col2:
-    st.subheader("CPE vs CPS (Q4 best: low-low)")
-    fig2 = make_scatter_with_quadrants(
-    df=df,
-    x_col="CPE",
-    y_col="CPS",
-    label_col="Kol",
-    scheme="LL_is_Q4",
-    best_quadrant_label="Q4",
-    title="CPE vs CPS"
-    )
-    st.plotly_chart(fig2, use_container_width=True)
-    
-    st.caption(
-    "Notes: Quadrant thresholds are medians of each axis. Best areas are highlighted in green. "
-    "Q1 for Average Engagement/Post vs Average SHARE / post (high-high), Q4 for CPE vs CPS (low-low)."
-    )
-    
-    If it still fails:
-    
-    Open Manage app -> Logs to see the exact installer error.
-    Confirm the app’s main file path is app.py.
-    Try clearing unused files from the repo and redeploy.
-    If you must keep other heavy libs, create a separate repo/app for this dashboard so those packages don’t install.
-    No file chosenNo file chosen
-    Oh no.
-    Error running app. If you need help, try the Streamlit docs and forums.
-    
-    “Error running app” is Streamlit Cloud’s generic crash page. Without the logs, we can’t see the exact cause, but the most common issues are:
-    
-    Wrong main file path (Cloud is running a different file, e.g., your old Optimize.py)
-    Broken/too-heavy requirements (unneeded packages like torch/transformers/bigquery; engine packages missing)
-    Python/runtime mismatch
-    Fastest way to recover: deploy a clean, minimal app in a fresh repo and point Cloud to it.
-    
-    Step 1 — Create a clean repo with just these files
-    
-    requirements.txt (minimal, pinned)
-    streamlit==1.36.0
-    pandas==2.2.2
-    numpy==1.26.4
-    plotly==5.22.0
-    openpyxl==3.1.5
-    
-    runtime.txt
-    python-3.10.13
-    
-    app.py (complete app)
-    import io
-    import numpy as np
-    import pandas as pd
-    import plotly.express as px
-    import streamlit as st
-    
-    st.set_page_config(page_title="KOL Performance Analyzer", layout="wide")
-    st.title("KOL Performance Analyzer")
-    
-    st.write(
-    "Upload CSV or Excel (.xlsx) with columns: "
-    "'Kol', 'Cost', 'Average Engagement/Post', 'Average SHARE / post', 'Engagement', 'Share'. "
-    "Numbers may include commas or currency symbols."
-    )
-    
-    Sample data used when no file is uploaded
-    sample_data = pd.DataFrame({
-    "Kol": ["Off chainon", "Thairath", "Facebook", "Tiktok"],
-    "Cost": ["20,000", "200,000", "95,000", "45,000"],
-    "Average Engagement/Post": ["110,000", "200,000", "95,000", "45,000"],
-    "Average SHARE / post": ["7,700", "1,500", "4,750", "2,250"],
-    "Engagement": ["7,700", "14,000", "6,650", "3,150"],
-    "Share": ["125,400", "215,500", "106,400", "50,400"],
-    })
-    
-    def normalize_and_rename_columns(df):
-    canonical = {
-    "kol": "Kol",
-    "cost": "Cost",
-    "average engagement/post": "Average Engagement/Post",
-    "avg engagement/post": "Average Engagement/Post",
-    "average engagement per post": "Average Engagement/Post",
-    "avg engagement per post": "Average Engagement/Post",
-    "average share / post": "Average SHARE / post",
-    "average share/post": "Average SHARE / post",
-    "avg share / post": "Average SHARE / post",
-    "avg share/post": "Average SHARE / post",
-    "average share per post": "Average SHARE / post",
-    "engagement": "Engagement",
-    "share": "Share",
-    }
-    ren = {}
-    for c in df.columns:
-    key = c.strip().lower().replace("\", "/")
-    key = " ".join(key.split())
-    ren[c] = canonical.get(key, c)
-    return df.rename(columns=ren)
-    
-    def clean_numeric_cols(df, cols):
-    for c in cols:
-    if c in df.columns:
-    df[c] = pd.to_numeric(df[c].astype(str).str.replace(r"[^\d.-]", "", regex=True), errors="coerce")
-    return df
-    
-    def compute_metrics(df):
-    df["CPE"] = df["Cost"] / df["Engagement"].replace({0: np.nan})
-    df["CPS"] = df["Cost"] / df["Share"].replace({0: np.nan})
-    return df
-    
-    def assign_quadrant(x, y, xt, yt, scheme="classic"):
-    if scheme == "classic":  # Q1 top-right, Q2 top-left, Q3 bottom-left, Q4 bottom-right
-    if x >= xt and y >= yt: return "Q1"
-    if x <  xt and y >= yt: return "Q2"
-    if x <  xt and y <  yt: return "Q3"
-    return "Q4"
-    else:  # LL_is_Q4: bottom-left is Q4 (best for low-low)
-    if x >= xt and y >= yt: return "Q1"
-    if x <  xt and y >= yt: return "Q2"
-    if x >= xt and y <  yt: return "Q3"
-    return "Q4"
-    
-    def quadrant_shapes_and_annotations(x_min, x_max, y_min, y_max, xt, yt, best_quadrant_label, scheme):
-    if scheme == "classic":
-    rects = [("Q1", xt, x_max, yt, y_max), ("Q2", x_min, xt, yt, y_max),
-    ("Q3", x_min, xt, y_min, yt), ("Q4", xt, x_max, y_min, yt)]
-    else:
-    rects = [("Q1", xt, x_max, yt, y_max), ("Q2", x_min, xt, yt, y_max),
-    ("Q3", xt, x_max, y_min, yt), ("Q4", x_min, xt, y_min, yt)]
-    quads, annots = [], []
-    for name, x0, x1, y0, y1 in rects:
-    fill = "rgba(0, 200, 0, 0.12)" if name == best_quadrant_label else "rgba(0,0,0,0.03)"
-    quads.append(dict(type="rect", xref="x", yref="y", x0=x0, x1=x1, y0=y0, y1=y1,
-    fillcolor=fill, line=dict(width=0), layer="below"))
-    annots.append(dict(x=(x0+x1)/2, y=(y0+y1)/2, text=name + (" (Best)" if name == best_quadrant_label else ""),
-    showarrow=False, font=dict(size=12), xanchor="center", yanchor="middle", opacity=0.75))
-    return quads, annots
-    
-    def make_scatter_with_quadrants(df, x_col, y_col, label_col, scheme, best_quadrant_label, title):
-    df = df.copy()
-    x, y = df[x_col], df[y_col]
-    xt, yt = np.nanmedian(x), np.nanmedian(y)
-    df["Quadrant"] = [assign_quadrant(a, b, xt, yt, scheme) for a, b in zip(x, y)]
-    x_min, x_max = np.nanmin(x), np.nanmax(x)
-    y_min, y_max = np.nanmin(y), np.nanmax(y)
-    x_pad = (x_max - x_min) * 0.05 if x_max > x_min else 1
-    y_pad = (y_max - y_min) * 0.05 if y_max > y_min else 1
-    x_min, x_max = x_min - x_pad, x_max + x_pad
-    y_min, y_max = y_min - y_pad, y_max + y_pad
-    
-    fig = px.scatter(df, x=x_col, y=y_col, color="Quadrant", hover_name=label_col,
-                     hover_data={"Cost": ":,.0f", "Engagement": ":,.0f", "Share": ":,.0f",
-                                 x_col: ":,.2f", y_col: ":,.2f"}, title=title)
-    rects, annots = quadrant_shapes_and_annotations(x_min, x_max, y_min, y_max, xt, yt, best_quadrant_label, scheme)
-    fig.update_layout(shapes=rects, annotations=annots)
-    fig.add_vline(x=xt, line_width=1, line_dash="dash", line_color="gray")
-    fig.add_hline(y=yt, line_width=1, line_dash="dash", line_color="gray")
-    fig.update_xaxes(range=[x_min, x_max], showgrid=True, gridcolor="rgba(0,0,0,0.06)")
-    fig.update_yaxes(range=[y_min, y_max], showgrid=True, gridcolor="rgba(0,0,0,0.06)")
-    fig.update_layout(legend_title_text="Quadrant", margin=dict(l=10, r=10, t=60, b=10))
-    return fig
+    # ---------------------------
+    # Upload (CSV, .xlsx via openpyxl)
+    # ---------------------------
     uploaded = st.file_uploader("Upload CSV or Excel (.xlsx)", type=["csv", "xlsx"])
     
     def read_uploaded_file(uploaded_file):
-    name = uploaded_file.name.lower()
-    if name.endswith(".csv"):
-    return pd.read_csv(uploaded_file)
-    # .xlsx via openpyxl only (simple, reliable)
-    return pd.read_excel(uploaded_file, engine="openpyxl")
+        name = uploaded_file.name.lower()
+        if name.endswith(".csv"):
+            return pd.read_csv(uploaded_file)
+        # .xlsx via openpyxl
+        return pd.read_excel(uploaded_file, engine="openpyxl")
     
     if uploaded is not None:
-    try:
-    df = read_uploaded_file(uploaded)
-    except Exception as e:
-    st.error(f"Failed to read file. Tip: for .xlsx, ensure openpyxl is installed. Details: {e}")
-    st.stop()
+        try:
+            df = read_uploaded_file(uploaded)
+        except Exception as e:
+            st.error(f"Failed to read file. Tip: for .xlsx, ensure openpyxl is installed. Details: {e}")
+            st.stop()
     else:
-    st.info("No file uploaded. Using sample data.")
-    df = sample_data.copy()
+        st.info("No file uploaded. Using sample data.")
+        df = sample_data.copy()
     
-    st.caption(f"Versions — Streamlit {st.version} | Pandas {pd.version}")
-    
+    # ---------------------------
+    # Prepare data
+    # ---------------------------
     df = normalize_and_rename_columns(df)
-    required_cols = ["Kol", "Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"]
+    
     missing = [c for c in required_cols if c not in df.columns]
     if missing:
-    st.error(f"Missing required columns: {missing}")
-    st.stop()
+        st.error(f"Missing required columns: {missing}")
+        st.stop()
     
     df = clean_numeric_cols(df, ["Cost", "Average Engagement/Post", "Average SHARE / post", "Engagement", "Share"])
     df = compute_metrics(df)
     
+    # ---------------------------
+    # Raw data
+    # ---------------------------
     if st.checkbox("Show raw data"):
-    st.subheader("Raw data")
-    st.dataframe(df, use_container_width=True)
+        st.subheader("Raw data")
+        st.dataframe(
+            df.style.format({
+                "Cost": "{:,.0f}",
+                "Average Engagement/Post": "{:,.0f}",
+                "Average SHARE / post": "{:,.0f}",
+                "Engagement": "{:,.0f}",
+                "Share": "{:,.0f}",
+                "CPE": "{:,.4f}",
+                "CPS": "{:,.4f}",
+            }),
+            use_container_width=True
+        )
     
+    # Download processed data
     buffer = io.BytesIO()
     df.to_csv(buffer, index=False)
     st.download_button("Download processed CSV", data=buffer.getvalue(), file_name="processed.csv", mime="text/csv")
     
     st.markdown("---")
     
+    # ---------------------------
+    # Plots
+    # ---------------------------
     col1, col2 = st.columns(2)
+    
     with col1:
-    st.subheader("Average Engagement/Post vs Average SHARE / post (Q1 best: high-high)")
-    fig1 = make_scatter_with_quadrants(
-    df, "Average Engagement/Post", "Average SHARE / post", "Kol",
-    scheme="classic", best_quadrant_label="Q1",
-    title="Average Engagement/Post vs Average SHARE / post"
-    )
-    st.plotly_chart(fig1, use_container_width=True)
+        st.subheader("Average Engagement/Post vs Average SHARE / post (Q1 best: high-high)")
+        fig1 = make_scatter_with_quadrants(
+            df, "Average Engagement/Post", "Average SHARE / post", "Kol",
+            scheme="classic", best_quadrant_label="Q1",
+            title="Average Engagement/Post vs Average SHARE / post"
+        )
+        st.plotly_chart(fig1, use_container_width=True)
     
     with col2:
-    st.subheader("CPE vs CPS (Q4 best: low-low)")
-    fig2 = make_scatter_with_quadrants(
-    df, "CPE", "CPS", "Kol",
-    scheme="LL_is_Q4", best_quadrant_label="Q4",
-    title="CPE vs CPS"
-    )
-    st.plotly_chart(fig2, use_container_width=True)
+        st.subheader("CPE vs CPS (Q4 best: low-low)")
+        fig2 = make_scatter_with_quadrants(
+            df, "CPE", "CPS", "Kol",
+            scheme="LL_is_Q4", best_quadrant_label="Q4",
+            title="CPE vs CPS"
+        )
+        st.plotly_chart(fig2, use_container_width=True)
     
     st.caption("Medians define quadrant splits. Best areas highlighted in green: Q1 (high-high) and Q4 (low-low).")

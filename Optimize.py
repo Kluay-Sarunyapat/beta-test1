@@ -557,7 +557,7 @@ def render_nav_pills():
     curr = st.session_state.page
 
     st.markdown('<div class="nav-scope"><div class="nav-grid">', unsafe_allow_html=True)
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown('<div class="p1">', unsafe_allow_html=True)
         st.button("📂 Simulation Budget", use_container_width=True,
@@ -572,6 +572,12 @@ def render_nav_pills():
         st.markdown('<div class="p3">', unsafe_allow_html=True)
         st.button("🧾 Optimized Budget", use_container_width=True,
                   disabled=(curr == "Optimized Budget"), on_click=set_page, args=("Optimized Budget",))
+        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
+    with c4:
+    st.markdown('<div class="4">', unsafe_allow_html=True)
+    st.button("🧾 Upload Data", use_container_width=True,
+                  disabled=(curr == "Upload Data"), on_click=set_page, args=("Upload Data",))
         st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div></div>', unsafe_allow_html=True)
 
@@ -1983,3 +1989,7 @@ elif st.session_state.page == "Optimized Budget":
                 st.success("Generated scenarios.")
                 scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
                 render_outputs(scenarios, scenario_ids, show_target_cols=True)
+
+#Page4 
+if st.session_state.page == "Upload Data":
+    st.title(" COMMING SOON...")

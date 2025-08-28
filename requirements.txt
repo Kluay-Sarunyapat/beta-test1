@@ -15,10 +15,6 @@ google-auth-oauthlib
 pulp
 altair
 dedent
-streamlit>=1.33
-pandas>=2.1
-numpy>=1.26
-plotly>=5.20
-openpyxl>=3.1.2
-calamine>=0.2.4
-xlrd>=2.0.1
+openpyxl
+calamine
+xlrd

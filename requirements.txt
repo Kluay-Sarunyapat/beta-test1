@@ -2,16 +2,8 @@ streamlit
 pandas
 plotly
 numpy
-torch
-transformers
 pipeline
 scipy
-pandasai
-pydata-google-auth
-pandas-gbq
-google-cloud-bigquery
-google-auth
-google-auth-oauthlib
 pulp
 altair
 dedent

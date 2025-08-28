@@ -1992,7 +1992,7 @@ elif st.session_state.page == "Optimized Budget":
 
 #Page4 
 if st.session_state.page == "Upload Data":
-        st.title("KOL Upload Data")
+    st.title("KOL Upload Data")
     st.write(
         "Upload a CSV or Excel file with columns: "
         "'Kol', 'Cost', 'Average Engagement/Post', 'Average SHARE / post', 'Engagement', 'Share'. "

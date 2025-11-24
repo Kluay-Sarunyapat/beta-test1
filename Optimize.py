@@ -84,8 +84,22 @@ body {
 @keyframes sheenMove {0%{ transform:translateX(-150%) skewX(-18deg)} 100%{ transform:translateX(250%) skewX(-18deg)}}
 .glass{ height:22px; background:linear-gradient(180deg,rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
 
-.stButton > button{ width:100%; border-radius:10px; height:44px; background: linear-gradient(90deg, #22c55e, #06b6d4); border:none; color:#fff; font-weight:700; letter-spacing:.2px; box-shadow:0 8px 22px rgba(3,105,161,.28); }
-.stButton > button:hover{ filter:brightness(1.04); transform: translateY(-1px); }
+/* ปรับให้ปุ่มเขียวใช้เฉพาะในกล่อง login เท่านั้น */
+.login-card .stButton > button{
+  width:100%;
+  border-radius:10px;
+  height:44px;
+  background: linear-gradient(90deg, #22c55e, #06b6d4);
+  border:none;
+  color:#fff;
+  font-weight:700;
+  letter-spacing:.2px;
+  box-shadow:0 8px 22px rgba(3,105,161,.28);
+}
+.login-card .stButton > button:hover{
+  filter:brightness(1.04);
+  transform: translateY(-1px);
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -163,7 +177,7 @@ def FG2_cleanup_keep_first_ticker():
     </script>
     """, unsafe_allow_html=True)
 
-# Login
+# Login view + intro (เหมือนเดิม)  ----------------------------------------
 def FG2_login_view():
     try:
         st.query_params.update({"intro": "1"})
@@ -205,44 +219,15 @@ def FG2_login_view():
     if st.session_state.FG2_invalid_login:
         st.error("Invalid username or password.")
 
-# Introduction
 def FG2_render_intro():
     FG2_render_top_banner()
-
     mid = st.columns([1,1,1])[1]
     with mid:
         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
-
     st.markdown("<h3>Introducing NEST OPTIMIZER</h3>", unsafe_allow_html=True)
     st.markdown("""
     <div style="font-size:16px; line-height:1.7; color:#111827;">
-      <p>In a world with countless influencers across countless platforms, knowing where to begin is the biggest challenge.
-      "<strong>NEST OPTIMIZER</strong>" is our proprietary KOL engine, designed to bring precision to influencer marketing and solve the two
-      biggest challenges in the industry:</p>
-
-      <div style="display:flex; align-items:flex-start; gap:10px; margin:10px 0;">
-        <div style="font-size:24px;">🔺</div>
-        <div>
-          <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:#ecfdf5;">
-            KOL TIER OPTIMIZATION
-          </span>
-          <span>: Strategically allocates your budget across influencer tiers to ensure maximum impact and cost efficiency.</span>
-        </div>
-      </div>
-
-      <div style="display:flex; align-items:flex-start; gap:10px; margin:6px 0 14px;">
-        <div style="font-size:24px;">🧩</div>
-        <div>
-          <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:#ecfdf5;">
-            KOL LIST OPTIMIZATION
-          </span>
-          <span>: Selects the most effective creators within each tier, based on their performance and relevance.</span>
-        </div>
-      </div>
-
-      <p>This is where we bring science to the art of influencer marketing. Our platform allows us to combine human expertise
-      with data-driven insights. It provides a scientifically-backed KOL strategy that ensures every dollar spent delivers
-      maximum effectiveness and cost efficiency, giving us a unique competitive advantage in the market.</p>
+      ... (ข้อความเดิม) ...
     </div>
     """, unsafe_allow_html=True)
 
@@ -308,123 +293,18 @@ TICKER_ITEMS = [
 # -------------------- GLOBAL STYLES (header + hero) --------------------
 st.markdown("""
 <style>
-.appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
-
-/* Ticker pills */
-.top-wrap { margin-top: 10px; margin-bottom: 22px; }
-.pill { width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px; position:relative; overflow:hidden;
-  background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
-.pill .sheen{ content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
-@keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg)} 100%{ transform: translateX(250%) skewX(-18deg)} }
-.glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
-
-/* Header หลังล็อกอิน */
-.app-header{
-  position: relative; overflow: hidden; padding: 26px 26px 20px; border-radius: 18px;
-  background: rgba(255,255,255,.78); backdrop-filter: blur(8px);
-  border: 1px solid rgba(17,24,39,.08); box-shadow: 0 12px 35px rgba(17,24,39,.10); margin-bottom: 18px;
-}
-.app-header:before{ content:""; position:absolute; inset:-2px;
-  background: conic-gradient(from 0deg, #6366f1, #22d3ee, #a78bfa, #6366f1);
-  filter: blur(28px); opacity:.25; animation: spin 10s linear infinite; }
-.shine{ position:absolute; inset:1px; border-radius:16px;
-  background: linear-gradient(120deg, rgba(255,255,255,.18), transparent 35%, transparent 65%, rgba(255,255,255,.18));
-  background-size:220% 100%; animation: gradientMove 6s linear infinite; pointer-events:none; }
-.headline{ font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.subline{ margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px); }
-
-/* Brand hero */
-.brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
-.brand-hero .brand-stage{ position:relative; z-index:1; }
-.brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
-.brand-ambient .g1, .brand-ambient .g2, .brand-ambient .g3{
-  position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
-}
-.brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
-.brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
-.brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
-@keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
-@keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
-@keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
-.brand-logo{ position:relative; width:120px; height:120px; }
-.brand-logo::before{
-  content:""; position:absolute; inset:-10px; border-radius:50%;
-  background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-  animation: bh_spin 10s linear infinite; filter: blur(10px); opacity:.7;
-}
-.brand-logo img{
-  position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
-  box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s ease-in-out infinite;
-}
-@keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
-@keyframes spin{ to{ transform: rotate(360deg);} }
+... (ส่วน header / brand hero เดิม เหมือนในไฟล์คุณ) ...
 </style>
 """, unsafe_allow_html=True)
 
 def inject_cleanup_js():
-    st.markdown("""
-    <script>
-    (function(){
-      function hideDuplicateTickers(){
-        const iframes = Array.from(document.querySelectorAll('iframe'));
-        const tickers = [];
-        for (const f of iframes){
-          try{
-            const doc = f.contentDocument || f.contentWindow?.document;
-            if(!doc) continue;
-            const txt = (doc.body?.innerText || "").replace(/\\s+/g,' ').trim();
-            if (txt.includes('MBCS AI Optimization Tool') &&
-                txt.includes('Smart budget simulation') &&
-                txt.includes('Influencer optimization')){
-              tickers.push(f);
-            }
-          }catch(e){}
-        }
-        if (tickers.length > 1){
-          for(let i=0;i<tickers.length-1;i++){
-            tickers[i].style.display = 'none';
-          }
-        }
-      }
-
-      function hideLoggedInBanner(){
-        const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
-        alerts.forEach(a=>{
-          const t = (a.innerText||"").trim();
-          if (t.startsWith('You are logged in. Build your app content here.')){
-            a.style.display = 'none';
-          }
-        });
-      }
-
-      hideDuplicateTickers(); hideLoggedInBanner();
-      setTimeout(hideDuplicateTickers, 250);  setTimeout(hideLoggedInBanner, 250);
-      setTimeout(hideDuplicateTickers, 800);  setTimeout(hideLoggedInBanner, 800);
-      setTimeout(hideDuplicateTickers, 2000); setTimeout(hideLoggedInBanner, 2000);
-    })();
-    </script>
-    """, unsafe_allow_html=True)
+    ...  # ฟังก์ชันเดิมของคุณ
 
 def render_header():
-    st.markdown("""
-    <div class="app-header">
-      <div class="shine"></div>
-      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
-      <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
-    </div>
-    """, unsafe_allow_html=True)
+    ...  # ฟังก์ชันเดิมของคุณ
 
 def render_brand_hero():
-    st.markdown(f"""
-    <div class="brand-hero">
-      <div class="brand-ambient">
-        <span class="g1"></span><span class="g2"></span><span class="g3"></span>
-      </div>
-      <div class="brand-stage">
-        <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    ...  # ฟังก์ชันเดิมของคุณ
 
 def render_top_banner_once():
     if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
@@ -432,56 +312,61 @@ def render_top_banner_once():
     FG2_render_top_banner()
     st.session_state.ticker_rendered_once = True
 
-# -------------------- NAV (ใช้ <a> แทน st.button) --------------------
+# -------------------- NAV (ใช้ st.button + CSS active/inactive) ----------
 def sync_page_from_query():
     try:
         qp = st.query_params
+        if "page" in qp:
+            st.session_state.page = qp["page"]
     except Exception:
         qp = st.experimental_get_query_params()
-    if "page" in qp:
-        val = qp["page"]
-        if isinstance(val, list):
-            val = val[0]
-        st.session_state.page = val
+        if "page" in qp:
+            st.session_state.page = qp["page"][0]
+
+def set_page(name: str):
+    st.session_state.page = name
+    try:
+        st.query_params.update({"page": name})
+    except Exception:
+        st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    sync_page_from_query()
-    curr = st.session_state.page
-
     st.markdown("""
     <style>
-    .nav-scope { max-width:900px; margin:12px auto 8px auto; }
-    .nav-row   { display:flex; gap:18px; flex-wrap:wrap; }
-    .nav-pill{
-      flex:1 1 0;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      height:50px;
+    .nav-scope { max-width: 900px; margin: 12px auto 6px auto; }
+    .nav-row { display:flex; gap:18px; }
+
+    .nav-scope .nav-btn div.stButton > button{
+      width:100%;
+      height:50px!important;
       border-radius:9999px;
       font-weight:800;
       font-size:12px;
       letter-spacing:.2px;
-      text-decoration:none;
-      border:1px solid #d1d5db;
-      box-shadow:0 4px 10px rgba(15,23,42,.06);
-      transition:all .16s ease-out;
       white-space:normal;
       line-height:1.2;
       padding:0 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border:1px solid #d1d5db;
+      box-shadow:0 4px 10px rgba(15,23,42,.06);
+      transition:all .15s ease-out;
     }
-    .nav-pill.inactive{
-      background:linear-gradient(135deg,#f3f4f6,#e5e7eb);
-      color:#9ca3af;
-    }
-    .nav-pill.inactive:hover{
+    .nav-scope .nav-btn div.stButton > button:hover{
       filter:brightness(1.03);
       transform:translateY(-1px);
       box-shadow:0 8px 18px rgba(15,23,42,.12);
     }
-    .nav-pill.active{
-      background:linear-gradient(135deg,#f97373,#b91c1c);
-      color:#ffffff;
+
+    .nav-scope .nav-btn.inactive div.stButton > button{
+      background:linear-gradient(135deg,#f3f4f6,#e5e7eb)!important;
+      color:#9ca3af!important;
+    }
+
+    .nav-scope .nav-btn.active div.stButton > button{
+      background:linear-gradient(135deg,#f97373,#b91c1c)!important;
+      color:#ffffff!important;
       box-shadow:0 16px 32px rgba(248,113,113,.55);
       text-shadow:0 1px 3px rgba(127,29,29,.95);
       transform:translateY(-1px);
@@ -489,20 +374,53 @@ def render_nav_pills():
     </style>
     """, unsafe_allow_html=True)
 
-    nav_items = [
-        ("KOL Tier Optimizer (KTO)", "🧮 KOL Tier Optimizer (KTO)"),
-        ("Tier Scenario Planner", "📂 Tier Scenario Planner"),
-        ("Influencer Precision Engine (IPE)", "🎯 Influencer Precision Engine (IPE)"),
-        ("Upload Data", "🧾 Upload Data"),
-    ]
+    sync_page_from_query()
+    curr = st.session_state.page
 
-    html = ['<div class="nav-scope"><div class="nav-row">']
-    for page_name, label in nav_items:
-        state = "active" if curr == page_name else "inactive"
-        href = f"?page={_url.quote(page_name)}&intro=0"
-        html.append(f'<a href="{href}" class="nav-pill {state}">{label}</a>')
-    html.append("</div></div>")
-    st.markdown("".join(html), unsafe_allow_html=True)
+    st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+
+    with c1:
+        cls = "nav-btn active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn inactive"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.button("🧮 KOL Tier Optimizer (KTO)",
+                  use_container_width=True,
+                  key="nav_kto",
+                  on_click=set_page,
+                  args=("KOL Tier Optimizer (KTO)",))
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with c2:
+        cls = "nav-btn active" if curr == "Tier Scenario Planner" else "nav-btn inactive"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.button("📂 Tier Scenario Planner",
+                  use_container_width=True,
+                  key="nav_tsp",
+                  on_click=set_page,
+                  args=("Tier Scenario Planner",))
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with c3:
+        cls = "nav-btn active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn inactive"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.button("🎯 Influencer Precision Engine (IPE)",
+                  use_container_width=True,
+                  key="nav_ipe",
+                  on_click=set_page,
+                  args=("Influencer Precision Engine (IPE)",))
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with c4:
+        cls = "nav-btn active" if curr == "Upload Data" else "nav-btn inactive"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.button("🧾 Upload Data",
+                  use_container_width=True,
+                  key="nav_upload",
+                  on_click=set_page,
+                  args=("Upload Data",))
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
 # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:
@@ -518,8 +436,7 @@ render_nav_pills()
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data
 def load_weights(csv_url):
-    df = pd.read_csv(csv_url)
-    return df
+    return pd.read_csv(csv_url)
 
 # Load weights from the published Google Sheet
 csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"

@@ -407,6 +407,15 @@ def inject_cleanup_js():
     </script>
     """, unsafe_allow_html=True)
 
+# >>>>> ฟังก์ชันใหม่นี้คือส่วนที่หายไป ทำให้เกิด NameError <<<<<<
+def render_top_banner_once():
+    """แสดง ticker ด้านบนหลัง login แค่ครั้งเดียวต่อ session"""
+    if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
+        return
+    FG2_render_top_banner()
+    st.session_state.ticker_rendered_once = True
+# >>>>> จบฟังก์ชันที่เพิ่ม <<<<<<
+
 def render_header():
     st.markdown("""
     <div class="app-header">
@@ -566,7 +575,7 @@ if not st.session_state.authenticated:
     st.stop()
 
 inject_cleanup_js()
-render_top_banner_once()
+render_top_banner_once()     # ← ตอนนี้มีฟังก์ชันแล้ว ไม่ error
 render_brand_hero()
 render_header()
 render_nav_pills()

@@ -342,7 +342,7 @@ st.markdown("""
 }
 .brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
 .brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
-.brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
+.brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s.ease-in-out infinite .4s; }
 @keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
 @keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
 @keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
@@ -456,7 +456,7 @@ def render_nav_pills():
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
     .nav-row { display:flex; gap:18px; }
 
-    /* base style for all nav buttons */
+    /* base style */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:50px !important;
@@ -471,59 +471,36 @@ def render_nav_pills():
       align-items:center;
       justify-content:center;
 
-      /* light / subtle as default */
-      background: rgba(255,255,255,0.9) !important;
+      background: linear-gradient(135deg, #f9fafb, #e5e7eb) !important;
       color:#4b5563 !important;
       border:1px solid #d1d5db !important;
-      box-shadow:0 4px 10px rgba(15,23,42,.08);
+      box-shadow:0 4px 10px rgba(15,23,42,.06);
+      transition: all .18s ease-out;
     }
 
     .nav-scope .nav-btn div.stButton > button:hover{
       filter:brightness(1.03);
-      transform:translateY(-1px) !important;
-      box-shadow:0 8px 18px rgba(15,23,42,.16);
-    }
-    .nav-scope .nav-btn div.stButton > button:active{
-      transform:scale(.98) translateY(0) !important;
-      box-shadow:0 4px 10px rgba(15,23,42,.10);
+      transform:translateY(-1px);
+      box-shadow:0 8px 18px rgba(15,23,42,.12);
     }
 
-    /* inactive buttons – pale / not dominant */
+    /* inactive – grey & soft */
     .nav-scope .nav-btn.inactive div.stButton > button{
-      background: rgba(255,255,255,0.7) !important;
+      background: linear-gradient(135deg, #f3f4f6, #e5e7eb) !important;
       color:#9ca3af !important;
       border-color:#e5e7eb !important;
       box-shadow:0 2px 6px rgba(15,23,42,.05);
-      opacity:0.9;
+      opacity:0.95;
     }
 
-    /* active buttons – vivid gradient and stronger shadow */
-    .nav-scope .nav-btn.p1.active div.stButton > button{
-      background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
+    /* active – strong red pill, embossed text */
+    .nav-scope .nav-btn.active div.stButton > button{
+      background: linear-gradient(135deg, #f97373, #b91c1c) !important;
       color:#ffffff !important;
-      border-color:rgba(16,185,129,.4) !important;
-      box-shadow:0 14px 30px rgba(34,197,94,.40);
-      opacity:1;
-    }
-    .nav-scope .nav-btn.p2.active div.stButton > button{
-      background: linear-gradient(135deg, #f97316, #ef4444) !important;
-      color:#ffffff !important;
-      border-color:rgba(248,113,22,.5) !important;
-      box-shadow:0 14px 30px rgba(248,113,22,.40);
-      opacity:1;
-    }
-    .nav-scope .nav-btn.p3.active div.stButton > button{
-      background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
-      color:#ffffff !important;
-      border-color:rgba(59,130,246,.5) !important;
-      box-shadow:0 14px 30px rgba(59,130,246,.40);
-      opacity:1;
-    }
-    .nav-scope .nav-btn.p4.active div.stButton > button{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
-      color:#ffffff !important;
-      border-color:rgba(14,165,233,.5) !important;
-      box-shadow:0 14px 30px rgba(14,165,233,.40);
+      border-color:#b91c1c !important;
+      box-shadow:0 16px 32px rgba(248,113,113,.55);
+      text-shadow:0 1px 3px rgba(127,29,29,.95);
+      transform:translateY(-1px);
       opacity:1;
     }
     </style>
@@ -536,7 +513,7 @@ def render_nav_pills():
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1 inactive"
+        cls = "nav-btn active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🧮 KOL Tier Optimizer (KTO)",
@@ -548,7 +525,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c2:
-        cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2 inactive"
+        cls = "nav-btn active" if curr == "Tier Scenario Planner" else "nav-btn inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "📂 Tier Scenario Planner",
@@ -560,7 +537,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c3:
-        cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3 inactive"
+        cls = "nav-btn active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🎯 Influencer Precision Engine (IPE)",
@@ -572,7 +549,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c4:
-        cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4 inactive"
+        cls = "nav-btn active" if curr == "Upload Data" else "nav-btn inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🧾 Upload Data",

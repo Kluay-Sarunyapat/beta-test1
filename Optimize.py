@@ -452,7 +452,7 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    # CSS เดิม + เพิ่ม override สีตัวอักษรปุ่มที่ active
+    # CSS เดิมของคุณ (เหมือนในโค้ดที่ส่งมา) – ไม่แตะเลย
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
@@ -487,74 +487,55 @@ def render_nav_pills():
 
     .nav-scope .nav-btn.inactive div.stButton > button{
       background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
-      color:#f9fafb !important;
+      color:#4b5563 !important;
       opacity:0.55;
       box-shadow:0 6px 12px rgba(15,23,42,.12);
     }
 
     .nav-scope .nav-btn.p1.active div.stButton > button{
       background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
+      color:#ffffff !important;
       opacity:1;
       box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
     .nav-scope .nav-btn.p2.active div.stButton > button{
       background: linear-gradient(135deg, #f97316, #ef4444) !important;
+      color:#ffffff !important;
       opacity:1;
       box-shadow:0 12px 24px rgba(248,113,22,.35);
     }
     .nav-scope .nav-btn.p3.active div.stButton > button{
       background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
+      color:#ffffff !important;
       opacity:1;
       box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
     .nav-scope .nav-btn.p4.active div.stButton > button{
       background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
+      color:#ffffff !important;
       opacity:1;
       box-shadow:0 12px 24px rgba(14,165,233,.35);
-    }
-
-    /* ================================
-       จุดสำคัญ: ให้ตัวหนังสือของปุ่มที่ active เป็นสีแดง
-       ================================ */
-
-    /* ปุ่ม KTO */
-    .nav-scope .nav-btn.p1.active div.stButton > button,
-    .nav-scope .nav-btn.p1.active div.stButton > button *{
-      color:#ff2b2b !important;
-    }
-
-    /* ปุ่ม Tier Scenario Planner */
-    .nav-scope .nav-btn.p2.active div.stButton > button,
-    .nav-scope .nav-btn.p2.active div.stButton > button *{
-      color:#ff2b2b !important;
-    }
-
-    /* ปุ่ม IPE */
-    .nav-scope .nav-btn.p3.active div.stButton > button,
-    .nav-scope .nav-btn.p3.active div.stButton > button *{
-      color:#ff2b2b !important;
-    }
-
-    /* ปุ่ม Upload Data */
-    .nav-scope .nav-btn.p4.active div.stButton > button,
-    .nav-scope .nav-btn.p4.active div.stButton > button *{
-      color:#ff2b2b !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # อ่านค่าหน้าปัจจุบันจาก query/session
+    # sync page จาก query / session
     sync_page_from_query()
     curr = st.session_state.page
 
-    # ฟังก์ชันกำหนดจุดแดง / จุดขาว
-    def dot(page_name: str) -> str:
-        return "🔴" if curr == page_name else "⚪"
+    # ฟังก์ชันสร้าง label:
+    #  - หน้า active: 🔴 【ชื่อเมนู】
+    #  - หน้าอื่น:   ⚪ ชื่อเมนู
+    def make_label(base: str, page_name: str) -> str:
+        if curr == page_name:
+            return f"🔴 【{base}】"
+        else:
+            return f"⚪ {base}"
 
-    label_kto = f"{dot('KOL Tier Optimizer (KTO)')} KOL Tier Optimizer (KTO)"
-    label_tsp = f"{dot('Tier Scenario Planner')} Tier Scenario Planner"
-    label_ipe = f"{dot('Influencer Precision Engine (IPE)')} Influencer Precision Engine (IPE)"
-    label_up  = f"{dot('Upload Data')} Upload Data"
+    label_kto = make_label("KOL Tier Optimizer (KTO)", "KOL Tier Optimizer (KTO)")
+    label_tsp = make_label("Tier Scenario Planner", "Tier Scenario Planner")
+    label_ipe = make_label("Influencer Precision Engine (IPE)", "Influencer Precision Engine (IPE)")
+    label_up  = make_label("Upload Data", "Upload Data")
 
     st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)

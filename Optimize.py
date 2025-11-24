@@ -452,12 +452,12 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    # CSS เดิมของคุณ (ไม่แก้)
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
     .nav-row { display:flex; gap:18px; }
 
+    /* สไตล์พื้นฐานของปุ่มเมนู (เหมือนของเดิม) */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:50px !important;
@@ -475,6 +475,7 @@ def render_nav_pills():
       display:flex;
       align-items:center;
       justify-content:center;
+      transition: all .16s ease-out;
     }
 
     .nav-scope .nav-btn div.stButton > button:hover{
@@ -485,6 +486,7 @@ def render_nav_pills():
       transform:scale(.98);
     }
 
+    /* ปุ่มที่ไม่ได้เลือก */
     .nav-scope .nav-btn.inactive div.stButton > button{
       background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
       color:#4b5563 !important;
@@ -492,42 +494,53 @@ def render_nav_pills():
       box-shadow:0 6px 12px rgba(15,23,42,.12);
     }
 
+    /* สีพื้นหลังของปุ่มที่เลือกแต่ละแท็บ (ของเดิม) */
     .nav-scope .nav-btn.p1.active div.stButton > button{
       background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
       color:#ffffff !important;
       opacity:1;
-      box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
     .nav-scope .nav-btn.p2.active div.stButton > button{
       background: linear-gradient(135deg, #f97316, #ef4444) !important;
       color:#ffffff !important;
       opacity:1;
-      box-shadow:0 12px 24px rgba(248,113,22,.35);
     }
     .nav-scope .nav-btn.p3.active div.stButton > button{
       background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
       color:#ffffff !important;
       opacity:1;
-      box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
     .nav-scope .nav-btn.p4.active div.stButton > button{
       background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
       color:#ffffff !important;
       opacity:1;
-      box-shadow:0 12px 24px rgba(14,165,233,.35);
+    }
+
+    /* เอฟเฟกต์กรอบหนา + เรืองแสงสำหรับปุ่มที่เลือกทุกแท็บ */
+    .nav-scope .nav-btn.active div.stButton > button{
+      border:2px solid #b91c1c !important;
+      box-shadow:
+        0 0 0 1px rgba(248,250,252,.9),
+        0 0 0 4px rgba(248,113,113,.55),
+        0 18px 36px rgba(15,23,42,.35);
+      transform:translateY(-1px);
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # อ่านค่าหน้าปัจจุบัน
+    # อ่านค่าหน้าปัจจุบันจาก session/query
     sync_page_from_query()
     curr = st.session_state.page
 
-    # กำหนด label ให้มีจุดแดง / จุดขาว ตามหน้า active
-    label_kto  = ("🔴 " if curr == "KOL Tier Optimizer (KTO)" else "⚪ ") + "KOL Tier Optimizer (KTO)"
-    label_tsp  = ("🔴 " if curr == "Tier Scenario Planner" else "⚪ ") + "Tier Scenario Planner"
-    label_ipe  = ("🔴 " if curr == "Influencer Precision Engine (IPE)" else "⚪ ") + "Influencer Precision Engine (IPE)"
-    label_up   = ("🔴 " if curr == "Upload Data" else "⚪ ") + "Upload Data"
+    # ฟังก์ชันเลือกจุดสีแดง/ขาว ตามหน้า active
+    def dot(page_name: str) -> str:
+        return "🔴" if curr == page_name else "⚪"
+
+    # label ของแต่ละปุ่ม (ไม่มี 🧮 / 📂 / 🎯 / 🧾 แล้ว เหลือแค่จุด + ข้อความ)
+    label_kto = f"{dot('KOL Tier Optimizer (KTO)')} KOL Tier Optimizer (KTO)"
+    label_tsp = f"{dot('Tier Scenario Planner')} Tier Scenario Planner"
+    label_ipe = f"{dot('Influencer Precision Engine (IPE)')} Influencer Precision Engine (IPE)"
+    label_up  = f"{dot('Upload Data')} Upload Data"
 
     st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
@@ -536,7 +549,7 @@ def render_nav_pills():
         cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
-            f"🧮 {label_kto}",
+            label_kto,
             use_container_width=True,
             key="nav_kto",
             on_click=set_page,
@@ -548,7 +561,7 @@ def render_nav_pills():
         cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
-            f"📂 {label_tsp}",
+            label_tsp,
             use_container_width=True,
             key="nav_tsp",
             on_click=set_page,
@@ -560,7 +573,7 @@ def render_nav_pills():
         cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
-            f"🎯 {label_ipe}",
+            label_ipe,
             use_container_width=True,
             key="nav_ipe",
             on_click=set_page,
@@ -572,7 +585,7 @@ def render_nav_pills():
         cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
-            f"🧾 {label_up}",
+            label_up,
             use_container_width=True,
             key="nav_upload",
             on_click=set_page,

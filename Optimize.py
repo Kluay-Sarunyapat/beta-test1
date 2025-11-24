@@ -293,6 +293,7 @@ st.session_state.setdefault("page", "KOL Tier Optimizer (KTO)")
 st.session_state.setdefault("prev_page", None)
 st.session_state.setdefault("ticker_rendered_once", False)
 
+# Shared data
 if "inputs" not in st.session_state:
     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
@@ -342,7 +343,7 @@ st.markdown("""
 }
 .brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s.ease-in-out infinite; }
 .brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
-.brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
+.brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s.ease-in-out infinite .4s; }
 @keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
 @keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
 @keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
@@ -361,175 +362,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------- sync page / set_page --------------------
-def sync_page_from_query():
-    try:
-        qp = st.query_params
-        if "page" in qp:
-            st.session_state.page = qp["page"]
-    except Exception:
-        qp = st.experimental_get_query_params()
-        if "page" in qp:
-            st.session_state.page = qp["page"][0]
-
-def set_page(name: str):
-    st.session_state.page = name
-    try:
-        st.query_params.update({"page": name})
-    except Exception:
-        st.experimental_set_query_params(page=name)
-
-# -------------------- HEADER / HERO --------------------
-def render_header():
-    st.markdown("""
-    <div class="app-header">
-      <div class="shine"></div>
-      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
-      <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-def render_brand_hero():
-    st.markdown(f"""
-    <div class="brand-hero">
-      <div class="brand-ambient">
-        <span class="g1"></span><span class="g2"></span><span class="g3"></span>
-      </div>
-      <div class="brand-stage">
-        <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-def render_top_banner_once():
-    if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
-        return
-    FG2_render_top_banner()
-    st.session_state.ticker_rendered_once = True
-
-# -------------------- NAV (active สด / inactive เทา) --------------------
-def render_nav_pills():
-    st.markdown("""
-    <style>
-    .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
-    .nav-row { display:flex; gap:18px; }
-
-    .nav-scope .nav-btn div.stButton > button{
-      width:100%;
-      height:50px !important;
-      border-radius:9999px;
-      font-weight:800;
-      font-size:12px;
-      letter-spacing:.2px;
-      border:1px solid rgba(17,24,39,.08);
-      box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
-      color:#111827;
-      white-space:normal;
-      line-height:1.2;
-      padding:0 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .nav-scope .nav-btn div.stButton > button:hover{
-      filter:brightness(1.03);
-      transform:none !important;
-    }
-    .nav-scope .nav-btn div.stButton > button:active{
-      transform:scale(.98);
-    }
-
-    .nav-scope .nav-btn.inactive div.stButton > button{
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
-      color:#4b5563 !important;
-      opacity:0.55;
-      box-shadow:0 6px 12px rgba(15,23,42,.12);
-    }
-
-    .nav-scope .nav-btn.p1.active div.stButton > button{
-      background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
-      color:#ffffff !important;
-      opacity:1;
-      box-shadow:0 12px 24px rgba(34,197,94,.35);
-    }
-    .nav-scope .nav-btn.p2.active div.stButton > button{
-      background: linear-gradient(135deg, #f97316, #ef4444) !important;
-      color:#ffffff !important;
-      opacity:1;
-      box-shadow:0 12px 24px rgba(248,113,22,.35);
-    }
-    .nav-scope .nav-btn.p3.active div.stButton > button{
-      background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
-      color:#ffffff !important;
-      opacity:1;
-      box-shadow:0 12px 24px rgba(59,130,246,.35);
-    }
-    .nav-scope .nav-btn.p4.active div.stButton > button{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
-      color:#ffffff !important;
-      opacity:1;
-      box-shadow:0 12px 24px rgba(14,165,233,.35);
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    sync_page_from_query()
-    curr = st.session_state.page
-
-    st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-        cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1 inactive"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-        st.button(
-            "🧮 KOL Tier Optimizer (KTO)",
-            use_container_width=True,
-            key="nav_kto",
-            on_click=set_page,
-            args=("KOL Tier Optimizer (KTO)",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with c2:
-        cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2 inactive"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-        st.button(
-            "📂 Tier Scenario Planner",
-            use_container_width=True,
-            key="nav_tsp",
-            on_click=set_page,
-            args=("Tier Scenario Planner",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with c3:
-        cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3 inactive"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-        st.button(
-            "🎯 Influencer Precision Engine (IPE)",
-            use_container_width=True,
-            key="nav_ipe",
-            on_click=set_page,
-            args=("Influencer Precision Engine (IPE)",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with c4:
-        cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4 inactive"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-        st.button(
-            "🧾 Upload Data",
-            use_container_width=True,
-            key="nav_upload",
-            on_click=set_page,
-            args=("Upload Data",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('</div></div>', unsafe_allow_html=True)
+# ---------- NAV / HEADER / HERO helpers อยู่ด้านบนเรียบร้อยแล้ว ----------
+# (ดูฟังก์ชัน render_header, render_brand_hero, render_nav_pills, render_top_banner_once ด้านบน)
 
 # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:

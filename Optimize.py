@@ -284,7 +284,6 @@ else:
 
 # ===================== END FRONTGATE V2 =====================
 
-
 # -------------------- PAGE CONFIG --------------------
 st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wide")
 
@@ -294,6 +293,7 @@ st.session_state.setdefault("page", "Tier Scenario Planner")
 st.session_state.setdefault("prev_page", None)
 st.session_state.setdefault("ticker_rendered_once", False)
 
+# Shared data
 if "inputs" not in st.session_state:
     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
@@ -363,7 +363,50 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------- Helper views --------------------
+def inject_cleanup_js():
+    st.markdown("""
+    <script>
+    (function(){
+      function hideDuplicateTickers(){
+        const iframes = Array.from(document.querySelectorAll('iframe'));
+        const tickers = [];
+        for (const f of iframes){
+          try{
+            const doc = f.contentDocument || f.contentWindow?.document;
+            if(!doc) continue;
+            const txt = (doc.body?.innerText || "").replace(/\\s+/g,' ').trim();
+            if (txt.includes('MBCS AI Optimization Tool') &&
+                txt.includes('Smart budget simulation') &&
+                txt.includes('Influencer optimization')){
+              tickers.push(f);
+            }
+          }catch(e){}
+        }
+        if (tickers.length > 1){
+          for(let i=0;i<tickers.length-1;i++){
+            tickers[i].style.display = 'none';
+          }
+        }
+      }
+
+      function hideLoggedInBanner(){
+        const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
+        alerts.forEach(a=>{
+          const t = (a.innerText||"").trim();
+          if (t.startsWith('You are logged in. Build your app content here.')){
+            a.style.display = 'none';
+          }
+        });
+      }
+
+      hideDuplicateTickers(); hideLoggedInBanner();
+      setTimeout(hideDuplicateTickers, 250);  setTimeout(hideLoggedInBanner, 250);
+      setTimeout(hideDuplicateTickers, 800);  setTimeout(hideLoggedInBanner, 800);
+      setTimeout(hideDuplicateTickers, 2000); setTimeout(hideLoggedInBanner, 2000);
+    })();
+    </script>
+    """, unsafe_allow_html=True)
+
 def render_header():
     st.markdown("""
     <div class="app-header">
@@ -403,13 +446,12 @@ def set_page(name: str):
     except Exception:
         st.experimental_set_query_params(page=name)
 
-# -------------------- NAV: 4 ปุ่มแนวนอน + highlight active --------------------
+# -------------------- NAV (4 ปุ่มแนวนอน + active เป็นสีสด) --------------------
 def render_nav_pills():
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
 
-    /* base: ปุ่มทุกอัน (เทา) */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:46px;
@@ -426,7 +468,6 @@ def render_nav_pills():
       padding:0 12px;
     }
 
-    /* override hover global สำหรับเมนู */
     .nav-scope .nav-btn div.stButton > button:hover{
       filter:brightness(1.03);
       transform:none !important;
@@ -435,24 +476,23 @@ def render_nav_pills():
       transform:scale(.98);
     }
 
-    /* ปุ่มที่เป็น current (disabled) ให้สีสดแต่ละหน้า */
     .nav-scope .nav-btn.p1 div.stButton > button:disabled{
-      background: linear-gradient(135deg, #22c55e, #06b6d4);  /* KTO */
+      background: linear-gradient(135deg, #22c55e, #06b6d4);
       color:#ffffff;
       box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
     .nav-scope .nav-btn.p2 div.stButton > button:disabled{
-      background: linear-gradient(135deg, #f97316, #ef4444);  /* Tier Scenario Planner */
+      background: linear-gradient(135deg, #f97316, #ef4444);
       color:#ffffff;
       box-shadow:0 12px 24px rgba(248,113,22,.35);
     }
     .nav-scope .nav-btn.p3 div.stButton > button:disabled{
-      background: linear-gradient(135deg, #6366f1, #22d3ee);  /* IPE */
+      background: linear-gradient(135deg, #6366f1, #22d3ee);
       color:#ffffff;
       box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
     .nav-scope .nav-btn.p4 div.stButton > button:disabled{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e);  /* Upload Data */
+      background: linear-gradient(135deg, #0ea5e9, #22c55e);
       color:#ffffff;
       box-shadow:0 12px 24px rgba(14,165,233,.35);
     }
@@ -465,7 +505,6 @@ def render_nav_pills():
     st.markdown('<div class="nav-scope">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
 
-    # 1) KOL Tier Optimizer (KTO)
     with c1:
         st.markdown('<div class="nav-btn p1">', unsafe_allow_html=True)
         st.button(
@@ -478,7 +517,6 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2) Tier Scenario Planner
     with c2:
         st.markdown('<div class="nav-btn p2">', unsafe_allow_html=True)
         st.button(
@@ -491,7 +529,6 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 3) Influencer Precision Engine (IPE)
     with c3:
         st.markdown('<div class="nav-btn p3">', unsafe_allow_html=True)
         st.button(
@@ -504,7 +541,6 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 4) Upload Data
     with c4:
         st.markdown('<div class="nav-btn p4">', unsafe_allow_html=True)
         st.button(
@@ -519,7 +555,12 @@ def render_nav_pills():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------- MAIN LAYOUT AFTER LOGIN --------------------
+# -------------------- DUMMY PAGE FUNCS (ไม่ใช้ของจริง) --------------------
+def page_simulation_budget(): return
+def page_influencer_performance(): return
+def page_optimized_budget(): return
+
+# ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:
     st.info("Please sign in on your existing login view.")
     st.stop()
@@ -530,21 +571,32 @@ render_brand_hero()
 render_header()
 render_nav_pills()
 
+# 5) dummy switch (ไม่ยุ่งกับเนื้อในข้างล่าง)
+if st.session_state.page == "KOL Tier Optimizer (KTO)":
+    page_optimized_budget()
+elif st.session_state.page == "Tier Scenario Planner":
+    page_simulation_budget()
+elif st.session_state.page == "Influencer Precision Engine (IPE)":
+    page_influencer_performance()
+else:
+    pass
+
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data
 def load_weights(csv_url):
     df = pd.read_csv(csv_url)
     return df
 
-# Load weights from the published Google Sheet
 csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
 weights_df = load_weights(csv_url)
 
-# ---------- PAGE 1: Tier Scenario Planner ----------
+# ----------------------- PAGE 1: Tier Scenario Planner (เดิม Simulation Budget) -----------------------
 if st.session_state.page == "Tier Scenario Planner":
 
+    # ===== เดิม: Simulation Budget ทั้งก้อน (เปลี่ยนชื่อ title แล้วอย่างเดียว) =====
     st.title("📊 Tier Scenario Planner")
     
+    # LOAD weights_df
     if "weights_df" in st.session_state:
         weights_df = st.session_state["weights_df"]
     elif "weights_df" in globals():
@@ -906,11 +958,11 @@ if st.session_state.page == "Tier Scenario Planner":
                         scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())), legend=None)
     )
     st.altair_chart(scatter + labels, use_container_width=True)
-    
 
-# ---------- PAGE 2: Influencer Precision Engine (IPE) ----------
+# ----------------------- PAGE 2: Influencer Precision Engine (IPE) -----------------------
 if st.session_state.page == "Influencer Precision Engine (IPE)":
     
+    # ทั้งบล็อกนี้คือโค้ดเดิมของ "Influencer Performance" แค่เปลี่ยน header / เงื่อนไขชื่อหน้า
     sheet_url_raw = "https://docs.google.com/spreadsheets/d/1jMo9lFTxif0uwAgwJeyn60_E2jM9n5Ku/gviz/tq?tqx=out:csv"
     sheet_url_off = "https://docs.google.com/spreadsheets/d/1Fst4_Ac4SwmY4WQ1S_rzXSgmrxDb3jvp/gviz/tq?tqx=out:csv"
     sheet_url_full = "https://docs.google.com/spreadsheets/d/1f7x4teD3iBeFfhmpObHqcj8wl_DkipLwa_JxAO5sYp8/gviz/tq?tqx=out:csv"
@@ -1296,9 +1348,8 @@ if st.session_state.page == "Influencer Precision Engine (IPE)":
                 for i, sc in enumerate(scenarios, start=1):
                     render_kol_table(sc, kpi_col, title=f"Scenario #{i}", download_label=f"Download CSV (Scenario {i})")
 
-
-# ---------- PAGE 3: KOL Tier Optimizer (KTO) ----------
-if st.session_state.page == "KOL Tier Optimizer (KTO)":
+# ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------
+elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     def _rerun():
         if hasattr(st, "rerun"):
@@ -1816,7 +1867,7 @@ if st.session_state.page == "KOL Tier Optimizer (KTO)":
                 scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
                 render_outputs(scenarios, scenario_ids, show_target_cols=True)
 
-# ---------- PAGE 4: Upload Data ----------
+# ----------------------- PAGE 4: Upload Data -----------------------
 if st.session_state.page == "Upload Data":
     st.title("KOL Upload Data")
     REQUIRED_COLS = [
@@ -2010,7 +2061,6 @@ if st.session_state.page == "Upload Data":
             show_labels=True
         )
         st.plotly_chart(fig2, use_container_width=True)
-
 
 ########################################################OLDVERSION#########################################################################################
 # import streamlit as st

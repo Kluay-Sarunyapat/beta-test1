@@ -251,7 +251,7 @@ def FG2_render_intro():
     with btn_col:
         if st.button("Next →", key="FG2_next", use_container_width=True):
             st.session_state.FG2_onboard_done = True
-            # ไปหน้า KTO ตามที่ต้องการ
+            # ไปหน้า KTO
             st.session_state.page = "KOL Tier Optimizer (KTO)"
             try:
                 st.query_params.update({"intro": "0", "page": "KOL Tier Optimizer (KTO)"})
@@ -290,8 +290,7 @@ st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wi
 
 # -------------------- SESSION STATE --------------------
 st.session_state.setdefault("authenticated", False)
-# default หน้าแรก = KTO
-st.session_state.setdefault("page", "KOL Tier Optimizer (KTO)")
+st.session_state.setdefault("page", "KOL Tier Optimizer (KTO)")   # default หน้าแรก = KTO
 st.session_state.setdefault("prev_page", None)
 st.session_state.setdefault("ticker_rendered_once", False)
 
@@ -453,19 +452,19 @@ def set_page(name: str):
     except Exception:
         st.experimental_set_query_params(page=name)
 
-# -------------------- NAV (4 ปุ่มแนวนอน: active สีสด, inactive เทา) --------------------
+# -------------------- NAV (4 ปุ่มแนวนอน: active สด, inactive เทา) --------------------
 def render_nav_pills():
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
+    .nav-row { display:flex; gap:18px; }
 
-    /* base: ปุ่มเทา */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
-      height:46px;
+      height:50px !important;
       border-radius:9999px;
       font-weight:800;
-      font-size:13px;
+      font-size:12px;
       letter-spacing:.2px;
       border:1px solid rgba(17,24,39,.08);
       box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
@@ -473,10 +472,12 @@ def render_nav_pills():
       color:#111827;
       white-space:normal;
       line-height:1.2;
-      padding:0 12px;
+      padding:0 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
 
-    /* hover: ไม่ให้เด้งขึ้นลง */
     .nav-scope .nav-btn div.stButton > button:hover{
       filter:brightness(1.03);
       transform:none !important;
@@ -485,14 +486,13 @@ def render_nav_pills():
       transform:scale(.98);
     }
 
-    /* inactive = เทา */
     .nav-scope .nav-btn.inactive div.stButton > button{
       background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
-      color:#111827 !important;
-      opacity:0.7;
+      color:#4b5563 !important;
+      opacity:0.55;
+      box-shadow:0 6px 12px rgba(15,23,42,.12);
     }
 
-    /* active ของแต่ละปุ่ม: สีสด */
     .nav-scope .nav-btn.p1.active div.stButton > button{
       background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
       color:#ffffff !important;
@@ -523,10 +523,9 @@ def render_nav_pills():
     sync_page_from_query()
     curr = st.session_state.page
 
-    st.markdown('<div class="nav-scope">', unsafe_allow_html=True)
+    st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
 
-    # 1) KTO
     with c1:
         cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
@@ -539,7 +538,6 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2) Tier Scenario Planner
     with c2:
         cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
@@ -552,7 +550,6 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 3) IPE
     with c3:
         cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
@@ -565,7 +562,6 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # 4) Upload Data
     with c4:
         cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
@@ -578,9 +574,9 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div></div>', unsafe_allow_html=True)
 
-# ============ MAIN FRAME (หลังล็อกอิน) ============
+# ============ MAIN (หลังล็อกอิน) ============
 if not st.session_state.authenticated:
     st.info("Please sign in on your existing login view.")
     st.stop()
@@ -591,7 +587,7 @@ render_brand_hero()
 render_header()
 render_nav_pills()
 
-# (ตรงนี้คง dummy switch เดิม แต่ไม่มีผลต่อเนื้อในด้านล่าง)
+# dummy funcs (ไม่ใช้แล้ว แต่คงไว้ไม่ให้ error)
 def page_simulation_budget(): pass
 def page_influencer_performance(): pass
 def page_optimized_budget(): pass
@@ -613,6 +609,7 @@ def load_weights(csv_url):
 
 csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
 weights_df = load_weights(csv_url)
+
 # ----------------------- PAGE 1: Tier Scenario Planner (เดิม Simulation Budget) -----------------------
 if st.session_state.page == "Tier Scenario Planner":
 

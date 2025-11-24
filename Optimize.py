@@ -452,85 +452,16 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    # CSS เดิมของคุณ (เหมือนในโค้ดที่ส่งมา) – ไม่แตะเลย
-    st.markdown("""
-    <style>
-    .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
-    .nav-row { display:flex; gap:18px; }
+    ...  # ส่วน CSS ด้านบนของคุณเหมือนเดิม ไม่ต้องแก้
 
-    .nav-scope .nav-btn div.stButton > button{
-      width:100%;
-      height:50px !important;
-      border-radius:9999px;
-      font-weight:800;
-      font-size:12px;
-      letter-spacing:.2px;
-      border:1px solid rgba(17,24,39,.08);
-      box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
-      color:#111827;
-      white-space:normal;
-      line-height:1.2;
-      padding:0 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .nav-scope .nav-btn div.stButton > button:hover{
-      filter:brightness(1.03);
-      transform:none !important;
-    }
-    .nav-scope .nav-btn div.stButton > button:active{
-      transform:scale(.98);
-    }
-
-    .nav-scope .nav-btn.inactive div.stButton > button{
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
-      color:#4b5563 !important;
-      opacity:0.55;
-      box-shadow:0 6px 12px rgba(15,23,42,.12);
-    }
-
-    .nav-scope .nav-btn.p1.active div.stButton > button{
-      background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
-      color:#ffffff !important;
-      opacity:1;
-      box-shadow:0 12px 24px rgba(34,197,94,.35);
-    }
-    .nav-scope .nav-btn.p2.active div.stButton > button{
-      background: linear-gradient(135deg, #f97316, #ef4444) !important;
-      color:#ffffff !important;
-      opacity:1;
-      box-shadow:0 12px 24px rgba(248,113,22,.35);
-    }
-    .nav-scope .nav-btn.p3.active div.stButton > button{
-      background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
-      color:#ffffff !important;
-      opacity:1;
-      box-shadow:0 12px 24px rgba(59,130,246,.35);
-    }
-    .nav-scope .nav-btn.p4.active div.stButton > button{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
-      color:#ffffff !important;
-      opacity:1;
-      box-shadow:0 12px 24px rgba(14,165,233,.35);
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # sync page จาก query / session
     sync_page_from_query()
     curr = st.session_state.page
 
     # ฟังก์ชันสร้าง label:
-    #  - หน้า active: 🔴 【ชื่อเมนู】
-    #  - หน้าอื่น:   ⚪ ชื่อเมนู
+    #  - หน้า active  : 🔴 + ชื่อเมนู
+    #  - หน้าอื่น    : ⚪ + ชื่อเมนู
     def make_label(base: str, page_name: str) -> str:
-        if curr == page_name:
-            return f"🔴 【{base}】"
-        else:
-            return f"⚪ {base}"
+        return f"{'🔴' if curr == page_name else '⚪'} {base}"
 
     label_kto = make_label("KOL Tier Optimizer (KTO)", "KOL Tier Optimizer (KTO)")
     label_tsp = make_label("Tier Scenario Planner", "Tier Scenario Planner")

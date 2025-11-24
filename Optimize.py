@@ -432,153 +432,77 @@ def render_top_banner_once():
     FG2_render_top_banner()
     st.session_state.ticker_rendered_once = True
 
-# -------------------- NAV --------------------
+# -------------------- NAV (ใช้ <a> แทน st.button) --------------------
 def sync_page_from_query():
     try:
         qp = st.query_params
-        if "page" in qp:
-            st.session_state.page = qp["page"]
     except Exception:
         qp = st.experimental_get_query_params()
-        if "page" in qp:
-            st.session_state.page = qp["page"][0]
-
-def set_page(name: str):
-    st.session_state.page = name
-    try:
-        st.query_params.update({"page": name})
-    except Exception:
-        st.experimental_set_query_params(page=name)
+    if "page" in qp:
+        val = qp["page"]
+        if isinstance(val, list):
+            val = val[0]
+        st.session_state.page = val
 
 def render_nav_pills():
-    # ปุ่มทุกอันเริ่มจากสีอ่อน ๆ เหมือนกัน
+    sync_page_from_query()
+    curr = st.session_state.page
+
     st.markdown("""
     <style>
-    .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
-    .nav-row { display:flex; gap:18px; }
-    .nav-scope .nav-btn div.stButton > button{
-      width:100%;
-      height:50px !important;
+    .nav-scope { max-width:900px; margin:12px auto 8px auto; }
+    .nav-row   { display:flex; gap:18px; flex-wrap:wrap; }
+    .nav-pill{
+      flex:1 1 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height:50px;
       border-radius:9999px;
       font-weight:800;
       font-size:12px;
       letter-spacing:.2px;
+      text-decoration:none;
+      border:1px solid #d1d5db;
+      box-shadow:0 4px 10px rgba(15,23,42,.06);
+      transition:all .16s ease-out;
       white-space:normal;
       line-height:1.2;
       padding:0 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background: linear-gradient(135deg, #f9fafb, #e5e7eb);
-      color:#4b5563;
-      border:1px solid #d1d5db;
-      box-shadow:0 4px 10px rgba(15,23,42,.06);
-      transition: all .16s ease-out;
     }
-    .nav-scope .nav-btn div.stButton > button:hover{
+    .nav-pill.inactive{
+      background:linear-gradient(135deg,#f3f4f6,#e5e7eb);
+      color:#9ca3af;
+    }
+    .nav-pill.inactive:hover{
       filter:brightness(1.03);
       transform:translateY(-1px);
       box-shadow:0 8px 18px rgba(15,23,42,.12);
     }
+    .nav-pill.active{
+      background:linear-gradient(135deg,#f97373,#b91c1c);
+      color:#ffffff;
+      box-shadow:0 16px 32px rgba(248,113,113,.55);
+      text-shadow:0 1px 3px rgba(127,29,29,.95);
+      transform:translateY(-1px);
+    }
     </style>
     """, unsafe_allow_html=True)
 
-    sync_page_from_query()
-    curr = st.session_state.page
+    nav_items = [
+        ("KOL Tier Optimizer (KTO)", "🧮 KOL Tier Optimizer (KTO)"),
+        ("Tier Scenario Planner", "📂 Tier Scenario Planner"),
+        ("Influencer Precision Engine (IPE)", "🎯 Influencer Precision Engine (IPE)"),
+        ("Upload Data", "🧾 Upload Data"),
+    ]
 
-    st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-        st.button(
-            "🧮 KOL Tier Optimizer (KTO)",
-            use_container_width=True,
-            key="nav_kto",
-            on_click=set_page,
-            args=("KOL Tier Optimizer (KTO)",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with c2:
-        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-        st.button(
-            "📂 Tier Scenario Planner",
-            use_container_width=True,
-            key="nav_tsp",
-            on_click=set_page,
-            args=("Tier Scenario Planner",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with c3:
-        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-        st.button(
-            "🎯 Influencer Precision Engine (IPE)",
-            use_container_width=True,
-            key="nav_ipe",
-            on_click=set_page,
-            args=("Influencer Precision Engine (IPE)",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    with c4:
-        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-        st.button(
-            "🧾 Upload Data",
-            use_container_width=True,
-            key="nav_upload",
-            on_click=set_page,
-            args=("Upload Data",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('</div></div>', unsafe_allow_html=True)
-
-    # ใช้ JS บังคับให้ปุ่มของเพจปัจจุบันเป็นสีแดงนูน
-    st.markdown(f"""
-    <script>
-    const currentPage = "{curr}".trim();
-    const map = {{
-      "KOL Tier Optimizer (KTO)": "nav_kto",
-      "Tier Scenario Planner": "nav_tsp",
-      "Influencer Precision Engine (IPE)": "nav_ipe",
-      "Upload Data": "nav_upload"
-    }};
-    const activeKey = map[currentPage];
-
-    const allSelectors = [
-      '[data-testid="stButton-nav_kto"] button',
-      '[data-testid="stButton-nav_tsp"] button',
-      '[data-testid="stButton-nav_ipe"] button',
-      '[data-testid="stButton-nav_upload"] button'
-    ];
-
-    function styleNav() {{
-      allSelectors.forEach(sel => {{
-        document.querySelectorAll(sel).forEach(btn => {{
-          btn.style.background = 'linear-gradient(135deg,#f3f4f6,#e5e7eb)';
-          btn.style.color = '#9ca3af';
-          btn.style.boxShadow = '0 2px 6px rgba(15,23,42,.05)';
-          btn.style.textShadow = 'none';
-        }});
-      }});
-      if (activeKey) {{
-        const sel = `[data-testid="stButton-${{activeKey}}"] button`;
-        document.querySelectorAll(sel).forEach(btn => {{
-          btn.style.background = 'linear-gradient(135deg,#f97373,#b91c1c)';
-          btn.style.color = '#ffffff';
-          btn.style.boxShadow = '0 16px 32px rgba(248,113,113,.55)';
-          btn.style.textShadow = '0 1px 3px rgba(127,29,29,.95)';
-        }});
-      }}
-    }}
-
-    setTimeout(styleNav, 50);
-    setTimeout(styleNav, 250);
-    setTimeout(styleNav, 800);
-    </script>
-    """, unsafe_allow_html=True)
+    html = ['<div class="nav-scope"><div class="nav-row">']
+    for page_name, label in nav_items:
+        state = "active" if curr == page_name else "inactive"
+        href = f"?page={_url.quote(page_name)}&intro=0"
+        html.append(f'<a href="{href}" class="nav-pill {state}">{label}</a>')
+    html.append("</div></div>")
+    st.markdown("".join(html), unsafe_allow_html=True)
 
 # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:

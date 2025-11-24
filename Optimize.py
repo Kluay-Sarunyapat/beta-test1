@@ -251,7 +251,6 @@ def FG2_render_intro():
     with btn_col:
         if st.button("Next →", key="FG2_next", use_container_width=True):
             st.session_state.FG2_onboard_done = True
-            # ไปหน้า KTO
             st.session_state.page = "KOL Tier Optimizer (KTO)"
             try:
                 st.query_params.update({"intro": "0", "page": "KOL Tier Optimizer (KTO)"})
@@ -290,11 +289,10 @@ st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wi
 
 # -------------------- SESSION STATE --------------------
 st.session_state.setdefault("authenticated", False)
-st.session_state.setdefault("page", "KOL Tier Optimizer (KTO)")   # default หน้าแรก = KTO
+st.session_state.setdefault("page", "KOL Tier Optimizer (KTO)")
 st.session_state.setdefault("prev_page", None)
 st.session_state.setdefault("ticker_rendered_once", False)
 
-# Shared data
 if "inputs" not in st.session_state:
     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
@@ -342,7 +340,7 @@ st.markdown("""
 .brand-ambient .g1, .brand-ambient .g2, .brand-ambient .g3{
   position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
 }
-.brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
+.brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s.ease-in-out infinite; }
 .brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
 .brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
 @keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
@@ -363,6 +361,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# -------------------- sync page / set_page --------------------
+def sync_page_from_query():
+    try:
+        qp = st.query_params
+        if "page" in qp:
+            st.session_state.page = qp["page"]
+    except Exception:
+        qp = st.experimental_get_query_params()
+        if "page" in qp:
+            st.session_state.page = qp["page"][0]
+
+def set_page(name: str):
+    st.session_state.page = name
+    try:
+        st.query_params.update({"page": name})
+    except Exception:
+        st.experimental_set_query_params(page=name)
+
+# -------------------- HEADER / HERO --------------------
 def render_header():
     st.markdown("""
     <div class="app-header">
@@ -384,75 +401,13 @@ def render_brand_hero():
     </div>
     """, unsafe_allow_html=True)
 
-def inject_cleanup_js():
-    st.markdown("""
-    <script>
-    (function(){
-      function hideDuplicateTickers(){
-        const iframes = Array.from(document.querySelectorAll('iframe'));
-        const tickers = [];
-        for (const f of iframes){
-          try{
-            const doc = f.contentDocument || f.contentWindow?.document;
-            if(!doc) continue;
-            const txt = (doc.body?.innerText || "").replace(/\\s+/g,' ').trim();
-            if (txt.includes('MBCS AI Optimization Tool') &&
-                txt.includes('Smart budget simulation') &&
-                txt.includes('Influencer optimization')){
-              tickers.push(f);
-            }
-          }catch(e){}
-        }
-        if (tickers.length > 1){
-          for(let i=0;i<tickers.length-1;i++){
-            tickers[i].style.display = 'none';
-          }
-        }
-      }
-
-      function hideLoggedInBanner(){
-        const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
-        alerts.forEach(a=>{
-          const t = (a.innerText||"").trim();
-          if (t.startsWith('You are logged in. Build your app content here.')){
-            a.style.display = 'none';
-          }
-        });
-      }
-
-      hideDuplicateTickers(); hideLoggedInBanner();
-      setTimeout(hideDuplicateTickers, 250);  setTimeout(hideLoggedInBanner, 250);
-      setTimeout(hideDuplicateTickers, 800);  setTimeout(hideLoggedInBanner, 800);
-      setTimeout(hideDuplicateTickers, 2000); setTimeout(hideLoggedInBanner, 2000);
-    })();
-    </script>
-    """, unsafe_allow_html=True)
-
 def render_top_banner_once():
     if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
         return
     FG2_render_top_banner()
     st.session_state.ticker_rendered_once = True
 
-# -------------------- sync page / set_page --------------------
-def sync_page_from_query():
-    try:
-        qp = st.query_params
-        if "page" in qp:
-            st.session_state.page = qp["page"]
-    except Exception:
-        qp = st.experimental_get_query_params()
-        if "page" in qp:
-            st.session_state.page = qp["page"][0]
-
-def set_page(name: str):
-    st.session_state.page = name
-    try:
-        st.query_params.update({"page": name})
-    except Exception:
-        st.experimental_set_query_params(page=name)
-
-# -------------------- NAV (4 ปุ่มแนวนอน: active สด, inactive เทา) --------------------
+# -------------------- NAV (active สด / inactive เทา) --------------------
 def render_nav_pills():
     st.markdown("""
     <style>
@@ -576,7 +531,7 @@ def render_nav_pills():
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-# ============ MAIN (หลังล็อกอิน) ============
+# ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:
     st.info("Please sign in on your existing login view.")
     st.stop()
@@ -586,20 +541,6 @@ render_top_banner_once()
 render_brand_hero()
 render_header()
 render_nav_pills()
-
-# dummy funcs (ไม่ใช้แล้ว แต่คงไว้ไม่ให้ error)
-def page_simulation_budget(): pass
-def page_influencer_performance(): pass
-def page_optimized_budget(): pass
-
-if st.session_state.page == "KOL Tier Optimizer (KTO)":
-    page_optimized_budget()
-elif st.session_state.page == "Tier Scenario Planner":
-    page_simulation_budget()
-elif st.session_state.page == "Influencer Precision Engine (IPE)":
-    page_influencer_performance()
-else:
-    pass
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data

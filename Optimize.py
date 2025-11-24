@@ -452,12 +452,13 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
+    # CSS สำหรับเมนู
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
     .nav-row { display:flex; gap:18px; }
 
-    /* สไตล์พื้นฐานของปุ่มเมนู (เหมือนของเดิม) */
+    /* base style ของปุ่มเมนู */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:50px !important;
@@ -466,16 +467,13 @@ def render_nav_pills():
       font-size:12px;
       letter-spacing:.2px;
       border:1px solid rgba(17,24,39,.08);
-      box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
-      color:#111827;
       white-space:normal;
       line-height:1.2;
       padding:0 10px;
       display:flex;
       align-items:center;
       justify-content:center;
-      transition: all .16s ease-out;
+      transition:all .18s ease-out;
     }
 
     .nav-scope .nav-btn div.stButton > button:hover{
@@ -486,57 +484,55 @@ def render_nav_pills():
       transform:scale(.98);
     }
 
-    /* ปุ่มที่ไม่ได้เลือก */
+    /* ปุ่มที่ไม่ได้เลือก = เทาอ่อนมาก แบน ไม่มีเงา */
     .nav-scope .nav-btn.inactive div.stButton > button{
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
-      color:#4b5563 !important;
+      background:linear-gradient(135deg,#f4f4f5,#e5e7eb) !important;
+      color:#9ca3af !important;
+      border:1px solid #d4d4d8 !important;
+      box-shadow:none !important;
       opacity:0.55;
-      box-shadow:0 6px 12px rgba(15,23,42,.12);
     }
 
-    /* สีพื้นหลังของปุ่มที่เลือกแต่ละแท็บ (ของเดิม) */
+    /* สีพื้นหลังของปุ่มที่เลือกแต่ละแท็บ (ตามดีไซน์เดิม) */
     .nav-scope .nav-btn.p1.active div.stButton > button{
       background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
       color:#ffffff !important;
-      opacity:1;
     }
     .nav-scope .nav-btn.p2.active div.stButton > button{
       background: linear-gradient(135deg, #f97316, #ef4444) !important;
       color:#ffffff !important;
-      opacity:1;
     }
     .nav-scope .nav-btn.p3.active div.stButton > button{
       background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
       color:#ffffff !important;
-      opacity:1;
     }
     .nav-scope .nav-btn.p4.active div.stButton > button{
       background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
       color:#ffffff !important;
-      opacity:1;
     }
 
-    /* เอฟเฟกต์กรอบหนา + เรืองแสงสำหรับปุ่มที่เลือกทุกแท็บ */
+    /* ปุ่มที่เลือก = กรอบหนา + เรืองแสงชัดมาก */
     .nav-scope .nav-btn.active div.stButton > button{
-      border:2px solid #b91c1c !important;
+      border:3px solid #ffffff !important;
       box-shadow:
-        0 0 0 1px rgba(248,250,252,.9),
-        0 0 0 4px rgba(248,113,113,.55),
-        0 18px 36px rgba(15,23,42,.35);
-      transform:translateY(-1px);
+        0 0 0 4px rgba(239,68,68,.95),
+        0 22px 44px rgba(15,23,42,.70);
+      filter:drop-shadow(0 0 14px rgba(248,113,113,.98));
+      transform:translateY(-2px) scale(1.03);
+      opacity:1;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # อ่านค่าหน้าปัจจุบันจาก session/query
+    # อ่านค่าหน้าปัจจุบัน
     sync_page_from_query()
     curr = st.session_state.page
 
-    # ฟังก์ชันเลือกจุดสีแดง/ขาว ตามหน้า active
+    # ฟังก์ชันเลือกจุดสี
     def dot(page_name: str) -> str:
         return "🔴" if curr == page_name else "⚪"
 
-    # label ของแต่ละปุ่ม (ไม่มี 🧮 / 📂 / 🎯 / 🧾 แล้ว เหลือแค่จุด + ข้อความ)
+    # label แต่ละปุ่ม (ไม่มี 〈CURRENT〉, ไม่มีไอคอนอื่น)
     label_kto = f"{dot('KOL Tier Optimizer (KTO)')} KOL Tier Optimizer (KTO)"
     label_tsp = f"{dot('Tier Scenario Planner')} Tier Scenario Planner"
     label_ipe = f"{dot('Influencer Precision Engine (IPE)')} Influencer Precision Engine (IPE)"
@@ -546,50 +542,54 @@ def render_nav_pills():
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1 inactive"
+        page_name = "KOL Tier Optimizer (KTO)"
+        cls = "nav-btn p1 active" if curr == page_name else "nav-btn p1 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             label_kto,
             use_container_width=True,
             key="nav_kto",
             on_click=set_page,
-            args=("KOL Tier Optimizer (KTO)",),
+            args=(page_name,),
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c2:
-        cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2 inactive"
+        page_name = "Tier Scenario Planner"
+        cls = "nav-btn p2 active" if curr == page_name else "nav-btn p2 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             label_tsp,
             use_container_width=True,
             key="nav_tsp",
             on_click=set_page,
-            args=("Tier Scenario Planner",),
+            args=(page_name,),
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c3:
-        cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3 inactive"
+        page_name = "Influencer Precision Engine (IPE)"
+        cls = "nav-btn p3 active" if curr == page_name else "nav-btn p3 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             label_ipe,
             use_container_width=True,
             key="nav_ipe",
             on_click=set_page,
-            args=("Influencer Precision Engine (IPE)",),
+            args=(page_name,),
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c4:
-        cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4 inactive"
+        page_name = "Upload Data"
+        cls = "nav-btn p4 active" if curr == page_name else "nav-btn p4 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             label_up,
             use_container_width=True,
             key="nav_upload",
             on_click=set_page,
-            args=("Upload Data",),
+            args=(page_name,),
         )
         st.markdown('</div>', unsafe_allow_html=True)
 

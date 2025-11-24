@@ -165,7 +165,6 @@ def FG2_cleanup_keep_first_ticker():
 
 # Login
 def FG2_login_view():
-    # Reset intro flag in URL when showing login
     try:
         st.query_params.update({"intro": "1"})
     except Exception:
@@ -194,7 +193,7 @@ def FG2_login_view():
         if u in FG2_VALID_USERS and p == FG2_VALID_USERS[u]:
             st.session_state.authenticated = True
             st.session_state.FG2_invalid_login = False
-            st.session_state.FG2_onboard_done = False  # always show Intro after login
+            st.session_state.FG2_onboard_done = False
             try:
                 st.query_params.update({"intro": "1"})
             except Exception:
@@ -264,7 +263,6 @@ if not st.session_state.authenticated:
     FG2_login_view()
     st.stop()
 
-# Read intro flag from URL only after login
 try:
     qp = st.query_params
     if qp.get("intro") == "0":
@@ -506,7 +504,7 @@ def render_brand_hero():
     </div>
     """, unsafe_allow_html=True)
 
-# -------------------- NAV (active/grey pills) --------------------
+# -------------------- NAV (active/grey pills, 4 ปุ่มใน 1 แถว) --------------------
 def sync_page_from_query():
     try:
         qp = st.query_params
@@ -525,57 +523,52 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
+    # CSS ปุ่มเมนู
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
-    .nav-row { display:flex; gap:18px; }
-    .nav-item { flex:1; }
 
-    .nav-item div.stButton > button{
+    /* base: ปุ่มทุกอัน (สีเทา) */
+    .nav-scope .nav-btn div.stButton > button{
       width:100%;
+      height:46px;
       border-radius:9999px;
-      border:1px solid rgba(17,24,39,.08);
-      box-shadow:0 10px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
       font-weight:800;
       font-size:13px;
       letter-spacing:.2px;
+      border:1px solid rgba(17,24,39,.08);
+      box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
+      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
       color:#111827;
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af); /* default grey */
-      min-height:48px;
-      padding:6px 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
       white-space:normal;
       line-height:1.2;
-      transition: transform .12s ease, filter .12s ease, box-shadow .15s ease;
+      padding:0 12px;
     }
-    .nav-item div.stButton > button:hover{
-      transform: scale(1.02);
-      filter:brightness(1.02);
+    .nav-scope .nav-btn div.stButton > button:hover{
+      filter:brightness(1.03);
     }
-    .nav-item div.stButton > button:active{
-      transform: scale(.98);
+    .nav-scope .nav-btn div.stButton > button:active{
+      transform:scale(.98);
     }
 
-    .nav-item.p1.active div.stButton > button{
-      background: linear-gradient(135deg, #22c55e, #06b6d4);
+    /* ปุ่ม active */
+    .nav-scope .nav-btn.p1.active div.stButton > button{
+      background: linear-gradient(135deg, #22c55e, #06b6d4);  /* KTO */
       color:#ffffff;
       box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
-    .nav-item.p2.active div.stButton > button{
-      background: linear-gradient(135deg, #f97316, #ef4444);
+    .nav-scope .nav-btn.p2.active div.stButton > button{
+      background: linear-gradient(135deg, #f97316, #ef4444);  /* Tier Scenario Planner */
       color:#ffffff;
       box-shadow:0 12px 24px rgba(248,113,22,.35);
     }
-    .nav-item.p3.active div.stButton > button{
-      background: linear-gradient(135deg, #6366f1, #22d3ee);
+    .nav-scope .nav-btn.p3.active div.stButton > button{
+      background: linear-gradient(135deg, #6366f1, #22d3ee);  /* IPE */
       color:#ffffff;
       box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
-    .nav-item.p4.active div.stButton > button{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e);
+    .nav-scope .nav-btn.p4.active div.stButton > button{
+      background: linear-gradient(135deg, #0ea5e9, #22c55e);  /* Upload Data */
       color:#ffffff;
       box-shadow:0 12px 24px rgba(14,165,233,.35);
     }
@@ -585,53 +578,62 @@ def render_nav_pills():
     sync_page_from_query()
     curr = st.session_state.page
 
-    st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
+    st.markdown('<div class="nav-scope">', unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
 
-    # 1) KOL Tier Optimizer (KTO)
-    state = "active" if curr == "KOL Tier Optimizer (KTO)" else ""
-    st.markdown(f'<div class="nav-item p1 {state}">', unsafe_allow_html=True)
-    st.button(
-        "🧮 KOL Tier Optimizer (KTO)",
-        use_container_width=True,
-        on_click=set_page,
-        args=("KOL Tier Optimizer (KTO)",),
-    )
+    # ปุ่ม 1: KTO
+    with c1:
+        cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.button(
+            "🧮 KOL Tier Optimizer (KTO)",
+            use_container_width=True,
+            key="nav_kto",
+            on_click=set_page,
+            args=("KOL Tier Optimizer (KTO)",),
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ปุ่ม 2: Tier Scenario Planner
+    with c2:
+        cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.button(
+            "📂 Tier Scenario Planner",
+            use_container_width=True,
+            key="nav_tsp",
+            on_click=set_page,
+            args=("Tier Scenario Planner",),
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ปุ่ม 3: IPE
+    with c3:
+        cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.button(
+            "🎯 Influencer Precision Engine (IPE)",
+            use_container_width=True,
+            key="nav_ipe",
+            on_click=set_page,
+            args=("Influencer Precision Engine (IPE)",),
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ปุ่ม 4: Upload Data
+    with c4:
+        cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.button(
+            "🧾 Upload Data",
+            use_container_width=True,
+            key="nav_upload",
+            on_click=set_page,
+            args=("Upload Data",),
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
     st.markdown('</div>', unsafe_allow_html=True)
-
-    # 2) Tier Scenario Planner
-    state = "active" if curr == "Tier Scenario Planner" else ""
-    st.markdown(f'<div class="nav-item p2 {state}">', unsafe_allow_html=True)
-    st.button(
-        "📂 Tier Scenario Planner",
-        use_container_width=True,
-        on_click=set_page,
-        args=("Tier Scenario Planner",),
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # 3) Influencer Precision Engine (IPE)
-    state = "active" if curr == "Influencer Precision Engine (IPE)" else ""
-    st.markdown(f'<div class="nav-item p3 {state}">', unsafe_allow_html=True)
-    st.button(
-        "🎯 Influencer Precision Engine (IPE)",
-        use_container_width=True,
-        on_click=set_page,
-        args=("Influencer Precision Engine (IPE)",),
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # 4) Upload Data
-    state = "active" if curr == "Upload Data" else ""
-    st.markdown(f'<div class="nav-item p4 {state}">', unsafe_allow_html=True)
-    st.button(
-        "🧾 Upload Data",
-        use_container_width=True,
-        on_click=set_page,
-        args=("Upload Data",),
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('</div></div>', unsafe_allow_html=True)
 
 # -------------------- PAGE CONTENT DUMMIES --------------------
 def page_simulation_budget(): return

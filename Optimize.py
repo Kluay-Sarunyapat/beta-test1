@@ -456,6 +456,7 @@ def render_nav_pills():
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
     .nav-row { display:flex; gap:18px; }
 
+    /* base style for all nav buttons */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:50px !important;
@@ -463,56 +464,67 @@ def render_nav_pills():
       font-weight:800;
       font-size:12px;
       letter-spacing:.2px;
-      border:1px solid rgba(17,24,39,.08);
-      box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
-      color:#111827;
       white-space:normal;
       line-height:1.2;
       padding:0 10px;
       display:flex;
       align-items:center;
       justify-content:center;
+
+      /* light / subtle as default */
+      background: rgba(255,255,255,0.9) !important;
+      color:#4b5563 !important;
+      border:1px solid #d1d5db !important;
+      box-shadow:0 4px 10px rgba(15,23,42,.08);
     }
 
     .nav-scope .nav-btn div.stButton > button:hover{
       filter:brightness(1.03);
-      transform:none !important;
+      transform:translateY(-1px) !important;
+      box-shadow:0 8px 18px rgba(15,23,42,.16);
     }
     .nav-scope .nav-btn div.stButton > button:active{
-      transform:scale(.98);
+      transform:scale(.98) translateY(0) !important;
+      box-shadow:0 4px 10px rgba(15,23,42,.10);
     }
 
+    /* inactive buttons – pale / not dominant */
     .nav-scope .nav-btn.inactive div.stButton > button{
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
-      color:#4b5563 !important;
-      opacity:0.55;
-      box-shadow:0 6px 12px rgba(15,23,42,.12);
+      background: rgba(255,255,255,0.7) !important;
+      color:#9ca3af !important;
+      border-color:#e5e7eb !important;
+      box-shadow:0 2px 6px rgba(15,23,42,.05);
+      opacity:0.9;
     }
 
+    /* active buttons – vivid gradient and stronger shadow */
     .nav-scope .nav-btn.p1.active div.stButton > button{
       background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
       color:#ffffff !important;
+      border-color:rgba(16,185,129,.4) !important;
+      box-shadow:0 14px 30px rgba(34,197,94,.40);
       opacity:1;
-      box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
     .nav-scope .nav-btn.p2.active div.stButton > button{
       background: linear-gradient(135deg, #f97316, #ef4444) !important;
       color:#ffffff !important;
+      border-color:rgba(248,113,22,.5) !important;
+      box-shadow:0 14px 30px rgba(248,113,22,.40);
       opacity:1;
-      box-shadow:0 12px 24px rgba(248,113,22,.35);
     }
     .nav-scope .nav-btn.p3.active div.stButton > button{
       background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
       color:#ffffff !important;
+      border-color:rgba(59,130,246,.5) !important;
+      box-shadow:0 14px 30px rgba(59,130,246,.40);
       opacity:1;
-      box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
     .nav-scope .nav-btn.p4.active div.stButton > button{
       background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
       color:#ffffff !important;
+      border-color:rgba(14,165,233,.5) !important;
+      box-shadow:0 14px 30px rgba(14,165,233,.40);
       opacity:1;
-      box-shadow:0 12px 24px rgba(14,165,233,.35);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -583,9 +595,6 @@ render_top_banner_once()
 render_brand_hero()
 render_header()
 render_nav_pills()
-
-# -------------------- จากตรงนี้ลงไปคือโค้ดเดิมของแต่ละหน้า (Simulation / IPE / KTO / Upload) --------------------
-# คุณสามารถ paste ต่อจากไฟล์เดิมของคุณได้เลย (ส่วนนี้ยาวมาก ผมไม่ตัดแต่ง logic ภายใน)
 
 # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data

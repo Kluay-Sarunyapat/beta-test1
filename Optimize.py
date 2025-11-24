@@ -452,12 +452,13 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
+    # CSS สำหรับเมนูด้านบน
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
     .nav-row { display:flex; gap:18px; }
 
-    /* base style ของปุ่มเมนู */
+    /* base style ของปุ่มทุกเมนู */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:50px !important;
@@ -472,33 +473,42 @@ def render_nav_pills():
       display:flex;
       align-items:center;
       justify-content:center;
-      box-shadow:0 4px 10px rgba(15,23,42,.06);
+      box-shadow:0 4px 10px rgba(15,23,42,.08);
       transition:all .15s ease-out;
+      background:linear-gradient(135deg,#f3f4f6,#e5e7eb);
+      color:#4b5563;
     }
 
     .nav-scope .nav-btn div.stButton > button:hover{
-      filter:brightness(1.03);
+      filter:brightness(1.05);
       transform:translateY(-1px);
-      box-shadow:0 8px 18px rgba(15,23,42,.12);
+      box-shadow:0 8px 18px rgba(15,23,42,.16);
     }
 
     /* ปุ่มที่ไม่ได้เลือก = เทาอ่อน */
     .nav-scope .nav-btn.inactive div.stButton > button{
       background:linear-gradient(135deg,#f3f4f6,#e5e7eb) !important;
       color:#9ca3af !important;
+      box-shadow:0 3px 8px rgba(15,23,42,.06);
+      text-shadow:none;
     }
 
-    /* ปุ่มที่เลือก = แดงเด่น */
-    .nav-scope .nav-btn.active div.stButton > button{
+    /* ปุ่มที่เลือก = แดงเด่น (ตัวนูน) */
+    .nav-scope .nav-btn.p1.active div.stButton > button,
+    .nav-scope .nav-btn.p2.active div.stButton > button,
+    .nav-scope .nav-btn.p3.active div.stButton > button,
+    .nav-scope .nav-btn.p4.active div.stButton > button{
       background:linear-gradient(135deg,#f97373,#b91c1c) !important;
       color:#ffffff !important;
       box-shadow:0 16px 32px rgba(248,113,113,.55);
       text-shadow:0 1px 3px rgba(127,29,29,.95);
       transform:translateY(-1px);
+      border-color:#b91c1c;
     }
     </style>
     """, unsafe_allow_html=True)
 
+    # ----- ส่วน logic เดิม ไม่เปลี่ยน -----
     sync_page_from_query()
     curr = st.session_state.page
 
@@ -506,7 +516,7 @@ def render_nav_pills():
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        cls = "nav-btn active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn inactive"
+        cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🧮 KOL Tier Optimizer (KTO)",
@@ -518,7 +528,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c2:
-        cls = "nav-btn active" if curr == "Tier Scenario Planner" else "nav-btn inactive"
+        cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "📂 Tier Scenario Planner",
@@ -530,7 +540,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c3:
-        cls = "nav-btn active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn inactive"
+        cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🎯 Influencer Precision Engine (IPE)",
@@ -542,7 +552,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c4:
-        cls = "nav-btn active" if curr == "Upload Data" else "nav-btn inactive"
+        cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🧾 Upload Data",
@@ -554,7 +564,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div></div>', unsafe_allow_html=True)
-
+    
 # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:
     st.info("Please sign in on your existing login view.")

@@ -452,72 +452,22 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    # CSS สำหรับเมนูด้านบน
-    st.markdown("""
-    <style>
-    .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
-    .nav-row { display:flex; gap:18px; }
-
-    /* base style ของปุ่มทุกเมนู */
-    .nav-scope .nav-btn div.stButton > button{
-      width:100%;
-      height:50px !important;
-      border-radius:9999px;
-      font-weight:800;
-      font-size:12px;
-      letter-spacing:.2px;
-      border:1px solid #d1d5db;
-      white-space:normal;
-      line-height:1.2;
-      padding:0 10px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      box-shadow:0 4px 10px rgba(15,23,42,.08);
-      transition:all .15s ease-out;
-      background:linear-gradient(135deg,#f3f4f6,#e5e7eb);
-      color:#4b5563;
-    }
-
-    .nav-scope .nav-btn div.stButton > button:hover{
-      filter:brightness(1.05);
-      transform:translateY(-1px);
-      box-shadow:0 8px 18px rgba(15,23,42,.16);
-    }
-
-    /* ปุ่มที่ไม่ได้เลือก = เทาอ่อน */
-    .nav-scope .nav-btn.inactive div.stButton > button{
-      background:linear-gradient(135deg,#f3f4f6,#e5e7eb) !important;
-      color:#9ca3af !important;
-      box-shadow:0 3px 8px rgba(15,23,42,.06);
-      text-shadow:none;
-    }
-
-    /* ปุ่มที่เลือก = แดงเด่น (ตัวนูน) */
-    .nav-scope .nav-btn.p1.active div.stButton > button,
-    .nav-scope .nav-btn.p2.active div.stButton > button,
-    .nav-scope .nav-btn.p3.active div.stButton > button,
-    .nav-scope .nav-btn.p4.active div.stButton > button{
-      background:linear-gradient(135deg,#f97373,#b91c1c) !important;
-      color:#ffffff !important;
-      box-shadow:0 16px 32px rgba(248,113,113,.55);
-      text-shadow:0 1px 3px rgba(127,29,29,.95);
-      transform:translateY(-1px);
-      border-color:#b91c1c;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # ----- ส่วน logic เดิม ไม่เปลี่ยน -----
+    # --- วาดเมนูด้วยปุ่มเหมือนเดิม แต่คราวนี้ห่อด้วย div มี id ชัดเจน ---
     sync_page_from_query()
     curr = st.session_state.page
 
-    st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+    .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
+    .nav-row   { display:flex; gap:18px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div id="custom-nav-root" class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1 inactive"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
         st.button(
             "🧮 KOL Tier Optimizer (KTO)",
             use_container_width=True,
@@ -528,8 +478,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c2:
-        cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2 inactive"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
         st.button(
             "📂 Tier Scenario Planner",
             use_container_width=True,
@@ -540,8 +489,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c3:
-        cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3 inactive"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
         st.button(
             "🎯 Influencer Precision Engine (IPE)",
             use_container_width=True,
@@ -552,8 +500,7 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c4:
-        cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4 inactive"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
         st.button(
             "🧾 Upload Data",
             use_container_width=True,
@@ -564,6 +511,61 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div></div>', unsafe_allow_html=True)
+
+    # --- JS ทาสีปุ่มตามหน้าปัจจุบัน (inline style จะชนะ CSS เดิมทั้งหมด) ---
+    st.markdown(f"""
+    <script>
+    (function(){{
+      const CURRENT_PAGE = "{curr}";
+
+      const CONFIG = [
+        {{page: "KOL Tier Optimizer (KTO)",       label: "🧮 KOL Tier Optimizer (KTO)"}},
+        {{page: "Tier Scenario Planner",         label: "📂 Tier Scenario Planner"}},
+        {{page: "Influencer Precision Engine (IPE)", label: "🎯 Influencer Precision Engine (IPE)"}},
+        {{page: "Upload Data",                   label: "🧾 Upload Data"}}
+      ];
+
+      function styleNav(){{
+        const root = document.getElementById("custom-nav-root");
+        if(!root) return;
+
+        const btns = Array.from(root.querySelectorAll("button"));
+        if(!btns.length) return;
+
+        // reset ทุกปุ่มให้เป็นเทาอ่อน
+        btns.forEach(btn => {{
+          btn.style.borderRadius = '9999px';
+          btn.style.background = 'linear-gradient(135deg,#f3f4f6,#e5e7eb)';
+          btn.style.color = '#9ca3af';
+          btn.style.boxShadow = '0 3px 8px rgba(15,23,42,.06)';
+          btn.style.textShadow = 'none';
+          btn.style.border = '1px solid #d1d5db';
+        }});
+
+        // หา config ของหน้า active
+        const conf = CONFIG.find(c => c.page === CURRENT_PAGE);
+        if(!conf) return;
+
+        // ทาสีแดงให้ปุ่มที่ label ตรงกับหน้า active
+        btns.forEach(btn => {{
+          const txt = (btn.innerText || "").trim();
+          if(txt === conf.label){{
+            btn.style.background = 'linear-gradient(135deg,#f97373,#b91c1c)';
+            btn.style.color = '#ffffff';
+            btn.style.boxShadow = '0 16px 32px rgba(248,113,113,.55)';
+            btn.style.textShadow = '0 1px 3px rgba(127,29,29,.95)';
+            btn.style.border = '1px solid #b91c1c';
+          }}
+        }});
+      }}
+
+      // เรียกหลายครั้งกันกรณี DOM ยังโหลดไม่เสร็จ
+      setTimeout(styleNav, 50);
+      setTimeout(styleNav, 250);
+      setTimeout(styleNav, 700);
+    }})();
+    </script>
+    """, unsafe_allow_html=True)
     
 # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:

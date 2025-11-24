@@ -251,11 +251,12 @@ def FG2_render_intro():
     with btn_col:
         if st.button("Next →", key="FG2_next", use_container_width=True):
             st.session_state.FG2_onboard_done = True
-            st.session_state.page = "Tier Scenario Planner"
+            # ไปหน้า KTO ตามที่ต้องการ
+            st.session_state.page = "KOL Tier Optimizer (KTO)"
             try:
-                st.query_params.update({"intro": "0", "page": "Tier Scenario Planner"})
+                st.query_params.update({"intro": "0", "page": "KOL Tier Optimizer (KTO)"})
             except Exception:
-                st.experimental_set_query_params(intro="0", page="Tier Scenario Planner")
+                st.experimental_set_query_params(intro="0", page="KOL Tier Optimizer (KTO)")
             st.rerun()
 
 # ROUTING
@@ -289,7 +290,8 @@ st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wi
 
 # -------------------- SESSION STATE --------------------
 st.session_state.setdefault("authenticated", False)
-st.session_state.setdefault("page", "Tier Scenario Planner")
+# default หน้าแรก = KTO
+st.session_state.setdefault("page", "KOL Tier Optimizer (KTO)")
 st.session_state.setdefault("prev_page", None)
 st.session_state.setdefault("ticker_rendered_once", False)
 
@@ -357,11 +359,31 @@ st.markdown("""
   position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
   box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s ease-in-out infinite;
 }
-
 @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
 @keyframes spin{ to{ transform: rotate(360deg);} }
 </style>
 """, unsafe_allow_html=True)
+
+def render_header():
+    st.markdown("""
+    <div class="app-header">
+      <div class="shine"></div>
+      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
+      <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_brand_hero():
+    st.markdown(f"""
+    <div class="brand-hero">
+      <div class="brand-ambient">
+        <span class="g1"></span><span class="g2"></span><span class="g3"></span>
+      </div>
+      <div class="brand-stage">
+        <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 def inject_cleanup_js():
     st.markdown("""
@@ -407,35 +429,11 @@ def inject_cleanup_js():
     </script>
     """, unsafe_allow_html=True)
 
-# >>>>> ฟังก์ชันใหม่นี้คือส่วนที่หายไป ทำให้เกิด NameError <<<<<<
 def render_top_banner_once():
-    """แสดง ticker ด้านบนหลัง login แค่ครั้งเดียวต่อ session"""
     if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
         return
     FG2_render_top_banner()
     st.session_state.ticker_rendered_once = True
-# >>>>> จบฟังก์ชันที่เพิ่ม <<<<<<
-
-def render_header():
-    st.markdown("""
-    <div class="app-header">
-      <div class="shine"></div>
-      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
-      <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
-    </div>
-    """, unsafe_allow_html=True)
-
-def render_brand_hero():
-    st.markdown(f"""
-    <div class="brand-hero">
-      <div class="brand-ambient">
-        <span class="g1"></span><span class="g2"></span><span class="g3"></span>
-      </div>
-      <div class="brand-stage">
-        <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
 
 # -------------------- sync page / set_page --------------------
 def sync_page_from_query():
@@ -455,12 +453,13 @@ def set_page(name: str):
     except Exception:
         st.experimental_set_query_params(page=name)
 
-# -------------------- NAV (4 ปุ่มแนวนอน + active เป็นสีสด) --------------------
+# -------------------- NAV (4 ปุ่มแนวนอน: active สีสด, inactive เทา) --------------------
 def render_nav_pills():
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
 
+    /* base: ปุ่มเทา */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:46px;
@@ -477,6 +476,7 @@ def render_nav_pills():
       padding:0 12px;
     }
 
+    /* hover: ไม่ให้เด้งขึ้นลง */
     .nav-scope .nav-btn div.stButton > button:hover{
       filter:brightness(1.03);
       transform:none !important;
@@ -485,24 +485,36 @@ def render_nav_pills():
       transform:scale(.98);
     }
 
-    .nav-scope .nav-btn.p1 div.stButton > button:disabled{
-      background: linear-gradient(135deg, #22c55e, #06b6d4);
-      color:#ffffff;
+    /* inactive = เทา */
+    .nav-scope .nav-btn.inactive div.stButton > button{
+      background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
+      color:#111827 !important;
+      opacity:0.7;
+    }
+
+    /* active ของแต่ละปุ่ม: สีสด */
+    .nav-scope .nav-btn.p1.active div.stButton > button{
+      background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
+      color:#ffffff !important;
+      opacity:1;
       box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
-    .nav-scope .nav-btn.p2 div.stButton > button:disabled{
-      background: linear-gradient(135deg, #f97316, #ef4444);
-      color:#ffffff;
+    .nav-scope .nav-btn.p2.active div.stButton > button{
+      background: linear-gradient(135deg, #f97316, #ef4444) !important;
+      color:#ffffff !important;
+      opacity:1;
       box-shadow:0 12px 24px rgba(248,113,22,.35);
     }
-    .nav-scope .nav-btn.p3 div.stButton > button:disabled{
-      background: linear-gradient(135deg, #6366f1, #22d3ee);
-      color:#ffffff;
+    .nav-scope .nav-btn.p3.active div.stButton > button{
+      background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
+      color:#ffffff !important;
+      opacity:1;
       box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
-    .nav-scope .nav-btn.p4 div.stButton > button:disabled{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e);
-      color:#ffffff;
+    .nav-scope .nav-btn.p4.active div.stButton > button{
+      background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
+      color:#ffffff !important;
+      opacity:1;
       box-shadow:0 12px 24px rgba(14,165,233,.35);
     }
     </style>
@@ -514,48 +526,52 @@ def render_nav_pills():
     st.markdown('<div class="nav-scope">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
 
+    # 1) KTO
     with c1:
-        st.markdown('<div class="nav-btn p1">', unsafe_allow_html=True)
+        cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1 inactive"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🧮 KOL Tier Optimizer (KTO)",
             use_container_width=True,
-            disabled=(curr == "KOL Tier Optimizer (KTO)"),
             key="nav_kto",
             on_click=set_page,
             args=("KOL Tier Optimizer (KTO)",),
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # 2) Tier Scenario Planner
     with c2:
-        st.markdown('<div class="nav-btn p2">', unsafe_allow_html=True)
+        cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2 inactive"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "📂 Tier Scenario Planner",
             use_container_width=True,
-            disabled=(curr == "Tier Scenario Planner"),
             key="nav_tsp",
             on_click=set_page,
             args=("Tier Scenario Planner",),
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # 3) IPE
     with c3:
-        st.markdown('<div class="nav-btn p3">', unsafe_allow_html=True)
+        cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3 inactive"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🎯 Influencer Precision Engine (IPE)",
             use_container_width=True,
-            disabled=(curr == "Influencer Precision Engine (IPE)"),
             key="nav_ipe",
             on_click=set_page,
             args=("Influencer Precision Engine (IPE)",),
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # 4) Upload Data
     with c4:
-        st.markdown('<div class="nav-btn p4">', unsafe_allow_html=True)
+        cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4 inactive"
+        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             "🧾 Upload Data",
             use_container_width=True,
-            disabled=(curr == "Upload Data"),
             key="nav_upload",
             on_click=set_page,
             args=("Upload Data",),
@@ -564,23 +580,22 @@ def render_nav_pills():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------- DUMMY PAGE FUNCS (ไม่ใช้ของจริง) --------------------
-def page_simulation_budget(): return
-def page_influencer_performance(): return
-def page_optimized_budget(): return
-
-# ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
+# ============ MAIN FRAME (หลังล็อกอิน) ============
 if not st.session_state.authenticated:
     st.info("Please sign in on your existing login view.")
     st.stop()
 
 inject_cleanup_js()
-render_top_banner_once()     # ← ตอนนี้มีฟังก์ชันแล้ว ไม่ error
+render_top_banner_once()
 render_brand_hero()
 render_header()
 render_nav_pills()
 
-# 5) dummy switch (ไม่ยุ่งกับเนื้อในข้างล่าง)
+# (ตรงนี้คง dummy switch เดิม แต่ไม่มีผลต่อเนื้อในด้านล่าง)
+def page_simulation_budget(): pass
+def page_influencer_performance(): pass
+def page_optimized_budget(): pass
+
 if st.session_state.page == "KOL Tier Optimizer (KTO)":
     page_optimized_budget()
 elif st.session_state.page == "Tier Scenario Planner":
@@ -598,7 +613,6 @@ def load_weights(csv_url):
 
 csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
 weights_df = load_weights(csv_url)
-
 # ----------------------- PAGE 1: Tier Scenario Planner (เดิม Simulation Budget) -----------------------
 if st.session_state.page == "Tier Scenario Planner":
 

@@ -452,13 +452,12 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    # CSS เมนู – ใช้ดีไซน์เดิม เปลี่ยนแค่สีตัวหนังสือ
+    # CSS เดิมของเมนู (เอามาจากโค้ดชุดแรกของคุณ)
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
     .nav-row { display:flex; gap:18px; }
 
-    /* base style ของปุ่มเมนู */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:50px !important;
@@ -469,14 +468,13 @@ def render_nav_pills():
       border:1px solid rgba(17,24,39,.08);
       box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
       background: linear-gradient(135deg, #e5e7eb, #9ca3af);
-      color:#ffffff;              /* ค่าพื้นฐานตัวหนังสือสีขาว */
+      color:#111827;
       white-space:normal;
       line-height:1.2;
       padding:0 10px;
       display:flex;
       align-items:center;
       justify-content:center;
-      transition:all .16s ease-out;
     }
 
     .nav-scope .nav-btn div.stButton > button:hover{
@@ -487,46 +485,45 @@ def render_nav_pills():
       transform:scale(.98);
     }
 
-    /* ปุ่มที่ไม่ได้เลือก – ขาวหม่นลงนิดหน่อย */
     .nav-scope .nav-btn.inactive div.stButton > button{
       background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
-      color:#f9fafb !important;   /* ขาวปกติ */
-      opacity:0.7;
+      color:#4b5563 !important;
+      opacity:0.55;
+      box-shadow:0 6px 12px rgba(15,23,42,.12);
     }
 
-    /* สีพื้นหลังของปุ่มที่เลือกแต่ละแท็บ (ตามเดิม) */
     .nav-scope .nav-btn.p1.active div.stButton > button{
       background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
+      color:#ffffff !important;
       opacity:1;
+      box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
     .nav-scope .nav-btn.p2.active div.stButton > button{
       background: linear-gradient(135deg, #f97316, #ef4444) !important;
+      color:#ffffff !important;
       opacity:1;
+      box-shadow:0 12px 24px rgba(248,113,22,.35);
     }
     .nav-scope .nav-btn.p3.active div.stButton > button{
       background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
+      color:#ffffff !important;
       opacity:1;
+      box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
     .nav-scope .nav-btn.p4.active div.stButton > button{
       background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
+      color:#ffffff !important;
       opacity:1;
-    }
-
-    /* ปุ่มที่เลือก – เปลี่ยนตัวอักษรเป็นสีแดงชัด ๆ */
-    .nav-scope .nav-btn.p1.active div.stButton > button,
-    .nav-scope .nav-btn.p2.active div.stButton > button,
-    .nav-scope .nav-btn.p3.active div.stButton > button,
-    .nav-scope .nav-btn.p4.active div.stButton > button{
-      color:#ff2b2b !important;   /* ตัวหนังสือแดง */
+      box-shadow:0 12px 24px rgba(14,165,233,.35);
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # อ่านค่าหน้าปัจจุบัน
+    # sync page จาก query / session เดิม
     sync_page_from_query()
     curr = st.session_state.page
 
-    # จุดแดง/จุดขาว
+    # ฟังก์ชันเลือกจุดแดง/จุดขาว
     def dot(page_name: str) -> str:
         return "🔴" if curr == page_name else "⚪"
 
@@ -591,6 +588,40 @@ def render_nav_pills():
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div></div>', unsafe_allow_html=True)
+
+    # ใช้ JavaScript เปลี่ยนสีตัวอักษรทีหลัง ให้ active = แดง, ที่เหลือ = ขาว
+    st.markdown(f"""
+    <script>
+    (function(){{
+      const CURRENT_PAGE = "{curr}";
+      const activeTextMap = {{
+        "KOL Tier Optimizer (KTO)": "KOL Tier Optimizer (KTO)",
+        "Tier Scenario Planner": "Tier Scenario Planner",
+        "Influencer Precision Engine (IPE)": "Influencer Precision Engine (IPE)",
+        "Upload Data": "Upload Data"
+      }};
+      const activeKeyword = activeTextMap[CURRENT_PAGE] || "";
+
+      function paintNavText(){{
+        const root = document.querySelector('.nav-scope');
+        if(!root) return;
+        const buttons = Array.from(root.querySelectorAll('button'));
+        buttons.forEach(btn => {{
+          const txt = (btn.innerText || "").trim();
+          if(activeKeyword && txt.includes(activeKeyword)){{
+            btn.style.color = '#ff2b2b';    // active = ตัวหนังสือแดง
+          }} else {{
+            btn.style.color = '#ffffff';    // อื่นๆ = ขาว
+          }}
+        }});
+      }}
+
+      setTimeout(paintNavText, 50);
+      setTimeout(paintNavText, 250);
+      setTimeout(paintNavText, 700);
+    }})();
+    </script>
+    """, unsafe_allow_html=True)
     
 # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:

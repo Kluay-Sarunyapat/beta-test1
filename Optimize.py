@@ -452,7 +452,7 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    # CSS สำหรับเมนู
+    # CSS เมนู – ใช้ดีไซน์เดิม เปลี่ยนแค่สีตัวหนังสือ
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
@@ -467,13 +467,16 @@ def render_nav_pills():
       font-size:12px;
       letter-spacing:.2px;
       border:1px solid rgba(17,24,39,.08);
+      box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
+      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+      color:#ffffff;              /* ค่าพื้นฐานตัวหนังสือสีขาว */
       white-space:normal;
       line-height:1.2;
       padding:0 10px;
       display:flex;
       align-items:center;
       justify-content:center;
-      transition:all .18s ease-out;
+      transition:all .16s ease-out;
     }
 
     .nav-scope .nav-btn div.stButton > button:hover{
@@ -484,42 +487,37 @@ def render_nav_pills():
       transform:scale(.98);
     }
 
-    /* ปุ่มที่ไม่ได้เลือก = เทาอ่อนมาก แบน ไม่มีเงา */
+    /* ปุ่มที่ไม่ได้เลือก – ขาวหม่นลงนิดหน่อย */
     .nav-scope .nav-btn.inactive div.stButton > button{
-      background:linear-gradient(135deg,#f4f4f5,#e5e7eb) !important;
-      color:#9ca3af !important;
-      border:1px solid #d4d4d8 !important;
-      box-shadow:none !important;
-      opacity:0.55;
+      background: linear-gradient(135deg, #e5e7eb, #9ca3af) !important;
+      color:#f9fafb !important;   /* ขาวปกติ */
+      opacity:0.7;
     }
 
-    /* สีพื้นหลังของปุ่มที่เลือกแต่ละแท็บ (ตามดีไซน์เดิม) */
+    /* สีพื้นหลังของปุ่มที่เลือกแต่ละแท็บ (ตามเดิม) */
     .nav-scope .nav-btn.p1.active div.stButton > button{
       background: linear-gradient(135deg, #22c55e, #06b6d4) !important;
-      color:#ffffff !important;
+      opacity:1;
     }
     .nav-scope .nav-btn.p2.active div.stButton > button{
       background: linear-gradient(135deg, #f97316, #ef4444) !important;
-      color:#ffffff !important;
+      opacity:1;
     }
     .nav-scope .nav-btn.p3.active div.stButton > button{
       background: linear-gradient(135deg, #6366f1, #22d3ee) !important;
-      color:#ffffff !important;
+      opacity:1;
     }
     .nav-scope .nav-btn.p4.active div.stButton > button{
       background: linear-gradient(135deg, #0ea5e9, #22c55e) !important;
-      color:#ffffff !important;
+      opacity:1;
     }
 
-    /* ปุ่มที่เลือก = กรอบหนา + เรืองแสงชัดมาก */
-    .nav-scope .nav-btn.active div.stButton > button{
-      border:3px solid #ffffff !important;
-      box-shadow:
-        0 0 0 4px rgba(239,68,68,.95),
-        0 22px 44px rgba(15,23,42,.70);
-      filter:drop-shadow(0 0 14px rgba(248,113,113,.98));
-      transform:translateY(-2px) scale(1.03);
-      opacity:1;
+    /* ปุ่มที่เลือก – เปลี่ยนตัวอักษรเป็นสีแดงชัด ๆ */
+    .nav-scope .nav-btn.p1.active div.stButton > button,
+    .nav-scope .nav-btn.p2.active div.stButton > button,
+    .nav-scope .nav-btn.p3.active div.stButton > button,
+    .nav-scope .nav-btn.p4.active div.stButton > button{
+      color:#ff2b2b !important;   /* ตัวหนังสือแดง */
     }
     </style>
     """, unsafe_allow_html=True)
@@ -528,11 +526,10 @@ def render_nav_pills():
     sync_page_from_query()
     curr = st.session_state.page
 
-    # ฟังก์ชันเลือกจุดสี
+    # จุดแดง/จุดขาว
     def dot(page_name: str) -> str:
         return "🔴" if curr == page_name else "⚪"
 
-    # label แต่ละปุ่ม (ไม่มี 〈CURRENT〉, ไม่มีไอคอนอื่น)
     label_kto = f"{dot('KOL Tier Optimizer (KTO)')} KOL Tier Optimizer (KTO)"
     label_tsp = f"{dot('Tier Scenario Planner')} Tier Scenario Planner"
     label_ipe = f"{dot('Influencer Precision Engine (IPE)')} Influencer Precision Engine (IPE)"

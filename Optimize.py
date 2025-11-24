@@ -334,7 +334,6 @@ st.markdown("""
 .headline{ font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .subline{ margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px); }
 
-/* Brand hero */
 .brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
 .brand-hero .brand-stage{ position:relative; z-index:1; }
 .brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
@@ -363,27 +362,109 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------- HEADER / BRAND HERO --------------------
-def render_header():
+# -------------------- Inject JS (ลบ ticker ซ้ำ + alert เขียว) --------------------
+def inject_cleanup_js():
     st.markdown("""
-    <div class="app-header">
-      <div class="shine"></div>
-      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
-      <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
-    </div>
+    <script>
+    (function(){
+      function hideDuplicateTickers(){
+        const iframes = Array.from(document.querySelectorAll('iframe'));
+        const tickers = [];
+        for (const f of iframes){
+          try{
+            const doc = f.contentDocument || f.contentWindow?.document;
+            if(!doc) continue;
+            const txt = (doc.body?.innerText || "").replace(/\\s+/g,' ').trim();
+            if (txt.includes('MBCS AI Optimization Tool') &&
+                txt.includes('Smart budget simulation') &&
+                txt.includes('Influencer optimization')){
+              tickers.push(f);
+            }
+          }catch(e){}
+        }
+        if (tickers.length > 1){
+          for(let i=0;i<tickers.length-1;i++){
+            tickers[i].style.display = 'none';
+          }
+        }
+      }
+
+      function hideLoggedInBanner(){
+        const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
+        alerts.forEach(a=>{
+          const t = (a.innerText||"").trim();
+          if (t.startsWith('You are logged in. Build your app content here.')){
+            a.style.display = 'none';
+          }
+        });
+      }
+
+      hideDuplicateTickers(); hideLoggedInBanner();
+      setTimeout(hideDuplicateTickers, 250);  setTimeout(hideLoggedInBanner, 250);
+      setTimeout(hideDuplicateTickers, 800);  setTimeout(hideLoggedInBanner, 800);
+      setTimeout(hideDuplicateTickers, 2000); setTimeout(hideLoggedInBanner, 2000);
+    })();
+    </script>
     """, unsafe_allow_html=True)
 
-def render_brand_hero():
-    st.markdown(f"""
-    <div class="brand-hero">
-      <div class="brand-ambient">
-        <span class="g1"></span><span class="g2"></span><span class="g3"></span>
+# -------------------- TICKER (render once) --------------------
+def render_top_banner_once():
+    if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
+        return
+    import json as _json
+    items_json = _json.dumps(TICKER_ITEMS)
+    html = f"""
+    <div class="top-wrap">
+      <div class="pill">
+        <div class="sheen"></div>
+        <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
+          <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
+        </div>
       </div>
-      <div class="brand-stage">
-        <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
-      </div>
+      <div class="glass pill"></div>
     </div>
-    """, unsafe_allow_html=True)
+    <style>
+      @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
+      .t-item {{ display:inline-flex; align-items:center; font-weight:600; }}
+      .t-sep {{ color:#94a3b8; margin:0 12px; }}
+      #track::after {{
+        content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
+        background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
+        transform: skewX(-18deg); animation: sweepT 7s linear infinite;
+      }}
+      @keyframes sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
+    </style>
+    <script>
+      const ITEMS = {items_json};
+      const SEPARATOR = "•";
+      const END_SPACE_PX = 40;
+      const track = document.getElementById("track");
+      if (track && ITEMS.length){{
+        const make = () => {{
+          const frag = document.createDocumentFragment();
+          ITEMS.forEach((it, i) => {{
+            const s = document.createElement("span"); s.className = "t-item"; s.style.color = it.color; s.textContent = it.text; frag.appendChild(s);
+            if (i < ITEMS.length - 1) {{ const sep = document.createElement("span"); sep.className = "t-sep"; sep.textContent = SEPARATOR; frag.appendChild(sep); }}
+          }});
+          const spacer = document.createElement("span"); spacer.style.display = "inline-block"; spacer.style.width = END_SPACE_PX + "px"; frag.appendChild(spacer);
+          return frag;
+        }};
+        const c1 = document.createElement("div"); c1.appendChild(make());
+        const c2 = document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
+        track.appendChild(c1); track.appendChild(c2);
+        requestAnimationFrame(() => {{
+          const w = c1.getBoundingClientRect().width; const dur = Math.max(16, w / 90);
+          track.style.animationDuration = dur + "s";
+        }});
+      }}
+    </script>
+    """
+    st.components.v1.html(html, height=110, scrolling=False)
+    st.session_state.ticker_rendered_once = True
+
+# -------------------- HEADER / BRAND HERO --------------------
+render_header()
+render_brand_hero()
 
 # -------------------- sync page & set_page --------------------
 def sync_page_from_query():
@@ -555,7 +636,7 @@ def render_nav_pills():
     """
     st.markdown(js, unsafe_allow_html=True)
 
-# -------------------- PLACEHOLDER PAGE FUNCTIONS --------------------
+# -------------------- PLACEHOLDER PAGE FUNCS --------------------
 def page_simulation_budget(): return
 def page_influencer_performance(): return
 def page_optimized_budget(): return
@@ -571,7 +652,7 @@ render_brand_hero()
 render_header()
 render_nav_pills()
 
-# mapping (ป้องกันซ้อนกับด้านล่าง)
+# map page -> dummy (ไม่ทับของจริงด้านล่าง)
 if st.session_state.page == "KOL Tier Optimizer (KTO)":
     page_optimized_budget()
 elif st.session_state.page == "Tier Scenario Planner":
@@ -581,12 +662,19 @@ elif st.session_state.page == "Influencer Precision Engine (IPE)":
 else:
     pass  # Upload Data
 
-# ---------- FUNCTION: Load Weights ----------
+# ===================================================================
+# ด้านล่างนี้ ให้คุณนำโค้ด “แต่ละหน้า” ที่ใช้งานได้อยู่แล้ว
+# (Tier Scenario Planner / IPE / KTO / Upload Data) วางต่อได้เลย
+# ไม่ต้องแก้อะไรภายใน หน้าพวกนั้นจะทำงานเหมือนเดิม
+# ===================================================================
+
+# ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
 @st.cache_data
 def load_weights(csv_url):
     df = pd.read_csv(csv_url)
     return df
 
+# Load weights from the published Google Sheet
 csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
 weights_df = load_weights(csv_url)
 

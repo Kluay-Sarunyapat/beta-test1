@@ -294,7 +294,6 @@ st.session_state.setdefault("page", "Tier Scenario Planner")
 st.session_state.setdefault("prev_page", None)
 st.session_state.setdefault("ticker_rendered_once", False)
 
-# Shared data
 if "inputs" not in st.session_state:
     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
 
@@ -307,18 +306,10 @@ TICKER_ITEMS = [
     {"text": "Influencer optimization",   "color": "#2563eb"},
 ]
 
-# -------------------- GLOBAL STYLES --------------------
+# -------------------- GLOBAL STYLES (header ฯลฯ) --------------------
 st.markdown("""
 <style>
 .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
-
-/* พื้นหลัง */
-body {
-  background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
-    radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
-    linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
-}
 
 /* Ticker pills */
 .top-wrap { margin-top: 10px; margin-bottom: 22px; }
@@ -367,120 +358,10 @@ body {
   box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s ease-in-out infinite;
 }
 
-/* Current page pill (ไม่ใช้แล้ว) */
-.page-pill{
-  display: inline-flex; align-items: center; gap:10px; padding: 10px 16px; margin-top: 10px;
-  border-radius: 999px; background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(34,211,238,.06)), #ffffff;
-  border: 1px solid rgba(17,24,39,.10); color:#111827; font-weight: 700;
-  box-shadow: 0 4px 16px rgba(17,24,39,.08); position: relative; overflow: hidden;
-}
-.page-pill .dot{ width: 10px; height: 10px; border-radius: 50%; background: #6366f1; box-shadow: 0 0 10px rgba(99,102,241,.6); }
-.page-pill .glowline{ position:absolute; inset:1px; border-radius:999px; background: linear-gradient(120deg, rgba(255,255,255,.6), transparent 40%, transparent 60%, rgba(255,255,255,.6)); background-size: 200% 100%; animation: gradientMove 3.2s linear infinite; pointer-events:none; }
-
 @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
 @keyframes spin{ to{ transform: rotate(360deg);} }
 </style>
 """, unsafe_allow_html=True)
-
-# -------------------- Inject JS --------------------
-def inject_cleanup_js():
-    st.markdown("""
-    <script>
-    (function(){
-      function hideDuplicateTickers(){
-        const iframes = Array.from(document.querySelectorAll('iframe'));
-        const tickers = [];
-        for (const f of iframes){
-          try{
-            const doc = f.contentDocument || f.contentWindow?.document;
-            if(!doc) continue;
-            const txt = (doc.body?.innerText || "").replace(/\\s+/g,' ').trim();
-            if (txt.includes('MBCS AI Optimization Tool') &&
-                txt.includes('Smart budget simulation') &&
-                txt.includes('Influencer optimization')){
-              tickers.push(f);
-            }
-          }catch(e){}
-        }
-        if (tickers.length > 1){
-          for(let i=0;i<tickers.length-1;i++){
-            tickers[i].style.display = 'none';
-          }
-        }
-      }
-
-      function hideLoggedInBanner(){
-        const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
-        alerts.forEach(a=>{
-          const t = (a.innerText||"").trim();
-          if (t.startsWith('You are logged in. Build your app content here.')){
-            a.style.display = 'none';
-          }
-        });
-      }
-
-      hideDuplicateTickers(); hideLoggedInBanner();
-      setTimeout(hideDuplicateTickers, 250);  setTimeout(hideLoggedInBanner, 250);
-      setTimeout(hideDuplicateTickers, 800);  setTimeout(hideLoggedInBanner, 800);
-      setTimeout(hideDuplicateTickers, 2000); setTimeout(hideLoggedInBanner, 2000);
-    })();
-    </script>
-    """, unsafe_allow_html=True)
-
-# -------------------- TICKER (render once) --------------------
-def render_top_banner_once():
-    if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
-        return
-    import json as _json
-    items_json = _json.dumps(TICKER_ITEMS)
-    html = f"""
-    <div class="top-wrap">
-      <div class="pill">
-        <div class="sheen"></div>
-        <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
-          <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
-        </div>
-      </div>
-      <div class="glass pill"></div>
-    </div>
-    <style>
-      @keyframes marq {{ 0%{{ transform:translateX(0) }} 100%{{ transform:translateX(-50%) }} }}
-      .t-item {{ display:inline-flex; align-items:center; font-weight:600; }}
-      .t-sep {{ color:#94a3b8; margin:0 12px; }}
-      #track::after {{
-        content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
-        background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
-        transform: skewX(-18deg); animation: sweepT 7s linear infinite;
-      }}
-      @keyframes sweepT {{ 0%{{ left:-120px }} 100%{{ left:120% }} }}
-    </style>
-    <script>
-      const ITEMS = {items_json};
-      const SEPARATOR = "•";
-      const END_SPACE_PX = 40;
-      const track = document.getElementById("track");
-      if (track && ITEMS.length){{
-        const make = () => {{
-          const frag = document.createDocumentFragment();
-          ITEMS.forEach((it, i) => {{
-            const s = document.createElement("span"); s.className = "t-item"; s.style.color = it.color; s.textContent = it.text; frag.appendChild(s);
-            if (i < ITEMS.length - 1) {{ const sep = document.createElement("span"); sep.className = "t-sep"; sep.textContent = SEPARATOR; frag.appendChild(sep); }}
-          }});
-          const spacer = document.createElement("span"); spacer.style.display = "inline-block"; spacer.style.width = END_SPACE_PX + "px"; frag.appendChild(spacer);
-          return frag;
-        }};
-        const c1 = document.createElement("div"); c1.appendChild(make());
-        const c2 = document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
-        track.appendChild(c1); track.appendChild(c2);
-        requestAnimationFrame(() => {{
-          const w = c1.getBoundingClientRect().width; const dur = Math.max(16, w / 90);
-          track.style.animationDuration = dur + "s";
-        }});
-      }}
-    </script>
-    """
-    st.components.v1.html(html, height=110, scrolling=False)
-    st.session_state.ticker_rendered_once = True
 
 # -------------------- HEADER / BRAND HERO --------------------
 def render_header():
@@ -504,7 +385,7 @@ def render_brand_hero():
     </div>
     """, unsafe_allow_html=True)
 
-# -------------------- NAV (active/grey pills, 4 ปุ่มใน 1 แถว) --------------------
+# -------------------- sync page & set_page --------------------
 def sync_page_from_query():
     try:
         qp = st.query_params
@@ -522,13 +403,15 @@ def set_page(name: str):
     except Exception:
         st.experimental_set_query_params(page=name)
 
+# -------------------- NAV (4 ปุ่มแนวนอน + highlight active) --------------------
 def render_nav_pills():
-    # CSS ปุ่มเมนู
+    import json as _json
+
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
 
-    /* base: ปุ่มทุกอัน (สีเทา) */
+    /* base: ปุ่มทุกอัน */
     .nav-scope .nav-btn div.stButton > button{
       width:100%;
       height:46px;
@@ -538,39 +421,46 @@ def render_nav_pills():
       letter-spacing:.2px;
       border:1px solid rgba(17,24,39,.08);
       box-shadow:0 8px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
-      color:#111827;
+      color:#ffffff;
       white-space:normal;
       line-height:1.2;
       padding:0 12px;
     }
+
+    /* override hover global เพื่อไม่ให้เลื่อนขึ้น */
     .nav-scope .nav-btn div.stButton > button:hover{
       filter:brightness(1.03);
+      transform:none !important;
     }
     .nav-scope .nav-btn div.stButton > button:active{
       transform:scale(.98);
     }
 
-    /* ปุ่ม active */
-    .nav-scope .nav-btn.p1.active div.stButton > button{
+    /* สีพื้นฐานแต่ละเมนู */
+    .nav-scope .nav-btn.p1 div.stButton > button{
       background: linear-gradient(135deg, #22c55e, #06b6d4);  /* KTO */
-      color:#ffffff;
-      box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
-    .nav-scope .nav-btn.p2.active div.stButton > button{
-      background: linear-gradient(135deg, #f97316, #ef4444);  /* Tier Scenario Planner */
-      color:#ffffff;
-      box-shadow:0 12px 24px rgba(248,113,22,.35);
+    .nav-scope .nav-btn.p2 div.stButton > button{
+      background: linear-gradient(135deg, #0ea5e9, #22c55e);  /* Tier Scenario Planner */
     }
-    .nav-scope .nav-btn.p3.active div.stButton > button{
+    .nav-scope .nav-btn.p3 div.stButton > button{
       background: linear-gradient(135deg, #6366f1, #22d3ee);  /* IPE */
-      color:#ffffff;
-      box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
-    .nav-scope .nav-btn.p4.active div.stButton > button{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e);  /* Upload Data */
-      color:#ffffff;
-      box-shadow:0 12px 24px rgba(14,165,233,.35);
+    .nav-scope .nav-btn.p4 div.stButton > button{
+      background: linear-gradient(135deg, #14b8a6, #22c55e);  /* Upload Data */
+    }
+
+    /* ไฮไลต์ด้วย class บนปุ่ม */
+    button.topnav-btn{
+      transition: filter .15s ease, box-shadow .15s ease, opacity .15s ease;
+    }
+    button.topnav-active{
+      opacity:1;
+      filter:brightness(1.12);
+      box-shadow:0 14px 30px rgba(15,23,42,.35);
+    }
+    button.topnav-inactive{
+      opacity:0.55;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -578,13 +468,21 @@ def render_nav_pills():
     sync_page_from_query()
     curr = st.session_state.page
 
+    # map page -> label
+    label_map = {
+        "KOL Tier Optimizer (KTO)": "🧮 KOL Tier Optimizer (KTO)",
+        "Tier Scenario Planner": "📂 Tier Scenario Planner",
+        "Influencer Precision Engine (IPE)": "🎯 Influencer Precision Engine (IPE)",
+        "Upload Data": "🧾 Upload Data",
+    }
+    active_label = label_map.get(curr, "")
+    nav_labels = list(label_map.values())
+
     st.markdown('<div class="nav-scope">', unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
 
-    # ปุ่ม 1: KTO
     with c1:
-        cls = "nav-btn p1 active" if curr == "KOL Tier Optimizer (KTO)" else "nav-btn p1"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-btn p1">', unsafe_allow_html=True)
         st.button(
             "🧮 KOL Tier Optimizer (KTO)",
             use_container_width=True,
@@ -594,10 +492,8 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ปุ่ม 2: Tier Scenario Planner
     with c2:
-        cls = "nav-btn p2 active" if curr == "Tier Scenario Planner" else "nav-btn p2"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-btn p2">', unsafe_allow_html=True)
         st.button(
             "📂 Tier Scenario Planner",
             use_container_width=True,
@@ -607,10 +503,8 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ปุ่ม 3: IPE
     with c3:
-        cls = "nav-btn p3 active" if curr == "Influencer Precision Engine (IPE)" else "nav-btn p3"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-btn p3">', unsafe_allow_html=True)
         st.button(
             "🎯 Influencer Precision Engine (IPE)",
             use_container_width=True,
@@ -620,10 +514,8 @@ def render_nav_pills():
         )
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # ปุ่ม 4: Upload Data
     with c4:
-        cls = "nav-btn p4 active" if curr == "Upload Data" else "nav-btn p4"
-        st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+        st.markdown('<div class="nav-btn p4">', unsafe_allow_html=True)
         st.button(
             "🧾 Upload Data",
             use_container_width=True,
@@ -635,7 +527,35 @@ def render_nav_pills():
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------- PAGE CONTENT DUMMIES --------------------
+    # JS ใส่ class active/inactive ให้ปุ่ม
+    js = f"""
+    <script>
+    const ACTIVE_LABEL = { _json.dumps(active_label) };
+    const NAV_LABELS  = { _json.dumps(nav_labels) };
+
+    function updateNavHighlight(){{
+      const btns = Array.from(document.querySelectorAll('button'));
+      btns.forEach(b => {{
+        const txt = (b.innerText || "").trim();
+        if (!NAV_LABELS.includes(txt)) return;
+        b.classList.add('topnav-btn');
+        b.classList.remove('topnav-active','topnav-inactive');
+        if (txt === ACTIVE_LABEL) {{
+          b.classList.add('topnav-active');
+        }} else {{
+          b.classList.add('topnav-inactive');
+        }}
+      }});
+    }}
+
+    updateNavHighlight();
+    setTimeout(updateNavHighlight, 200);
+    setTimeout(updateNavHighlight, 800);
+    </script>
+    """
+    st.markdown(js, unsafe_allow_html=True)
+
+# -------------------- PLACEHOLDER PAGE FUNCTIONS --------------------
 def page_simulation_budget(): return
 def page_influencer_performance(): return
 def page_optimized_budget(): return
@@ -651,7 +571,7 @@ render_brand_hero()
 render_header()
 render_nav_pills()
 
-# map page -> dummy (ไม่ทับของจริงด้านล่าง)
+# mapping (ป้องกันซ้อนกับด้านล่าง)
 if st.session_state.page == "KOL Tier Optimizer (KTO)":
     page_optimized_budget()
 elif st.session_state.page == "Tier Scenario Planner":

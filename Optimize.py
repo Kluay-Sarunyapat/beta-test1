@@ -252,7 +252,6 @@ def FG2_render_intro():
     with btn_col:
         if st.button("Next →", key="FG2_next", use_container_width=True):
             st.session_state.FG2_onboard_done = True
-            # เดิมไปหน้า Simulation Budget → ปรับเป็น Tier Scenario Planner
             st.session_state.page = "Tier Scenario Planner"
             try:
                 st.query_params.update({"intro": "0", "page": "Tier Scenario Planner"})
@@ -284,7 +283,6 @@ if not st.session_state.FG2_onboard_done:
     st.stop()
 else:
     FG2_cleanup_keep_first_ticker()
-    # Do not render extra ticker here; let your App View run below normally.
 
 # ===================== END FRONTGATE V2 =====================
 
@@ -294,7 +292,6 @@ st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wi
 
 # -------------------- SESSION STATE --------------------
 st.session_state.setdefault("authenticated", False)
-# เดิม "Simulation Budget" → หน้าใหม่ Tier Scenario Planner เป็น default
 st.session_state.setdefault("page", "Tier Scenario Planner")
 st.session_state.setdefault("prev_page", None)
 st.session_state.setdefault("ticker_rendered_once", False)
@@ -325,7 +322,7 @@ body {
     linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
 }
 
-/* Ticker pills (ของเรา) */
+/* Ticker pills */
 .top-wrap { margin-top: 10px; margin-bottom: 22px; }
 .pill { width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px; position:relative; overflow:hidden;
   background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
@@ -372,7 +369,7 @@ body {
   box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s ease-in-out infinite;
 }
 
-/* Current page pill (ไม่ใช้แล้ว แต่ CSS ทิ้งไว้ได้) */
+/* Current page pill (ไม่ใช้แล้ว) */
 .page-pill{
   display: inline-flex; align-items: center; gap:10px; padding: 10px 16px; margin-top: 10px;
   border-radius: 999px; background: linear-gradient(135deg, rgba(99,102,241,.08), rgba(34,211,238,.06)), #ffffff;
@@ -387,7 +384,7 @@ body {
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------- Inject JS: ลบตัววิ่งซ้ำ + ซ่อนแบนเนอร์สีเขียว --------------------
+# -------------------- Inject JS --------------------
 def inject_cleanup_js():
     st.markdown("""
     <script>
@@ -531,56 +528,56 @@ def render_nav_pills():
     st.markdown("""
     <style>
     .nav-scope { max-width: 900px; margin: 8px auto 6px auto; }
-    .nav-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .nav-row { display:flex; gap:18px; }
+    .nav-item { flex:1; }
 
-    /* base style ทุกปุ่ม (โทนเทา) */
-    .nav-scope div.stButton > button{
-      height: 46px;
-      border-radius: 9999px;
-      width: 100%;
-      font-weight: 800;
-      letter-spacing: .2px;
-      font-size: 14px;
-      border: 1px solid rgba(17,24,39,.08);
-      box-shadow: 0 10px 22px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
-      transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
-      color: #111827;
-    }
-    .nav-scope div.stButton > button:hover{
-      transform: translateY(-2px) scale(1.01);
-      filter: brightness(1.04);
-    }
-    .nav-scope div.stButton > button:active{
-      transform: translateY(0) scale(.98);
-    }
-
-    /* ปุ่มที่ไม่ใช่หน้า current (inactive) */
-    .nav-scope .inactive div.stButton > button{
-      background: linear-gradient(135deg, #e5e7eb, #9ca3af);
+    .nav-item div.stButton > button{
+      width:100%;
+      border-radius:9999px;
+      border:1px solid rgba(17,24,39,.08);
+      box-shadow:0 10px 18px rgba(15,23,42,.10), inset 0 0 6px rgba(255,255,255,.18);
+      font-weight:800;
+      font-size:13px;
+      letter-spacing:.2px;
       color:#111827;
+      background: linear-gradient(135deg, #e5e7eb, #9ca3af); /* default grey */
+      min-height:48px;
+      padding:6px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
+      white-space:normal;
+      line-height:1.2;
+      transition: transform .12s ease, filter .12s ease, box-shadow .15s ease;
+    }
+    .nav-item div.stButton > button:hover{
+      transform: scale(1.02);
+      filter:brightness(1.02);
+    }
+    .nav-item div.stButton > button:active{
+      transform: scale(.98);
     }
 
-    /* ปุ่มหน้า current (active) */
-    .nav-scope .p1.active div.stButton > button{
-      background: linear-gradient(135deg, #22c55e, #06b6d4);  /* KTO */
+    .nav-item.p1.active div.stButton > button{
+      background: linear-gradient(135deg, #22c55e, #06b6d4);
       color:#ffffff;
-      box-shadow: 0 12px 24px rgba(34,197,94,.35);
+      box-shadow:0 12px 24px rgba(34,197,94,.35);
     }
-    .nav-scope .p2.active div.stButton > button{
-      background: linear-gradient(135deg, #f97316, #ef4444);  /* Tier Scenario Planner */
+    .nav-item.p2.active div.stButton > button{
+      background: linear-gradient(135deg, #f97316, #ef4444);
       color:#ffffff;
-      box-shadow: 0 12px 24px rgba(248,113,22,.35);
+      box-shadow:0 12px 24px rgba(248,113,22,.35);
     }
-    .nav-scope .p3.active div.stButton > button{
-      background: linear-gradient(135deg, #6366f1, #22d3ee);  /* IPE */
+    .nav-item.p3.active div.stButton > button{
+      background: linear-gradient(135deg, #6366f1, #22d3ee);
       color:#ffffff;
-      box-shadow: 0 12px 24px rgba(59,130,246,.35);
+      box-shadow:0 12px 24px rgba(59,130,246,.35);
     }
-    .nav-scope .p4.active div.stButton > button{
-      background: linear-gradient(135deg, #0ea5e9, #22c55e);  /* Upload Data */
+    .nav-item.p4.active div.stButton > button{
+      background: linear-gradient(135deg, #0ea5e9, #22c55e);
       color:#ffffff;
-      box-shadow: 0 12px 24px rgba(14,165,233,.35);
+      box-shadow:0 12px 24px rgba(14,165,233,.35);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -588,56 +585,51 @@ def render_nav_pills():
     sync_page_from_query()
     curr = st.session_state.page
 
-    st.markdown('<div class="nav-scope"><div class="nav-grid">', unsafe_allow_html=True)
-    c1, c2, c3, c4 = st.columns(4)
+    st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
 
-    # 1) KOL Tier Optimizer (KTO) – เดิม Optimized Budget
-    with c1:
-        state = "active" if curr == "KOL Tier Optimizer (KTO)" else "inactive"
-        st.markdown(f'<div class="p1 {state}">', unsafe_allow_html=True)
-        st.button(
-            "🧮 KOL Tier Optimizer (KTO)",
-            use_container_width=True,
-            on_click=set_page,
-            args=("KOL Tier Optimizer (KTO)",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+    # 1) KOL Tier Optimizer (KTO)
+    state = "active" if curr == "KOL Tier Optimizer (KTO)" else ""
+    st.markdown(f'<div class="nav-item p1 {state}">', unsafe_allow_html=True)
+    st.button(
+        "🧮 KOL Tier Optimizer (KTO)",
+        use_container_width=True,
+        on_click=set_page,
+        args=("KOL Tier Optimizer (KTO)",),
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # 2) Tier Scenario Planner – เดิม Simulation Budget
-    with c2:
-        state = "active" if curr == "Tier Scenario Planner" else "inactive"
-        st.markdown(f'<div class="p2 {state}">', unsafe_allow_html=True)
-        st.button(
-            "📂 Tier Scenario Planner",
-            use_container_width=True,
-            on_click=set_page,
-            args=("Tier Scenario Planner",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+    # 2) Tier Scenario Planner
+    state = "active" if curr == "Tier Scenario Planner" else ""
+    st.markdown(f'<div class="nav-item p2 {state}">', unsafe_allow_html=True)
+    st.button(
+        "📂 Tier Scenario Planner",
+        use_container_width=True,
+        on_click=set_page,
+        args=("Tier Scenario Planner",),
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # 3) Influencer Precision Engine (IPE) – เดิม Influencer Performance
-    with c3:
-        state = "active" if curr == "Influencer Precision Engine (IPE)" else "inactive"
-        st.markdown(f'<div class="p3 {state}">', unsafe_allow_html=True)
-        st.button(
-            "🎯 Influencer Precision Engine (IPE)",
-            use_container_width=True,
-            on_click=set_page,
-            args=("Influencer Precision Engine (IPE)",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+    # 3) Influencer Precision Engine (IPE)
+    state = "active" if curr == "Influencer Precision Engine (IPE)" else ""
+    st.markdown(f'<div class="nav-item p3 {state}">', unsafe_allow_html=True)
+    st.button(
+        "🎯 Influencer Precision Engine (IPE)",
+        use_container_width=True,
+        on_click=set_page,
+        args=("Influencer Precision Engine (IPE)",),
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    # 4) Upload Data – เหมือนเดิม
-    with c4:
-        state = "active" if curr == "Upload Data" else "inactive"
-        st.markdown(f'<div class="p4 {state}">', unsafe_allow_html=True)
-        st.button(
-            "🧾 Upload Data",
-            use_container_width=True,
-            on_click=set_page,
-            args=("Upload Data",),
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
+    # 4) Upload Data
+    state = "active" if curr == "Upload Data" else ""
+    st.markdown(f'<div class="nav-item p4 {state}">', unsafe_allow_html=True)
+    st.button(
+        "🧾 Upload Data",
+        use_container_width=True,
+        on_click=set_page,
+        args=("Upload Data",),
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div></div>', unsafe_allow_html=True)
 
@@ -651,46 +643,36 @@ if not st.session_state.authenticated:
     st.info("Please sign in on your existing login view.")
     st.stop()
 
-# 1) เคลียร์ตัววิ่งซ้ำ + ซ่อนแบนเนอร์เขียว
 inject_cleanup_js()
-
-# 2) เรนเดอร์ตัววิ่ง
 render_top_banner_once()
-
-# 3) โลโก้ + Header + Nav
 render_brand_hero()
 render_header()
 render_nav_pills()
 
-# *** ตัด current page pill ออกแล้ว ***
-
-# 5) สลับเพจ dummy (ให้ชื่อใหม่แม็ปฟังก์ชันเดิม)
+# map page -> dummy (ไม่ทับของจริงด้านล่าง)
 if st.session_state.page == "KOL Tier Optimizer (KTO)":
-    page_optimized_budget()              # เดิม Optimized Budget
+    page_optimized_budget()
 elif st.session_state.page == "Tier Scenario Planner":
-    page_simulation_budget()             # เดิม Simulation Budget
+    page_simulation_budget()
 elif st.session_state.page == "Influencer Precision Engine (IPE)":
-    page_influencer_performance()        # เดิม Influencer Performance
+    page_influencer_performance()
 else:
-    pass  # Upload Data จัดการด้านล่าง
+    pass  # Upload Data
 
-# ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
+# ---------- FUNCTION: Load Weights ----------
 @st.cache_data
 def load_weights(csv_url):
     df = pd.read_csv(csv_url)
     return df
 
-# Load weights from the published Google Sheet
 csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
 weights_df = load_weights(csv_url)
 
-# ---------- PAGE 1: Tier Scenario Planner (เดิม Simulation Budget) ----------
+# ---------- PAGE 1: Tier Scenario Planner ----------
 if st.session_state.page == "Tier Scenario Planner":
 
-    # ===================== TITLE =====================
     st.title("📊 Tier Scenario Planner")
     
-    # ===================== LOAD weights_df =====================
     if "weights_df" in st.session_state:
         weights_df = st.session_state["weights_df"]
     elif "weights_df" in globals():
@@ -717,7 +699,6 @@ if st.session_state.page == "Tier Scenario Planner":
     if unknown_kpis:
         st.warning(f"Ignored KPIs in weights_df (not used anymore): {sorted(list(unknown_kpis))}")
     
-    # ===================== SESSION STATE =====================
     def zero_inputs():
         return {t: 0 for t in TIERS}
     
@@ -750,7 +731,6 @@ if st.session_state.page == "Tier Scenario Planner":
         ps = platforms_for_category(st.session_state.category_c)
         st.session_state.platform_c = ps[0] if ps else None
     
-    # ===================== HELPERS =====================
     def get_weights(category, platform, kpi):
         if platform is None or kpi not in ALLOWED_KPIS:
             return {}
@@ -778,7 +758,6 @@ if st.session_state.page == "Tier Scenario Planner":
     def safe_div(n, d):
         return (n / d) if d not in (0, None) else 0.0
     
-    # ===================== INPUT PANELS =====================
     st.subheader("📊 Budget Simulation Comparison")
     col_input_a, col_input_b, col_input_c = st.columns(3)
     
@@ -832,7 +811,6 @@ if st.session_state.page == "Tier Scenario Planner":
     inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
     inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
     
-    # ===================== SIMULATION =====================
     def calc_metrics(inputs, category, platform):
         w_imp   = get_weights(category, platform, "Impression")
         w_view  = get_weights(category, platform, "View")
@@ -856,7 +834,6 @@ if st.session_state.page == "Tier Scenario Planner":
     cpe_a, cpe_b, cpe_c               = safe_div(budget_a, eng_a), safe_div(budget_b, eng_b), safe_div(budget_c, eng_c)
     cpshare_a, cpshare_b, cpshare_c   = safe_div(budget_a, share_a), safe_div(budget_b, share_b), safe_div(budget_c, share_c)
     
-    # ===================== RESULTS TABLE =====================
     st.markdown("---")
     st.subheader("📈 Simulation Results Comparison")
     
@@ -982,7 +959,6 @@ if st.session_state.page == "Tier Scenario Planner":
     """)
     st.markdown(html_table, unsafe_allow_html=True)
     
-    # ===================== CHARTS =====================
     st.markdown("#### ✨ Visual Comparison")
     
     metric_order = ["Budget", "Impressions", "Views", "Engagements", "Shares"]
@@ -1088,7 +1064,6 @@ if st.session_state.page == "Influencer Precision Engine (IPE)":
         st.error("df_full not found. Provide a DataFrame named 'df_full' with columns: kol_name, platform, tier, category, followers, cost, impression, engagement, view, share")
         st.stop()
     
-    # CSS table
     st.markdown(dedent("""
     <style>
     #kol-res table{width:100%;border-collapse:separate;border-spacing:0 6px;margin:6px 0;}
@@ -1195,9 +1170,6 @@ if st.session_state.page == "Influencer Precision Engine (IPE)":
             use_container_width=True
         )
     
-    # ==========================
-    # Filters + UI
-    # ==========================
     st.header("🎯 Influencer Precision Engine (IPE)")
     
     all_tiers = ['All', 'VIP', 'Mega', 'Mid', 'Macro', 'Micro', 'Nano']
@@ -1454,7 +1426,7 @@ if st.session_state.page == "Influencer Precision Engine (IPE)":
 
 
 # ---------- PAGE 3: KOL Tier Optimizer (KTO) ----------
-elif st.session_state.page == "KOL Tier Optimizer (KTO)":
+if st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     def _rerun():
         if hasattr(st, "rerun"):

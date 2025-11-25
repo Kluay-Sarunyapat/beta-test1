@@ -1670,6 +1670,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                              primary_kpi_name, primary_value, category,
                              show_target_cols, compare_key):
 
+        # ---------------- เตรียม Scenario Map ----------------
         scen_map = {}
         scenario_order = []
 
@@ -1693,6 +1694,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             st.error("No scenarios to display.")
             return
 
+        # ---------------- Summary Header ----------------
         best_name = "Opt 1" if "Opt 1" in scen_map else scenario_order[0]
         cats_str = ", ".join(category) if isinstance(category, (list, tuple, set)) else str(category)
 
@@ -1706,7 +1708,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         st.markdown(f"### {title}")
 
-        # Budget allocation & % per scenario
+        # ---------------- Budget allocation + % share ----------------
         rows = []
         for sname in scenario_order:
             sc = scen_map[sname]
@@ -1768,7 +1770,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         with c2:
             st.altair_chart(chart2, use_container_width=True)
 
-        # Budget allocation table
+        # ---------------- Budget allocation table ----------------
         st.markdown("#### Budget allocation table (Baht & %)")
         tbl = bud_df.pivot_table(index="Tier", columns="Scenario",
                                  values=["Allocation", "Pct"], aggfunc="first")
@@ -1776,31 +1778,32 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         tbl = tbl.reset_index()
         st.dataframe(tbl, use_container_width=True)
 
-        # ---------- Performance Comparison (with persistent selection) ----------
+        # ---------------- Performance Comparison ----------------
         st.markdown("### Performance Comparison")
 
         scen_names_for_select = scenario_order
-        state_list_key = f"{compare_key}_compare_sel"
 
-        if state_list_key not in st.session_state:
-            st.session_state[state_list_key] = []
+        show_flag_key = f"{compare_key}_show_compare"
+        ms_key = f"{compare_key}_compare_ms"
 
-        # multiselect แสดงค่าที่เคยเลือกครั้งล่าสุด
+        if show_flag_key not in st.session_state:
+            st.session_state[show_flag_key] = False
+
         compare_sel = st.multiselect(
             "Select scenarios to compare:",
             scen_names_for_select,
-            default=st.session_state[state_list_key],
-            key=f"{compare_key}_multiselect"
+            key=ms_key
         )
 
-        # ปุ่ม Compare แค่บันทึก selection ลง session_state
-        if st.button("Compare", key=f"{compare_key}_btn"):
-            st.session_state[state_list_key] = compare_sel
+        if st.button("Compare", key=f"{compare_key}_compare_btn"):
+            st.session_state[show_flag_key] = True
 
-        sel = st.session_state[state_list_key]
-
-        if not sel:
+        if not st.session_state[show_flag_key]:
             st.info("Select scenarios above and click **Compare** to see performance comparison.")
+            return
+
+        if not compare_sel:
+            st.warning("Please select at least one scenario to compare.")
             return
 
         perf_rows = []
@@ -1808,7 +1811,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                    "CPM", "CPV", "CPE", "CPS"]
         for m in metrics:
             row = {"Metric": m}
-            for sname in sel:
+            for sname in compare_sel:
                 sc = scen_map[sname]
                 alloc = sc['allocation']
                 total_b = float(np.sum(list(alloc.values())))
@@ -1839,8 +1842,8 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                     val = 0.0
                 row[sname] = val
             perf_rows.append(row)
-        perf_df = pd.DataFrame(perf_rows)
 
+        perf_df = pd.DataFrame(perf_rows)
         fmt = {col: "{:,.2f}" for col in perf_df.columns if col != "Metric"}
         styled_perf = (
             perf_df.style
@@ -1865,7 +1868,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         st.error(str(e))
         st.stop()
 
-    # state step 2
     if 'show_step2_max' not in st.session_state:
         st.session_state.show_step2_max = False
     if 'show_step2_min' not in st.session_state:

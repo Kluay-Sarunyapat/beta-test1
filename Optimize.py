@@ -1490,11 +1490,11 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         return maps, warns
 
     # -------------------------------------------------
-    # 4) เวคเตอร์ weight ตาม Priority (ไม่มี balanced แล้ว)
+    # 4) เวคเตอร์ weight ตาม Priority
     # -------------------------------------------------
     def _build_weights_vector_for_priority_lenient(df, category, priority):
         """
-        priority: ชื่อ KPI ที่อยาก optimize โดยตรง (Impression, Views, Engagement, Share)
+        priority: ชื่อ KPI ที่อยาก optimize โดยตรง (IMPRESSION, VIEWS, ENGAGEMENT, SHARE)
         """
         p = str(priority).strip().lower()
         warnings = []
@@ -1548,7 +1548,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             scores=scores
         ), list(dict.fromkeys([w for w in warns if w]))
 
-    def get_five_budget_scenarios(weights_df, total_budget, min_alloc, max_alloc, priority='Impression', category='Total IPG'):
+    def get_five_budget_scenarios(weights_df, total_budget, min_alloc, max_alloc, priority='IMPRESSION', category='Total IPG'):
         warnings = []
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
         if invalid:
@@ -1867,10 +1867,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             "Total Budget",
             min_value=0.0, value=10000.0, step=100.0, key="total_budget_max"
         )
-        # ตัด balanced ออก และปรับตัวพิมพ์ใหญ่
+        # dropdown เป็นตัวพิมพ์ใหญ่ทั้งหมด
         priority = st.selectbox(
             "Optimization Priority",
-            ["Impression", "Views", "Engagement", "Share"],
+            ["IMPRESSION", "VIEWS", "ENGAGEMENT", "SHARE"],
             key="priority_max"
         )
 
@@ -1904,7 +1904,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                     total_budget=float(total_budget),
                     min_alloc={k: float(v) for k, v in min_alloc.items()},
                     max_alloc={k: float(v) for k, v in max_alloc.items()},
-                    priority=priority,      # ใช้ชื่อ KPI ตรง ๆ
+                    priority=priority,      # ใช้ชื่อ KPI ตัวใหญ่ เช่น "IMPRESSION"
                     category=category       # string หรือ list
                 )
                 for w in (warns or []):
@@ -1927,10 +1927,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     # Mode 2: Minimize Spend (Budget)
     # --------------------------
     else:
-        # KPI list ตัวพิมพ์ใหญ่ต้นคำ
+        # KPI list ตัวพิมพ์ใหญ่ทั้งหมด
         kpi_type = st.selectbox(
             "KPI to target",
-            ["Impression", "Views", "Engagement", "Share"],
+            ["IMPRESSION", "VIEWS", "ENGAGEMENT", "SHARE"],
             key="kpi_tgt"
         )
         target_value = st.number_input(
@@ -1959,7 +1959,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 scenarios, warns = get_five_target_scenarios(
                     weights_df=weights_df,
                     target_value=float(target_value),
-                    kpi_type=kpi_type,   # ใช้ชื่อ KPI ที่จัดตัวพิมพ์ใหญ่แล้ว
+                    kpi_type=kpi_type,   # ใช้ชื่อ KPI ตัวใหญ่ เช่น "IMPRESSION"
                     min_alloc=min_alloc,
                     max_alloc=max_alloc,
                     category=category

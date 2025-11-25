@@ -1667,12 +1667,13 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     # ---------------------- Dashboard เปรียบเทียบ Free vs Constraints ----------------------
     def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
-                             primary_kpi_name, primary_value, category, show_target_cols):
+                             primary_kpi_name, primary_value, category,
+                             show_target_cols, compare_key):
 
         scen_map = {}
         scenario_order = []
 
-        # 1) กรณีมี constrained scenario → Free Run = แค่ scenario เดียว (อันแรก) + Opt1..n
+        # 1) ถ้ามี constrained → Free Run ใช้อันเดียวเป็น baseline
         if cons_scenarios:
             if free_scenarios:
                 scen_map["Free Run"] = free_scenarios[0]
@@ -1681,7 +1682,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 name = f"Opt {i+1}"
                 scen_map[name] = s
                 scenario_order.append(name)
-        # 2) ถ้าไม่มี constrained เลย → เป็น Free Run หลาย scenario
+        # 2) ไม่มี constrained → Free Run หลาย scenario
         elif free_scenarios:
             for i, s in enumerate(free_scenarios):
                 name = f"Scenario {i+1}"
@@ -1692,7 +1693,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             st.error("No scenarios to display.")
             return
 
-        # pick best scenario = Opt 1 ถ้ามี, ไม่งั้น Scenario 1 / Free Run แรก
         best_name = "Opt 1" if "Opt 1" in scen_map else scenario_order[0]
         cats_str = ", ".join(category) if isinstance(category, (list, tuple, set)) else str(category)
 
@@ -1706,7 +1706,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         st.markdown(f"### {title}")
 
-        # --- Budget allocation + % share table ---
+        # Budget allocation & % per scenario
         rows = []
         for sname in scenario_order:
             sc = scen_map[sname]
@@ -1715,15 +1715,12 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             for tier in DISPLAY_ORDER:
                 val = float(alloc.get(tier, 0.0))
                 pct = (val / total_b * 100.0) if total_b > 0 else 0.0
-                rows.append({
-                    "Scenario": sname,
-                    "Tier": tier,
-                    "Allocation": val,
-                    "Pct": pct
-                })
+                rows.append({"Scenario": sname, "Tier": tier,
+                             "Allocation": val, "Pct": pct})
         bud_df = pd.DataFrame(rows)
 
-        tier_colors = ["#60a5fa", "#34d399", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]
+        tier_colors = ["#60a5fa", "#34d399", "#f59e0b",
+                       "#8b5cf6", "#ef4444", "#06b6d4"]
 
         chart1 = (
             alt.Chart(bud_df)
@@ -1771,7 +1768,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         with c2:
             st.altair_chart(chart2, use_container_width=True)
 
-        # ตาราง Budget allocation ราย Tier (Baht & %)
+        # Budget allocation table
         st.markdown("#### Budget allocation table (Baht & %)")
         tbl = bud_df.pivot_table(index="Tier", columns="Scenario",
                                  values=["Allocation", "Pct"], aggfunc="first")
@@ -1779,67 +1776,77 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         tbl = tbl.reset_index()
         st.dataframe(tbl, use_container_width=True)
 
-        # --- Performance comparison ---
+        # ---------- Performance Comparison (with persistent selection) ----------
         st.markdown("### Performance Comparison")
-        scen_names_for_select = scenario_order
 
+        scen_names_for_select = scenario_order
+        state_list_key = f"{compare_key}_compare_sel"
+
+        if state_list_key not in st.session_state:
+            st.session_state[state_list_key] = []
+
+        # multiselect แสดงค่าที่เคยเลือกครั้งล่าสุด
         compare_sel = st.multiselect(
             "Select scenarios to compare:",
             scen_names_for_select,
-            default=[]
+            default=st.session_state[state_list_key],
+            key=f"{compare_key}_multiselect"
         )
 
-        if st.button("Compare"):
-            if len(compare_sel) < 1:
-                st.info("Please select at least one scenario to compare.")
-                return
+        # ปุ่ม Compare แค่บันทึก selection ลง session_state
+        if st.button("Compare", key=f"{compare_key}_btn"):
+            st.session_state[state_list_key] = compare_sel
 
-            perf_rows = []
-            metrics = ["Budget", "Impressions", "Views", "Engagement", "Share",
-                       "CPM", "CPV", "CPE", "CPS"]
-            for m in metrics:
-                row = {"Metric": m}
-                for sname in compare_sel:
-                    sc = scen_map[sname]
-                    alloc = sc['allocation']
-                    total_b = float(np.sum(list(alloc.values())))
-                    scores = sc['scores']
-                    if m == "Budget":
-                        val = total_b
-                    elif m == "Impressions":
-                        val = scores.get("Impression", 0.0)
-                    elif m == "Views":
-                        val = scores.get("View", 0.0)
-                    elif m == "Engagement":
-                        val = scores.get("Engagement", 0.0)
-                    elif m == "Share":
-                        val = scores.get("Share", 0.0)
-                    elif m == "CPM":
-                        imp = scores.get("Impression", 0.0)
-                        val = (total_b / imp * 1000.0) if imp else 0.0
-                    elif m == "CPV":
-                        v = scores.get("View", 0.0)
-                        val = (total_b / v) if v else 0.0
-                    elif m == "CPE":
-                        e = scores.get("Engagement", 0.0)
-                        val = (total_b / e) if e else 0.0
-                    elif m == "CPS":
-                        sh = scores.get("Share", 0.0)
-                        val = (total_b / sh) if sh else 0.0
-                    else:
-                        val = 0.0
-                    row[sname] = val
-                perf_rows.append(row)
-            perf_df = pd.DataFrame(perf_rows)
+        sel = st.session_state[state_list_key]
 
-            fmt = {col: "{:,.2f}" for col in perf_df.columns if col != "Metric"}
-            styled_perf = (
-                perf_df.style
-                .format(fmt, subset=[c for c in perf_df.columns if c != "Metric"])
-            )
-            st.dataframe(styled_perf, hide_index=True, use_container_width=True)
-        else:
+        if not sel:
             st.info("Select scenarios above and click **Compare** to see performance comparison.")
+            return
+
+        perf_rows = []
+        metrics = ["Budget", "Impressions", "Views", "Engagement", "Share",
+                   "CPM", "CPV", "CPE", "CPS"]
+        for m in metrics:
+            row = {"Metric": m}
+            for sname in sel:
+                sc = scen_map[sname]
+                alloc = sc['allocation']
+                total_b = float(np.sum(list(alloc.values())))
+                scores = sc['scores']
+                if m == "Budget":
+                    val = total_b
+                elif m == "Impressions":
+                    val = scores.get("Impression", 0.0)
+                elif m == "Views":
+                    val = scores.get("View", 0.0)
+                elif m == "Engagement":
+                    val = scores.get("Engagement", 0.0)
+                elif m == "Share":
+                    val = scores.get("Share", 0.0)
+                elif m == "CPM":
+                    imp = scores.get("Impression", 0.0)
+                    val = (total_b / imp * 1000.0) if imp else 0.0
+                elif m == "CPV":
+                    v = scores.get("View", 0.0)
+                    val = (total_b / v) if v else 0.0
+                elif m == "CPE":
+                    e = scores.get("Engagement", 0.0)
+                    val = (total_b / e) if e else 0.0
+                elif m == "CPS":
+                    sh = scores.get("Share", 0.0)
+                    val = (total_b / sh) if sh else 0.0
+                else:
+                    val = 0.0
+                row[sname] = val
+            perf_rows.append(row)
+        perf_df = pd.DataFrame(perf_rows)
+
+        fmt = {col: "{:,.2f}" for col in perf_df.columns if col != "Metric"}
+        styled_perf = (
+            perf_df.style
+            .format(fmt, subset=[c for c in perf_df.columns if c != "Metric"])
+        )
+        st.dataframe(styled_perf, hide_index=True, use_container_width=True)
 
     # =========================== MAIN PAGE FLOW ===========================
     st.title("KOL Tier Optimizer (KTO)")
@@ -1858,7 +1865,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         st.error(str(e))
         st.stop()
 
-    # state สำหรับ step 2 ของ Max / Min
+    # state step 2
     if 'show_step2_max' not in st.session_state:
         st.session_state.show_step2_max = False
     if 'show_step2_min' not in st.session_state:
@@ -1908,7 +1915,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     # ---------------- Mode 1: Maximize Performance (KPIs) ----------------
     if mode == "Maximize Performance (KPIs)":
-        # STEP 1 (ให้หน้าเหมือนโหมด Min: KPI ก่อน, ตัวเลขทีหลัง)
         priority = st.selectbox(
             "Primary KPI",
             ["IMPRESSION", "VIEWS", "ENGAGEMENT", "SHARE"],
@@ -2018,7 +2024,8 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         primary_kpi_name=priority,
                         primary_value=float(total_budget),
                         category=category,
-                        show_target_cols=False
+                        show_target_cols=False,
+                        compare_key="max"
                     )
 
             else:  # Free run only
@@ -2041,12 +2048,12 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         primary_kpi_name=priority,
                         primary_value=float(total_budget),
                         category=category,
-                        show_target_cols=False
+                        show_target_cols=False,
+                        compare_key="max"
                     )
 
-    # ---------------- Mode 2: Minimize Spend (Budget) – flow เดียวกัน ----------------
+    # ---------------- Mode 2: Minimize Spend (Budget) ----------------
     else:
-        # STEP 1 (layout เหมือน Max: KPI ก่อน, ตัวเลขทีหลัง)
         kpi_type = st.selectbox(
             "Primary KPI",
             ["IMPRESSION", "VIEWS", "ENGAGEMENT", "SHARE"],
@@ -2153,7 +2160,8 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         primary_kpi_name=kpi_type,
                         primary_value=float(target_value),
                         category=category,
-                        show_target_cols=True
+                        show_target_cols=True,
+                        compare_key="min"
                     )
 
             else:  # Free run only
@@ -2176,7 +2184,8 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         primary_kpi_name=kpi_type,
                         primary_value=float(target_value),
                         category=category,
-                        show_target_cols=True
+                        show_target_cols=True,
+                        compare_key="min"
                     )
 
 # # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------

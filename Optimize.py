@@ -1304,7 +1304,7 @@ if st.session_state.page == "Influencer Precision Engine (IPE)":
                 for i, sc in enumerate(scenarios, start=1):
                     render_kol_table(sc, kpi_col, title=f"Scenario #{i}", download_label=f"Download CSV (Scenario {i})")
 
-# ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------
+# ----------------------- PAGE 3: KOL Tier Optimizer (KTO) -----------------------
 elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     import numpy as np
@@ -1665,6 +1665,175 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                        ("border-bottom", "1px solid #eaeef5")]}
         ])
 
+    # ---------------------- Dashboard เปรียบเทียบ Free vs Constraints ----------------------
+    def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
+                             primary_kpi_name, primary_value, category, show_target_cols):
+
+        # --- รวม scenario ทั้งหมด + ตั้งชื่อ Free Run / Opt 1.. ---
+        scen_map = {}
+        scenario_order = []
+
+        if free_scenarios:
+            scen_map["Free Run"] = free_scenarios[0]
+            scenario_order.append("Free Run")
+        for i, s in enumerate(cons_scenarios):
+            name = f"Opt {i+1}"
+            scen_map[name] = s
+            scenario_order.append(name)
+
+        if not scen_map:
+            st.error("No scenarios to display.")
+            return
+
+        # pick best scenario = Opt 1 ถ้ามี, ไม่งั้น Free Run
+        best_name = "Opt 1" if "Opt 1" in scen_map else scenario_order[0]
+        best_scen = scen_map[best_name]
+        cats_str = ", ".join(category) if isinstance(category, (list, tuple, set)) else str(category)
+
+        # Summary header
+        if mode == "max":
+            budget_txt = f"{primary_value:,.0f} Baht"
+            title = f"Final Best solutions : {budget_txt}  |  {primary_kpi_name}  |  {cats_str}"
+        else:
+            budget_txt = f"{best_scen.get('required_budget', 0.0):,.0f} Baht"
+            title = f"Final Best solutions : {budget_txt}  |  Target {primary_kpi_name} = {primary_value:,.0f}  |  {cats_str}"
+
+        st.markdown(f"### {title}")
+
+        # --- สร้าง DataFrame Budget allocation + % share ต่อ scenario ---
+        rows = []
+        for sname in scenario_order:
+            sc = scen_map[sname]
+            alloc = sc['allocation']
+            total_b = float(np.sum(list(alloc.values())))
+            for tier in DISPLAY_ORDER:
+                val = float(alloc.get(tier, 0.0))
+                pct = (val / total_b * 100.0) if total_b > 0 else 0.0
+                rows.append({
+                    "Scenario": sname,
+                    "Tier": tier,
+                    "Allocation": val,
+                    "Pct": pct
+                })
+        bud_df = pd.DataFrame(rows)
+
+        # --- Chart 1: Budget allocation by tier (stacked) ---
+        tier_colors = ["#60a5fa", "#34d399", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]
+        chart1 = (
+            alt.Chart(bud_df)
+            .mark_bar(cornerRadius=3)
+            .encode(
+                x=alt.X("Scenario:N", sort=scenario_order, title=None),
+                y=alt.Y("Allocation:Q", title="Budget allocation by tier"),
+                color=alt.Color("Tier:N",
+                                sort=DISPLAY_ORDER,
+                                scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
+                                legend=alt.Legend(title="Tier")),
+                tooltip=[
+                    alt.Tooltip("Scenario:N"),
+                    alt.Tooltip("Tier:N"),
+                    alt.Tooltip("Allocation:Q", format=",.0f"),
+                    alt.Tooltip("Pct:Q", format=",.1f")
+                ]
+            )
+            .properties(height=280)
+        )
+
+        # --- Chart 2: % Percentage (stacked 100%) ---
+        chart2 = (
+            alt.Chart(bud_df)
+            .mark_bar(cornerRadius=3)
+            .encode(
+                x=alt.X("Scenario:N", sort=scenario_order, title=None),
+                y=alt.Y("Pct:Q", stack="normalize", title="% Percentage by tier"),
+                color=alt.Color("Tier:N",
+                                sort=DISPLAY_ORDER,
+                                scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
+                                legend=None),
+                tooltip=[
+                    alt.Tooltip("Scenario:N"),
+                    alt.Tooltip("Tier:N"),
+                    alt.Tooltip("Allocation:Q", format=",.0f", title="Budget"),
+                    alt.Tooltip("Pct:Q", format=",.1f")
+                ]
+            )
+            .properties(height=280)
+        )
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.altair_chart(chart1, use_container_width=True)
+        with c2:
+            st.altair_chart(chart2, use_container_width=True)
+
+        # ตาราง Budget allocation ราย Tier (บาทและ %)
+        st.markdown("#### Budget allocation table (Baht & %)")
+        tbl = bud_df.pivot_table(index="Tier", columns="Scenario",
+                                 values=["Allocation", "Pct"], aggfunc="first")
+        # flatten columns
+        tbl.columns = [f"{lvl1}_{lvl2}" for lvl1, lvl2 in tbl.columns.to_flat_index()]
+        tbl = tbl.reset_index()
+        st.dataframe(tbl, use_container_width=True)
+
+        # --- Performance comparison selection ---
+        st.markdown("### Performance Comparison")
+        scen_names_for_select = scenario_order
+        default_compare = []
+        if "Free Run" in scen_names_for_select and best_name in scen_names_for_select:
+            default_compare = ["Free Run", best_name]
+        else:
+            default_compare = scen_names_for_select[:2]
+
+        compare_sel = st.multiselect(
+            "Select scenarios to compare (default: Free Run vs best option):",
+            scen_names_for_select,
+            default=default_compare
+        )
+        if len(compare_sel) < 1:
+            st.info("Please select at least one scenario to compare.")
+            return
+
+        # Build performance table
+        perf_rows = []
+        metrics = ["Budget", "Impressions", "Views", "Engagement", "Share",
+                   "CPM", "CPV", "CPE", "CPS"]
+        for m in metrics:
+            row = {"Metric": m}
+            for sname in compare_sel:
+                sc = scen_map[sname]
+                alloc = sc['allocation']
+                total_b = float(np.sum(list(alloc.values())))
+                scores = sc['scores']
+                if m == "Budget":
+                    val = total_b
+                elif m in ["Impressions", "Views", "Engagement", "Share"]:
+                    val = scores.get(m[:-1] if m == "Views" else m, 0.0)
+                elif m == "CPM":
+                    imp = scores.get("Impression", 0.0)
+                    val = (total_b / imp * 1000.0) if imp else 0.0
+                elif m == "CPV":
+                    v = scores.get("View", 0.0)
+                    val = (total_b / v) if v else 0.0
+                elif m == "CPE":
+                    e = scores.get("Engagement", 0.0)
+                    val = (total_b / e) if e else 0.0
+                elif m == "CPS":
+                    sh = scores.get("Share", 0.0)
+                    val = (total_b / sh) if sh else 0.0
+                else:
+                    val = 0.0
+                row[sname] = val
+            perf_rows.append(row)
+        perf_df = pd.DataFrame(perf_rows)
+
+        fmt = {col: "{:,.2f}" for col in perf_df.columns if col != "Metric"}
+        styled_perf = (
+            perf_df.style
+            .format(fmt, subset=[c for c in perf_df.columns if c != "Metric"])
+        )
+        st.dataframe(styled_perf, hide_index=True, use_container_width=True)
+
+    # =========================== MAIN PAGE FLOW ===========================
     st.title("KOL Tier Optimizer (KTO)")
 
     if "weights_df" in st.session_state:
@@ -1729,83 +1898,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     else:
         category = category_multi
 
-    def render_outputs(scenarios, scenario_ids, show_target_cols=False):
-        recs = []
-        for i, s in enumerate(scenarios):
-            for tier in DISPLAY_ORDER:
-                recs.append({"Scenario": scenario_ids[i], "Tier": tier, "Allocation": float(s['allocation'].get(tier, 0.0))})
-        chart_df = pd.DataFrame(recs)
-        chart_df["TierOrder"] = chart_df["Tier"].map({t: i for i, t in enumerate(DISPLAY_ORDER)})
-
-        tier_colors = ["#60a5fa", "#34d399", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]
-        sel = alt.selection_multi(fields=['Tier'], bind='legend')
-
-        chart = (
-            alt.Chart(chart_df)
-            .mark_bar(cornerRadius=5, stroke='white', strokeWidth=0.5)
-            .encode(
-                x=alt.X("Scenario:N", sort=scenario_ids, axis=alt.Axis(title=None)),
-                y=alt.Y("Allocation:Q", stack="zero", title="Allocation (Budget)"),
-                color=alt.Color("Tier:N",
-                                sort=DISPLAY_ORDER,
-                                scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
-                                legend=alt.Legend(title="Tier")),
-                order=alt.Order("TierOrder:Q"),
-                opacity=alt.condition(sel, alt.value(1), alt.value(0.35)),
-                tooltip=[alt.Tooltip("Scenario:N"),
-                         alt.Tooltip("Tier:N"),
-                         alt.Tooltip("Allocation:Q", format=",.2f")]
-            )
-            .add_selection(sel)
-            .properties(height=420)
-        )
-        st.altair_chart(chart, use_container_width=True)
-
-        rows = []
-        for i, s in enumerate(scenarios):
-            sc = s['scores']
-            row = {
-                "Scenario": scenario_ids[i],
-                "Priority KPI Score": s.get('primary_score', 0.0),
-                "Impressions": sc.get('Impression', 0.0),
-                "Views": sc.get('View', 0.0),
-                "Engagement": sc.get('Engagement', 0.0),
-                "Share": sc.get('Share', 0.0),
-                "CPE": sc.get('CPE', 0.0),
-                "CPShare": sc.get('CPShare', 0.0),
-            }
-            if show_target_cols:
-                row["Required Budget"] = s.get('required_budget', 0.0)
-                row["Target KPI"] = s.get('target_kpi_name', '')
-                row["Target KPI Achieved"] = s.get('target_kpi_value', 0.0)
-            rows.append(row)
-        kpi_df = pd.DataFrame(rows)
-
-        fmt = {
-            "Priority KPI Score": "{:,.2f}",
-            "Impressions": "{:,.2f}",
-            "Views": "{:,.2f}",
-            "Engagement": "{:,.2f}",
-            "Share": "{:,.2f}",
-            "CPE": "{:,.2f}",
-            "CPShare": "{:,.2f}",
-            "Required Budget": "{:,.2f}",
-            "Target KPI Achieved": "{:,.2f}",
-        }
-        max_cols = ["Priority KPI Score", "Impressions", "Views", "Engagement", "Share"]
-        min_cols = ["CPE", "CPShare"]
-        if show_target_cols:
-            min_cols.append("Required Budget")
-            max_cols.append("Target KPI Achieved")
-
-        styled = _style_header(
-            kpi_df.style
-            .format(fmt)
-            .apply(_highlight_max, subset=max_cols)
-            .apply(_highlight_min, subset=min_cols)
-        )
-        st.dataframe(styled, hide_index=True, use_container_width=True)
-
     # ---------------- Mode 1: Maximize Performance (KPIs) ----------------
     if mode == "Maximize Performance (KPIs)":
         # STEP 1
@@ -1825,7 +1917,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 st.session_state[f"max_{t}_max_step2"] = float(total_budget)
             st.session_state.show_step2_max = True
 
-        # STEP 2 – flow เหมือนโหมด Min
         if st.session_state.show_step2_max:
             st.markdown("### KOL Tier Optimizer (KTO) : Custom Budget Floors/Ceilings")
 
@@ -1841,7 +1932,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 key="n_best_max"
             )
 
-            # เตรียมฟังก์ชันรัน Free Run
             def run_free_max():
                 free_min = {t: 0.0 for t in TIERS}
                 free_max = {t: float(total_budget) for t in TIERS}
@@ -1858,9 +1948,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             if run_style == "Set Budget Constraints":
                 show_free_along = st.selectbox(
                     "Do you want to see the Free Run solution alongside your constrained solution? Y/N",
-                    ["Y", "N"],
-                    index=0,
-                    key="show_free_along_max"
+                    ["Y", "N"], index=0, key="show_free_along_max"
                 )
 
                 st.subheader("Budget floors/ceilings by Tier")
@@ -1902,12 +1990,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                             top_n=int(top_n)
                         )
                         warns_all = cons_warns or []
-
                         free_scenarios = []
                         if show_free_along == "Y":
                             free_scenarios, free_warns = run_free_max()
                             warns_all.extend(free_warns or [])
-
                         for w in list(dict.fromkeys([w for w in warns_all if w])):
                             st.warning(w)
 
@@ -1918,22 +2004,17 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         st.exception(e)
                         st.stop()
 
-                    if not cons_scenarios and not free_scenarios:
-                        st.error("No feasible scenarios.")
-                    else:
-                        st.success("Generated scenarios.")
-                        if free_scenarios:
-                            st.subheader("Free Run solution")
-                            ids_free = [f"Free Scenario {i+1}" for i in range(len(free_scenarios))]
-                            render_outputs(free_scenarios, ids_free, show_target_cols=False)
-                            st.subheader("Constrained solution")
-                        else:
-                            st.subheader("Constrained solution")
+                    render_kto_dashboard(
+                        free_scenarios=free_scenarios,
+                        cons_scenarios=cons_scenarios,
+                        mode="max",
+                        primary_kpi_name=priority,
+                        primary_value=float(total_budget),
+                        category=category,
+                        show_target_cols=False
+                    )
 
-                        ids_cons = [f"Scenario {i+1}" for i in range(len(cons_scenarios))]
-                        render_outputs(cons_scenarios, ids_cons, show_target_cols=False)
-
-            else:  # Free Run solution
+            else:  # Free run only
                 if st.button("RUN", key="run_max_free"):
                     try:
                         scenarios, warns = run_free_max()
@@ -1946,12 +2027,15 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         st.exception(e)
                         st.stop()
 
-                    if not scenarios:
-                        st.error("No feasible scenarios.")
-                    else:
-                        st.success("Generated scenarios.")
-                        scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
-                        render_outputs(scenarios, scenario_ids, show_target_cols=False)
+                    render_kto_dashboard(
+                        free_scenarios=scenarios,
+                        cons_scenarios=[],
+                        mode="max",
+                        primary_kpi_name=priority,
+                        primary_value=float(total_budget),
+                        category=category,
+                        show_target_cols=False
+                    )
 
     # ---------------- Mode 2: Minimize Spend (Budget) – flow เดียวกัน ----------------
     else:
@@ -1972,7 +2056,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 st.session_state[f"max_{t}_tgt_step2"] = float(BIG_MAX)
             st.session_state.show_step2_min = True
 
-        # STEP 2 – layout เดียวกับฝั่ง Max
         if st.session_state.show_step2_min:
             st.markdown("### KOL Tier Optimizer (KTO) : Custom Budget Floors/Ceilings (Target KPI Mode)")
 
@@ -1988,7 +2071,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 key="n_best_min"
             )
 
-            # ฟังก์ชัน Free Run ในโหมด Min (ไม่มี per-tier constraint)
             def run_free_min():
                 free_min = {t: 0.0 for t in TIERS}
                 free_max = {t: float(BIG_MAX) for t in TIERS}
@@ -2005,9 +2087,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             if run_style == "Set Budget Constraints":
                 show_free_along = st.selectbox(
                     "Do you want to see the Free Run solution alongside your constrained solution? Y/N",
-                    ["Y", "N"],
-                    index=0,
-                    key="show_free_along_min"
+                    ["Y", "N"], index=0, key="show_free_along_min"
                 )
 
                 with st.expander("Advanced constraints (per-tier min/max)", expanded=True):
@@ -2046,12 +2126,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                             top_n=int(top_n)
                         )
                         warns_all = cons_warns or []
-
                         free_scenarios = []
                         if show_free_along == "Y":
                             free_scenarios, free_warns = run_free_min()
                             warns_all.extend(free_warns or [])
-
                         for w in list(dict.fromkeys([w for w in warns_all if w])):
                             st.warning(w)
                     except NotEnoughDataError as e:
@@ -2061,22 +2139,17 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         st.exception(e)
                         st.stop()
 
-                    if not cons_scenarios and not free_scenarios:
-                        st.error("No feasible scenarios for the given target and constraints.")
-                    else:
-                        st.success("Generated scenarios.")
-                        if free_scenarios:
-                            st.subheader("Free Run solution")
-                            ids_free = [f"Free Scenario {i+1}" for i in range(len(free_scenarios))]
-                            render_outputs(free_scenarios, ids_free, show_target_cols=True)
-                            st.subheader("Constrained solution")
-                        else:
-                            st.subheader("Constrained solution")
+                    render_kto_dashboard(
+                        free_scenarios=free_scenarios,
+                        cons_scenarios=cons_scenarios,
+                        mode="min",
+                        primary_kpi_name=kpi_type,
+                        primary_value=float(target_value),
+                        category=category,
+                        show_target_cols=True
+                    )
 
-                        ids_cons = [f"Scenario {i+1}" for i in range(len(cons_scenarios))]
-                        render_outputs(cons_scenarios, ids_cons, show_target_cols=True)
-
-            else:  # Free Run solution
+            else:  # Free run only
                 if st.button("RUN", key="run_tgt_free"):
                     try:
                         scenarios, warns = run_free_min()
@@ -2089,12 +2162,15 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         st.exception(e)
                         st.stop()
 
-                    if not scenarios:
-                        st.error("No feasible scenarios for the given target and constraints.")
-                    else:
-                        st.success("Generated scenarios.")
-                        scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
-                        render_outputs(scenarios, scenario_ids, show_target_cols=True)
+                    render_kto_dashboard(
+                        free_scenarios=scenarios,
+                        cons_scenarios=[],
+                        mode="min",
+                        primary_kpi_name=kpi_type,
+                        primary_value=float(target_value),
+                        category=category,
+                        show_target_cols=True
+                    )
 
 # # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------
 # elif st.session_state.page == "KOL Tier Optimizer (KTO)":

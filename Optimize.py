@@ -1320,7 +1320,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         elif hasattr(st, "experimental_rerun"):
             st.experimental_rerun()
 
-    # ลำดับ Tier
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']
     BIG_MAX = 1_000_000_000.0
@@ -1329,7 +1328,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     class NotEnoughDataError(Exception):
         pass
 
-    # CSS
     st.markdown(dedent("""
     <style>
     @keyframes dfShine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -1351,7 +1349,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     </style>
     """), unsafe_allow_html=True)
 
-    # ---------------- Utils: เตรียม weights, คำนวณ weights per tier ----------------
+    # ---------- เตรียม weights ----------
     def _validate_and_prepare_weights(df):
         required_cols = {'Category', 'Tier', 'KPI', 'Weights'}
         if df is None:
@@ -1396,7 +1394,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             cat = str(category).strip()
             return df[df['Category'] == cat]
 
-    def _get_weights_for_kpi_lenient(df, category, kpi, agg='weighted_mean'):
+    def _get_weights_for_kpi_lenient(df, category, kpi):
         sub = _filter_by_category(df, category)
         sub = sub[sub['KPI'] == kpi]
 
@@ -1518,7 +1516,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         kpi_maps = base['kpi_maps']
 
         def pack(label, x_vec):
-            alloc = {TIERS[i]: float(x_vec[i]) for i in range(len(TIERS))]
+            alloc = {TIERS[i]: float(x_vec[i]) for i in range(len(TIERS))}
             scores = _compute_named_scores(x_vec, kpi_maps)
             total_b = float(np.sum(list(alloc.values())))
             cpe = (total_b / scores['Engagement']) if scores['Engagement'] else 0.0
@@ -1640,53 +1638,24 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
         return out[:top_n], list(dict.fromkeys([w for w in warnings if w]))
 
-    def _highlight_max(s):
-        try:
-            mx = s.max()
-            return ['background-color: #d9fbe2; font-weight: 700' if v == mx else '' for v in s]
-        except Exception:
-            return [''] * len(s)
-
-    def _highlight_min(s):
-        try:
-            mn = s.min()
-            return ['background-color: #fff3d6; font-weight: 700' if v == mn else '' for v in s]
-        except Exception:
-            return [''] * len(s)
-
-    def _style_header(styler):
-        return styler.set_table_styles([
-            {"selector": "th.col_heading",
-             "props": [("background", "linear-gradient(90deg, #f7faff, #eef2ff, #f7faff)"),
-                       ("background-size", "200% 100%"),
-                       ("animation", "dfShine 8s linear infinite"),
-                       ("color", "#0f172a"),
-                       ("font-weight", "900"),
-                       ("border-bottom", "1px solid #eaeef5")]}
-        ])
-
-    # ---------------------- Dashboard เปรียบเทียบ Free vs Constraints ----------------------
+    # ---------- Dashboard ----------
     def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
                              primary_kpi_name, primary_value, category,
                              show_target_cols, compare_key):
 
-        # ---------------- เตรียม Scenario Map ----------------
-        scen_map = {}
-        scenario_order = []
+        scen_map, scenario_order = {}, []
 
         if cons_scenarios:
             if free_scenarios:
                 scen_map["Free Run"] = free_scenarios[0]
                 scenario_order.append("Free Run")
             for i, s in enumerate(cons_scenarios):
-                name = f"Opt {i+1}"
-                scen_map[name] = s
-                scenario_order.append(name)
+                scen_map[f"Opt {i+1}"] = s
+                scenario_order.append(f"Opt {i+1}")
         elif free_scenarios:
             for i, s in enumerate(free_scenarios):
-                name = f"Scenario {i+1}"
-                scen_map[name] = s
-                scenario_order.append(name)
+                scen_map[f"Scenario {i+1}"] = s
+                scenario_order.append(f"Scenario {i+1}")
 
         if not scen_map:
             st.error("No scenarios to display.")
@@ -1705,7 +1674,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         st.markdown(f"### {title}")
 
-        # ---------------- Budget allocation + % share ----------------
+        # Budget allocation + %
         rows = []
         for sname in scenario_order:
             sc = scen_map[sname]
@@ -1767,7 +1736,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         with c2:
             st.altair_chart(chart2, use_container_width=True)
 
-        # ---------------- Budget allocation table ----------------
+        # ตาราง Budget allocation
         st.markdown("#### Budget allocation table (Baht & %)")
         tbl = bud_df.pivot_table(index="Tier", columns="Scenario",
                                  values=["Allocation", "Pct"], aggfunc="first")
@@ -1775,11 +1744,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         tbl = tbl.reset_index()
         st.dataframe(tbl, use_container_width=True)
 
-        # ---------------- Performance Comparison ----------------
+        # Performance Comparison
         st.markdown("### Performance Comparison")
 
         scen_names_for_select = scenario_order
-
         show_flag_key = f"{compare_key}_show_compare"
         ms_key = f"{compare_key}_compare_ms"
 
@@ -1842,13 +1810,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         perf_df = pd.DataFrame(perf_rows)
         fmt = {col: "{:,.2f}" for col in perf_df.columns if col != "Metric"}
-        styled_perf = (
-            perf_df.style
-            .format(fmt, subset=[c for c in perf_df.columns if c != "Metric"])
-        )
+        styled_perf = perf_df.style.format(fmt, subset=[c for c in perf_df.columns if c != "Metric"])
         st.dataframe(styled_perf, hide_index=True, use_container_width=True)
 
-    # =========================== MAIN PAGE FLOW ===========================
+    # =========================== MAIN ===========================
     st.title("KOL Tier Optimizer (KTO)")
 
     if "weights_df" in st.session_state:
@@ -1891,7 +1856,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         st.session_state.show_step2_min = False
         _rerun()
 
-    # เลือก KOL Category
+    # Category
     cats = sorted(df_clean['Category'].dropna().unique().tolist())
     if not cats:
         st.error("No Category found in weights_df.")
@@ -1912,7 +1877,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     else:
         category = category_multi
 
-    # ---------------- Mode 1: Maximize Performance (KPIs) ----------------
+    # ------------- Mode 1: Maximize -------------
     if mode == "Maximize Performance (KPIs)":
         priority = st.selectbox(
             "Primary KPI",
@@ -1986,17 +1951,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         )
 
                 if st.button("RUN", key="run_max_constraints"):
-                    if any(min_alloc[t] > max_alloc[t] for t in TIERS):
-                        st.error("Infeasible: some Min > Max.")
-                        st.stop()
-                    if sum(min_alloc[t] for t in TIERS) > total_budget:
-                        st.error("Infeasible: sum of minimums exceeds total budget.")
-                        st.stop()
-
-                    cons_scenarios = []
-                    free_scenarios = []
-                    warns_all = []
-
+                    cons_scenarios, free_scenarios, warns_all = [], [], []
                     try:
                         cons_scenarios, cons_warns = get_five_budget_scenarios(
                             weights_df=weights_df,
@@ -2029,7 +1984,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         category=category,
                     )
 
-            else:  # Free run only
+            else:
                 if st.button("RUN", key="run_max_free"):
                     try:
                         scenarios, warns = run_free_max()
@@ -2050,7 +2005,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         category=category,
                     )
 
-            # แสดง dashboard ถ้ามีผลลัพธ์ใน state
             if "max_results" in st.session_state:
                 r = st.session_state["max_results"]
                 render_kto_dashboard(
@@ -2061,10 +2015,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                     primary_value=r["primary_value"],
                     category=r["category"],
                     show_target_cols=False,
-                    compare_key="max",
+                    compare_key="max"
                 )
 
-    # ---------------- Mode 2: Minimize Spend (Budget) ----------------
+    # ------------- Mode 2: Minimize -------------
     else:
         kpi_type = st.selectbox(
             "Primary KPI",
@@ -2142,9 +2096,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                             )
 
                 if st.button("RUN", key="run_tgt_constraints"):
-                    cons_scenarios = []
-                    free_scenarios = []
-                    warns_all = []
+                    cons_scenarios, free_scenarios, warns_all = [], [], []
                     try:
                         cons_scenarios, cons_warns = get_five_target_scenarios(
                             weights_df=weights_df,
@@ -2177,7 +2129,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         category=category,
                     )
 
-            else:  # Free run only
+            else:
                 if st.button("RUN", key="run_tgt_free"):
                     try:
                         scenarios, warns = run_free_min()
@@ -2198,7 +2150,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         category=category,
                     )
 
-            # แสดง dashboard ถ้ามีผลลัพธ์ใน state
             if "min_results" in st.session_state:
                 r = st.session_state["min_results"]
                 render_kto_dashboard(
@@ -2209,7 +2160,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                     primary_value=r["primary_value"],
                     category=r["category"],
                     show_target_cols=True,
-                    compare_key="min",
+                    compare_key="min"
                 )
 
 # # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------

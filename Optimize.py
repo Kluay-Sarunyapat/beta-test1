@@ -1555,7 +1555,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         return out[:top_n], warnings
 
     def get_five_target_scenarios(weights_df, target_value, kpi_type, min_alloc, max_alloc,
-                                  category='Total IPG', epsilon_pct=1.5):
+                                  category='Total IPG', epsilon_pct=1.5, top_n=5):
         warnings = []
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
         if invalid:
@@ -1638,7 +1638,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             uniq.setdefault(key(s), s)
         out = list(uniq.values())
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
-        return out[:5], list(dict.fromkeys([w for w in warnings if w]))
+        return out[:top_n], list(dict.fromkeys([w for w in warnings if w]))
 
     def _highlight_max(s):
         try:
@@ -1681,8 +1681,11 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         st.error(str(e))
         st.stop()
 
+    # state สำหรับ step 2 ของ Max / Min
     if 'show_step2_max' not in st.session_state:
         st.session_state.show_step2_max = False
+    if 'show_step2_min' not in st.session_state:
+        st.session_state.show_step2_min = False
 
     mode = st.radio(
         "Select optimization mode:",
@@ -1702,8 +1705,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 st.session_state.pop(k, None)
         st.session_state.mode_prev = mode
         st.session_state.show_step2_max = False
+        st.session_state.show_step2_min = False
         _rerun()
 
+    # เลือก KOL Category
     cats = sorted(df_clean['Category'].dropna().unique().tolist())
     if not cats:
         st.error("No Category found in weights_df.")
@@ -1803,6 +1808,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     # ---------------- Mode 1: Maximize Performance (KPIs) ----------------
     if mode == "Maximize Performance (KPIs)":
+        # STEP 1
         total_budget = st.number_input(
             "Total Budget",
             min_value=0.0, value=10000.0, step=100.0, key="total_budget_max"
@@ -1813,13 +1819,13 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             key="priority_max"
         )
 
-        # ปุ่ม NEXT – auto-set Min=0, Max=Total Budget ทุก tier
         if st.button("➜ NEXT", key="next_max"):
             for t in TIERS:
                 st.session_state[f"min_{t}_max_step2"] = 0.0
                 st.session_state[f"max_{t}_max_step2"] = float(total_budget)
             st.session_state.show_step2_max = True
 
+        # STEP 2 – flow เหมือนโหมด Min
         if st.session_state.show_step2_max:
             st.markdown("### KOL Tier Optimizer (KTO) : Custom Budget Floors/Ceilings")
 
@@ -1834,6 +1840,20 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 min_value=1, max_value=10, value=5, step=1,
                 key="n_best_max"
             )
+
+            # เตรียมฟังก์ชันรัน Free Run
+            def run_free_max():
+                free_min = {t: 0.0 for t in TIERS}
+                free_max = {t: float(total_budget) for t in TIERS}
+                return get_five_budget_scenarios(
+                    weights_df=weights_df,
+                    total_budget=float(total_budget),
+                    min_alloc=free_min,
+                    max_alloc=free_max,
+                    priority=priority,
+                    category=category,
+                    top_n=int(top_n)
+                )
 
             if run_style == "Set Budget Constraints":
                 show_free_along = st.selectbox(
@@ -1885,17 +1905,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
                         free_scenarios = []
                         if show_free_along == "Y":
-                            free_min = {t: 0.0 for t in TIERS}
-                            free_max = {t: float(total_budget) for t in TIERS}
-                            free_scenarios, free_warns = get_five_budget_scenarios(
-                                weights_df=weights_df,
-                                total_budget=float(total_budget),
-                                min_alloc=free_min,
-                                max_alloc=free_max,
-                                priority=priority,
-                                category=category,
-                                top_n=int(top_n)
-                            )
+                            free_scenarios, free_warns = run_free_max()
                             warns_all.extend(free_warns or [])
 
                         for w in list(dict.fromkeys([w for w in warns_all if w])):
@@ -1923,20 +1933,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         ids_cons = [f"Scenario {i+1}" for i in range(len(cons_scenarios))]
                         render_outputs(cons_scenarios, ids_cons, show_target_cols=False)
 
-            else:
+            else:  # Free Run solution
                 if st.button("RUN", key="run_max_free"):
-                    free_min = {t: 0.0 for t in TIERS}
-                    free_max = {t: float(total_budget) for t in TIERS}
                     try:
-                        scenarios, warns = get_five_budget_scenarios(
-                            weights_df=weights_df,
-                            total_budget=float(total_budget),
-                            min_alloc=free_min,
-                            max_alloc=free_max,
-                            priority=priority,
-                            category=category,
-                            top_n=int(top_n)
-                        )
+                        scenarios, warns = run_free_max()
                         for w in (warns or []):
                             st.warning(w)
                     except NotEnoughDataError as e:
@@ -1953,8 +1953,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                         scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
                         render_outputs(scenarios, scenario_ids, show_target_cols=False)
 
-    # ---------------- Mode 2: Minimize Spend (Budget) (เหมือนเดิม) ----------------
+    # ---------------- Mode 2: Minimize Spend (Budget) – flow เดียวกัน ----------------
     else:
+        # STEP 1
         kpi_type = st.selectbox(
             "KPI to target",
             ["IMPRESSION", "VIEWS", "ENGAGEMENT", "SHARE"],
@@ -1965,47 +1966,135 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             min_value=0.0, value=1_000_000.0, step=1000.0, key="target_value_tgt"
         )
 
-        with st.expander("Advanced constraints (per-tier min/max)", expanded=True):
-            col1, col2 = st.columns(2)
-            min_alloc, max_alloc = {}, {}
-            with col1:
-                st.subheader("Minimum Allocation")
-                for t in TIERS:
-                    min_alloc[t] = st.number_input(
-                        f"Min {t}", min_value=0.0, value=0.0, step=100.0, key=f"min_{t}_tgt"
-                    )
-            with col2:
-                st.subheader("Maximum Allocation")
-                for t in TIERS:
-                    max_alloc[t] = st.number_input(
-                        f"Max {t}", min_value=0.0, value=BIG_MAX, step=100.0, key=f"max_{t}_tgt"
-                    )
+        if st.button("➜ NEXT", key="next_min"):
+            for t in TIERS:
+                st.session_state[f"min_{t}_tgt_step2"] = 0.0
+                st.session_state[f"max_{t}_tgt_step2"] = float(BIG_MAX)
+            st.session_state.show_step2_min = True
 
-        if st.button("Generate 5 scenarios to achieve KPI", key="run_tgt_free"):
-            try:
-                scenarios, warns = get_five_target_scenarios(
+        # STEP 2 – layout เดียวกับฝั่ง Max
+        if st.session_state.show_step2_min:
+            st.markdown("### KOL Tier Optimizer (KTO) : Custom Budget Floors/Ceilings (Target KPI Mode)")
+
+            run_style = st.radio(
+                "How would you like to run the optimization?",
+                ["Free Run solution", "Set Budget Constraints"],
+                key="run_style_min"
+            )
+
+            top_n = st.number_input(
+                "Number of top best Solutions (1-10):",
+                min_value=1, max_value=10, value=5, step=1,
+                key="n_best_min"
+            )
+
+            # ฟังก์ชัน Free Run ในโหมด Min (ไม่มี per-tier constraint)
+            def run_free_min():
+                free_min = {t: 0.0 for t in TIERS}
+                free_max = {t: float(BIG_MAX) for t in TIERS}
+                return get_five_target_scenarios(
                     weights_df=weights_df,
                     target_value=float(target_value),
                     kpi_type=kpi_type,
-                    min_alloc=min_alloc,
-                    max_alloc=max_alloc,
-                    category=category
+                    min_alloc=free_min,
+                    max_alloc=free_max,
+                    category=category,
+                    top_n=int(top_n)
                 )
-                for w in (warns or []):
-                    st.warning(w)
-            except NotEnoughDataError as e:
-                st.warning("We don't have enough data to optimize for this selection. " + str(e))
-                st.stop()
-            except Exception as e:
-                st.exception(e)
-                st.stop()
 
-            if not scenarios:
-                st.error("No feasible scenarios for the given target and constraints.")
-            else:
-                st.success("Generated scenarios.")
-                scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
-                render_outputs(scenarios, scenario_ids, show_target_cols=True)
+            if run_style == "Set Budget Constraints":
+                show_free_along = st.selectbox(
+                    "Do you want to see the Free Run solution alongside your constrained solution? Y/N",
+                    ["Y", "N"],
+                    index=0,
+                    key="show_free_along_min"
+                )
+
+                with st.expander("Advanced constraints (per-tier min/max)", expanded=True):
+                    col1, col2 = st.columns(2)
+                    min_alloc, max_alloc = {}, {}
+                    with col1:
+                        st.subheader("Minimum Allocation")
+                        for t in TIERS:
+                            min_alloc[t] = st.number_input(
+                                f"Min {t}",
+                                min_value=0.0,
+                                value=st.session_state.get(f"min_{t}_tgt_step2", 0.0),
+                                step=100.0,
+                                key=f"min_{t}_tgt_step2"
+                            )
+                    with col2:
+                        st.subheader("Maximum Allocation")
+                        for t in TIERS:
+                            max_alloc[t] = st.number_input(
+                                f"Max {t}",
+                                min_value=0.0,
+                                value=st.session_state.get(f"max_{t}_tgt_step2", float(BIG_MAX)),
+                                step=100.0,
+                                key=f"max_{t}_tgt_step2"
+                            )
+
+                if st.button("RUN", key="run_tgt_constraints"):
+                    try:
+                        cons_scenarios, cons_warns = get_five_target_scenarios(
+                            weights_df=weights_df,
+                            target_value=float(target_value),
+                            kpi_type=kpi_type,
+                            min_alloc=min_alloc,
+                            max_alloc=max_alloc,
+                            category=category,
+                            top_n=int(top_n)
+                        )
+                        warns_all = cons_warns or []
+
+                        free_scenarios = []
+                        if show_free_along == "Y":
+                            free_scenarios, free_warns = run_free_min()
+                            warns_all.extend(free_warns or [])
+
+                        for w in list(dict.fromkeys([w for w in warns_all if w])):
+                            st.warning(w)
+                    except NotEnoughDataError as e:
+                        st.warning("We don't have enough data to optimize for this selection. " + str(e))
+                        st.stop()
+                    except Exception as e:
+                        st.exception(e)
+                        st.stop()
+
+                    if not cons_scenarios and not free_scenarios:
+                        st.error("No feasible scenarios for the given target and constraints.")
+                    else:
+                        st.success("Generated scenarios.")
+                        if free_scenarios:
+                            st.subheader("Free Run solution")
+                            ids_free = [f"Free Scenario {i+1}" for i in range(len(free_scenarios))]
+                            render_outputs(free_scenarios, ids_free, show_target_cols=True)
+                            st.subheader("Constrained solution")
+                        else:
+                            st.subheader("Constrained solution")
+
+                        ids_cons = [f"Scenario {i+1}" for i in range(len(cons_scenarios))]
+                        render_outputs(cons_scenarios, ids_cons, show_target_cols=True)
+
+            else:  # Free Run solution
+                if st.button("RUN", key="run_tgt_free"):
+                    try:
+                        scenarios, warns = run_free_min()
+                        for w in (warns or []):
+                            st.warning(w)
+                    except NotEnoughDataError as e:
+                        st.warning("We don't have enough data to optimize for this selection. " + str(e))
+                        st.stop()
+                    except Exception as e:
+                        st.exception(e)
+                        st.stop()
+
+                    if not scenarios:
+                        st.error("No feasible scenarios for the given target and constraints.")
+                    else:
+                        st.success("Generated scenarios.")
+                        scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
+                        render_outputs(scenarios, scenario_ids, show_target_cols=True)
 
 # # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------
 # elif st.session_state.page == "KOL Tier Optimizer (KTO)":

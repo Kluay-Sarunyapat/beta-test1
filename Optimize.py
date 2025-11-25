@@ -1328,6 +1328,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     class NotEnoughDataError(Exception):
         pass
 
+    # ---------------- CSS ----------------
     st.markdown(dedent("""
     <style>
     @keyframes dfShine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
@@ -1349,7 +1350,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     </style>
     """), unsafe_allow_html=True)
 
-    # ---------- เตรียม weights ----------
+    # ---------------- Utils: เตรียม weights ----------------
     def _validate_and_prepare_weights(df):
         required_cols = {'Category', 'Tier', 'KPI', 'Weights'}
         if df is None:
@@ -1594,7 +1595,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         x_star = res.x
         B_star = float(np.sum(x_star))
-        B_cap = B_star * (1 + float(epsilon_pct)/100.0)
+
+        # (B_cap ไม่ถูกใช้แล้วในเวอร์ชันนี้ แต่เก็บโครงไว้เผื่อขยายต่อ)
+        _ = B_star * (1 + float(epsilon_pct)/100.0)
 
         kpi_maps, warn_all = _gather_kpi_maps_with_warnings(df, category, KPI_CANON)
         warnings.extend(warn_all or [])
@@ -1621,7 +1624,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         scenarios = [pack("Target-Optimal (min budget)", x_star)]
 
         A_ub2 = [np.array([-w_map[t] for t in TIERS], float), np.ones(n, float)]
-        b_ub2 = [-float(target_value), float(B_cap)]
+        b_ub2 = [-float(target_value), float(B_star * (1 + float(epsilon_pct)/100.0))]
         for i, t in enumerate(TIERS):
             c2 = np.zeros(n, float)
             c2[i] = -1.0
@@ -1638,7 +1641,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
         return out[:top_n], list(dict.fromkeys([w for w in warnings if w]))
 
-    # ---------- Dashboard ----------
+    # ---------- Dashboard (แก้กราฟให้เหมือน mockup) ----------
     def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
                              primary_kpi_name, primary_value, category,
                              show_target_cols, compare_key):
@@ -1674,7 +1677,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         st.markdown(f"### {title}")
 
-        # Budget allocation + %
+        # Budget allocation & %
         rows = []
         for sname in scenario_order:
             sc = scen_map[sname]
@@ -1690,12 +1693,37 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         tier_colors = ["#60a5fa", "#34d399", "#f59e0b",
                        "#8b5cf6", "#ef4444", "#06b6d4"]
 
-        chart1 = (
+        # ---- Chart 1: Budget Allocation by tier (faceted per Scenario, horizontal bars) ----
+        base_budget = alt.Chart(bud_df).mark_bar().encode(
+            x=alt.X("Allocation:Q", title="Budget"),
+            y=alt.Y("Tier:N", sort=DISPLAY_ORDER, title=None),
+            color=alt.Color("Tier:N",
+                            sort=DISPLAY_ORDER,
+                            scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
+                            legend=None),
+            tooltip=[
+                alt.Tooltip("Scenario:N"),
+                alt.Tooltip("Tier:N"),
+                alt.Tooltip("Allocation:Q", format=",.0f", title="Budget"),
+                alt.Tooltip("Pct:Q", format=",.1f", title="% of scenario")
+            ]
+        ).properties(height=140, width=130)
+
+        chart_budget = base_budget.facet(
+            column=alt.Column("Scenario:N",
+                              sort=scenario_order,
+                              header=alt.Header(title="Budget Allocation by tier",
+                                                labelFontWeight="bold",
+                                                labelOrient="bottom"))
+        )
+
+        # ---- Chart 2: % Percentage (stacked 100%) ----
+        chart_pct = (
             alt.Chart(bud_df)
-            .mark_bar(cornerRadius=3)
+            .mark_bar()
             .encode(
                 x=alt.X("Scenario:N", sort=scenario_order, title=None),
-                y=alt.Y("Allocation:Q", title="Budget allocation by tier"),
+                y=alt.Y("Pct:Q", stack="normalize", title="% Percentage by tier"),
                 color=alt.Color("Tier:N",
                                 sort=DISPLAY_ORDER,
                                 scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
@@ -1710,31 +1738,11 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             .properties(height=280)
         )
 
-        chart2 = (
-            alt.Chart(bud_df)
-            .mark_bar(cornerRadius=3)
-            .encode(
-                x=alt.X("Scenario:N", sort=scenario_order, title=None),
-                y=alt.Y("Pct:Q", stack="normalize", title="% Percentage by tier"),
-                color=alt.Color("Tier:N",
-                                sort=DISPLAY_ORDER,
-                                scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
-                                legend=None),
-                tooltip=[
-                    alt.Tooltip("Scenario:N"),
-                    alt.Tooltip("Tier:N"),
-                    alt.Tooltip("Allocation:Q", format=",.0f", title="Budget"),
-                    alt.Tooltip("Pct:Q", format=",.1f", title="% of scenario")
-                ]
-            )
-            .properties(height=280)
-        )
-
         c1, c2 = st.columns(2)
         with c1:
-            st.altair_chart(chart1, use_container_width=True)
+            st.altair_chart(chart_budget, use_container_width=True)
         with c2:
-            st.altair_chart(chart2, use_container_width=True)
+            st.altair_chart(chart_pct, use_container_width=True)
 
         # ตาราง Budget allocation
         st.markdown("#### Budget allocation table (Baht & %)")
@@ -1813,7 +1821,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         styled_perf = perf_df.style.format(fmt, subset=[c for c in perf_df.columns if c != "Metric"])
         st.dataframe(styled_perf, hide_index=True, use_container_width=True)
 
-    # =========================== MAIN ===========================
+    # =========================== MAIN FLOW ===========================
     st.title("KOL Tier Optimizer (KTO)")
 
     if "weights_df" in st.session_state:

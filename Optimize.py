@@ -1307,46 +1307,78 @@ if st.session_state.page == "Influencer Precision Engine (IPE)":
 # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------
 elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
+    import numpy as np
+    import pandas as pd
+    import altair as alt
+    from textwrap import dedent
+    from scipy.optimize import linprog
+    from pandas.api.types import CategoricalDtype
+
     def _rerun():
         if hasattr(st, "rerun"):
             st.rerun()
         elif hasattr(st, "experimental_rerun"):
             st.experimental_rerun()
-    
+
+    # ลำดับ Tier ที่จะใช้ในการคำนวณ/แสดงผล
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']
     BIG_MAX = 1_000_000_000.0
     KPI_CANON = ['Impression', 'View', 'Engagement', 'Share']
-    
+
     class NotEnoughDataError(Exception):
         pass
-    
+
+    # CSS สำหรับ table header
     st.markdown(dedent("""
     <style>
     @keyframes dfShine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     </style>
     """), unsafe_allow_html=True)
-    
+
+    # -------------------------------------------------
+    # 1) เตรียม weights_df ให้พร้อมใช้ + รองรับ N
+    # -------------------------------------------------
     def _validate_and_prepare_weights(df):
+        """
+        ตรวจสอบและเตรียม weights_df ให้ใช้ใน Optimizer ได้
+
+        - ต้องมี: Category, Tier, KPI, Weights
+        - ถ้าไม่มี Platform ให้สร้างเป็นคอลัมน์ว่าง
+        - ถ้ามี N ใช้เป็น sample size ในการถ่วงน้ำหนัก
+        - ถ้าไม่มี N ให้ตั้ง N = 1 ทุกแถว (เท่ากับไม่ถ่วงน้ำหนักพิเศษ)
+        """
         required_cols = {'Category', 'Tier', 'KPI', 'Weights'}
         if df is None:
             raise ValueError("weights_df not provided.")
         missing = required_cols - set(df.columns)
         if missing:
             raise ValueError(f"weights_df missing columns: {missing}")
-    
+
         df = df.copy()
+
+        # ทำให้ string สะอาด
         for col in ['Category', 'Tier', 'KPI']:
             df[col] = df[col].astype(str).str.strip()
-    
+
+        # ถ้าไม่มี Platform ให้สร้างเป็นคอลัมน์ว่าง
         if 'Platform' not in df.columns:
             df['Platform'] = ''
         df['Platform'] = df['Platform'].astype(str).str.strip()
-    
+
+        # แปลง Weights เป็นตัวเลข
         df['Weights'] = pd.to_numeric(df['Weights'], errors='coerce')
+
+        # จัดการ N (ถ้าไม่มีให้ตั้งเป็น 1)
+        if 'N' not in df.columns:
+            df['N'] = 1
+        df['N'] = pd.to_numeric(df['N'], errors='coerce').fillna(0)
+        df.loc[df['N'] < 0, 'N'] = 0  # ไม่ให้ N ติดลบ
+
         if df['Weights'].isna().any():
             raise ValueError("Found non-numeric or missing Weights in weights_df.")
-    
+
+        # map ชื่อ KPI ให้มาตรฐานตาม KPI_CANON
         kpi_map = {
             'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
             'view': 'View', 'views': 'View',
@@ -1355,39 +1387,91 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         }
         df['KPI'] = df['KPI'].str.lower().map(kpi_map).fillna(df['KPI'])
         df = df[df['KPI'].isin(KPI_CANON)]
+
         return df
-    
+
     def _platform_set(series):
         return sorted({str(x).strip() for x in series if str(x).strip() != ''})
-    
-    def _get_weights_for_kpi_lenient(df, category, kpi, agg='sum'):
-        sub = df[(df['Category'] == category) & (df['KPI'] == kpi)]
+
+    # -------------------------------------------------
+    # 2) helper: กรองตาม Category (รองรับ multi-select)
+    # -------------------------------------------------
+    def _filter_by_category(df, category):
+        """
+        รองรับทั้งกรณี category เป็น string เดียว หรือ list/tuple/set ของ category หลายตัว
+
+        - ถ้าเป็น string → เทียบเท่ากับ Category == category
+        - ถ้าเป็น list/tuple/set → เทียบเท่ากับ Category.isin(list)
+        """
+        if isinstance(category, (list, tuple, set)):
+            cats = [str(c).strip() for c in category]
+            return df[df['Category'].isin(cats)]
+        else:
+            cat = str(category).strip()
+            return df[df['Category'] == cat]
+
+    # -------------------------------------------------
+    # 3) คำนวณ weights ต่อ Tier สำหรับ KPI หนึ่งตัว (ใช้ weighted average ด้วย N)
+    # -------------------------------------------------
+    def _get_weights_for_kpi_lenient(df, category, kpi, agg='weighted_mean'):
+        """
+        ดึงน้ำหนักต่อ Tier สำหรับ KPI หนึ่งตัว ภายใต้ Category ที่ระบุ
+        - ใช้ค่าเฉลี่ยถ่วงน้ำหนักด้วย N (sample size) ในการรวม across Platform / หลาย record
+        - ถ้า sum(N) == 0 → fallback เป็น mean ปกติ
+
+        รองรับ category เป็น string เดียว หรือ list ของหลาย category
+        """
+        # 1) กรองตาม Category (รองรับ multi-select) และ KPI
+        sub = _filter_by_category(df, category)
+        sub = sub[sub['KPI'] == kpi]
+
         mp = {t: 0.0 for t in TIERS}
+
         if sub.empty:
-            return mp, f"No rows for KPI='{kpi}' in Category='{category}'.", False
-    
-        platforms = _platform_set(sub['Platform'])
-        grouped = sub.groupby('Tier', as_index=False)['Weights'].agg(agg)
+            cats_str = category if isinstance(category, str) else ", ".join(map(str, category))
+            return mp, f"No rows for KPI='{kpi}' in Category='{cats_str}'.", False
+
+        # 2) ให้แน่ใจว่า N เป็นตัวเลข
+        if 'N' not in sub.columns:
+            sub['N'] = 1.0
+        sub['N'] = pd.to_numeric(sub['N'], errors='coerce').fillna(0)
+        sub.loc[sub['N'] < 0, 'N'] = 0
+
+        # 3) group ตาม Tier และคำนวณค่าเฉลี่ยถ่วงน้ำหนักด้วย N
+        def _weighted_avg(g):
+            w = g['N'].to_numpy(dtype=float)
+            v = g['Weights'].to_numpy(dtype=float)
+            sw = w.sum()
+            if sw > 0:
+                return float((v * w).sum() / sw)
+            else:
+                # ถ้ารวม N แล้วได้ 0 → ใช้ mean ปกติ
+                return float(np.nanmean(v)) if len(v) > 0 else 0.0
+
+        grouped = sub.groupby('Tier').apply(_weighted_avg).reset_index(name='Weights')
+
         for _, row in grouped.iterrows():
             t = str(row['Tier']).strip()
             if t in mp:
                 mp[t] = float(row['Weights'])
+
         has_any = any(v != 0.0 for v in mp.values())
-    
         warn = None
         if not has_any:
-            warn = f"No usable weights for KPI='{kpi}' in Category='{category}'."
+            cats_str = category if isinstance(category, str) else ", ".join(map(str, category))
+            warn = f"No usable weights for KPI='{kpi}' in Category='{cats_str}'."
         return mp, warn, has_any
-    
+
     def _gather_kpi_maps_with_warnings(df, category, kpis=KPI_CANON):
         maps, warns = {}, []
         for k in kpis:
             m, w, _ = _get_weights_for_kpi_lenient(df, category, k)
             maps[k] = m
-            if w: warns.append(w)
+            if w:
+                warns.append(w)
         warns = list(dict.fromkeys([w for w in warns if w]))
         return maps, warns
-    
+
     def _build_weights_vector_for_priority_lenient(df, category, priority):
         p = str(priority).strip().lower()
         warnings = []
@@ -1396,9 +1480,12 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             vmap, vwarn, vok = _get_weights_for_kpi_lenient(df, category, 'View')
             emap, ewarn, eok = _get_weights_for_kpi_lenient(df, category, 'Engagement')
             for w in [iwarn, vwarn, ewarn]:
-                if w: warnings.append(w)
+                if w:
+                    warnings.append(w)
             if not (iok or vok or eok):
-                raise NotEnoughDataError(f"No usable weights for Impressions, Views, or Engagement in Category='{category}'.")
+                raise NotEnoughDataError(
+                    f"No usable weights for Impressions, Views, or Engagement in Category='{category}'."
+                )
             w = [(imap[t] + vmap[t] + emap[t]) / 3.0 for t in TIERS]
             return np.array(w, float), ['Impression', 'View', 'Engagement'], warnings
         else:
@@ -1412,27 +1499,28 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             if kpi_key not in KPI_CANON:
                 raise NotEnoughDataError(f"KPI '{priority}' is not available for optimization.")
             mp, warn, ok = _get_weights_for_kpi_lenient(df, category, kpi_key)
-            if warn: warnings.append(warn)
+            if warn:
+                warnings.append(warn)
             if not ok:
                 raise NotEnoughDataError(warn or f"No usable weights for KPI='{kpi_key}' in Category='{category}'.")
             w = [mp[t] for t in TIERS]
             return np.array(w, float), [kpi_key], warnings
-    
+
     def _compute_named_scores(x, kpi_maps):
         def dot(w_map):
             return float(sum(x[i] * w_map.get(TIERS[i], 0.0) for i in range(len(TIERS))))
         return {name: dot(wmap) for name, wmap in kpi_maps.items()}
-    
+
     def _solve_lp(c, total_budget, min_alloc, max_alloc, A_ub=None, b_ub=None):
         n = len(TIERS)
         A_eq = [np.ones(n)]
         b_eq = [total_budget]
         bounds = [(min_alloc[t], max_alloc[t]) for t in TIERS]
         return linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
-    
+
     def _solve_lp_general(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=None):
         return linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
-    
+
     def _optimize_primary(df, total_budget, min_alloc, max_alloc, priority, category):
         weights_vec, used_kpis, warns = _build_weights_vector_for_priority_lenient(df, category, priority)
         res = _solve_lp(-weights_vec, total_budget, min_alloc, max_alloc)
@@ -1449,7 +1537,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             kpi_maps=kpi_maps,
             scores=scores
         ), list(dict.fromkeys([w for w in warns if w]))
-    
+
     def get_five_budget_scenarios(weights_df, total_budget, min_alloc, max_alloc, priority='balanced', category='Total IPG'):
         warnings = []
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
@@ -1459,18 +1547,18 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             raise ValueError("Min > Max for some tiers.")
         if sum(min_alloc[t] for t in TIERS) > total_budget:
             raise ValueError("Sum of minimums exceeds total budget.")
-    
+
         df = _validate_and_prepare_weights(weights_df)
         base, warns = _optimize_primary(df, total_budget, min_alloc, max_alloc, priority, category)
         warnings.extend(warns or [])
         if base is None:
             return [], warnings
-    
+
         x_star = base['x']
         weights_vec = base['weights_vec']
         z_star = base['primary_score']
         kpi_maps = base['kpi_maps']
-    
+
         def pack(label, x_vec):
             alloc = {TIERS[i]: float(x_vec[i]) for i in range(len(TIERS))}
             scores = _compute_named_scores(x_vec, kpi_maps)
@@ -1486,9 +1574,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 primary_score=float(np.dot(x_vec, weights_vec)),
                 scores=scores_derived
             )
-    
+
         scenarios = [pack("Optimal", x_star)]
-    
+
         eps_abs = abs(z_star) * 0.015
         A_ub = [-weights_vec]
         b_ub = [-(z_star - eps_abs)]
@@ -1498,7 +1586,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             res = _solve_lp(c, total_budget, min_alloc, max_alloc, A_ub=A_ub, b_ub=b_ub)
             if res.success:
                 scenarios.append(pack(f"Near-optimal (emphasize {t})", res.x))
-    
+
         def key(s):
             return tuple(round(s['allocation'][t], 2) for t in TIERS)
         uniq = {}
@@ -1507,7 +1595,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out = list(uniq.values())
         out.sort(key=lambda s: s['primary_score'], reverse=True)
         return out[:5], warnings
-    
+
     def get_five_target_scenarios(weights_df, target_value, kpi_type, min_alloc, max_alloc, category='Total IPG', epsilon_pct=1.5):
         warnings = []
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
@@ -1515,7 +1603,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             raise ValueError(f"Missing bounds: {invalid}")
         if any(min_alloc[t] > max_alloc[t] for t in TIERS):
             raise ValueError("Min > Max for some tiers.")
-    
+
         df = _validate_and_prepare_weights(weights_df)
         kpi_map = {
             'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
@@ -1526,17 +1614,17 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         kpi_key = kpi_map.get(str(kpi_type).lower(), kpi_type)
         if kpi_key not in KPI_CANON:
             raise NotEnoughDataError(f"KPI '{kpi_type}' is not available for targeting.")
-    
+
         w_map, warn, ok = _get_weights_for_kpi_lenient(df, category, kpi_key)
         if warn:
             warnings.append(warn)
         if not ok:
             raise NotEnoughDataError(warn or f"No usable weights for KPI='{kpi_key}' in Category='{category}'.")
-    
+
         max_possible = sum(float(max_alloc[t]) * w_map.get(t, 0.0) for t in TIERS)
         if float(target_value) > max_possible + 1e-9:
             return [], warnings
-    
+
         n = len(TIERS)
         c = np.ones(n, float)
         A_ub = [np.array([-w_map[t] for t in TIERS], float)]
@@ -1545,14 +1633,14 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         res = _solve_lp_general(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds)
         if not res.success:
             return [], warnings
-    
+
         x_star = res.x
         B_star = float(np.sum(x_star))
         B_cap = B_star * (1 + float(epsilon_pct)/100.0)
-    
+
         kpi_maps, warn_all = _gather_kpi_maps_with_warnings(df, category, KPI_CANON)
         warnings.extend(warn_all or [])
-    
+
         def pack(label, x):
             alloc = {TIERS[i]: float(x[i]) for i in range(n)}
             scores = _compute_named_scores(x, kpi_maps)
@@ -1571,9 +1659,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 target_kpi_value=achieved_target_kpi,
                 scores=scores_derived
             )
-    
+
         scenarios = [pack("Target-Optimal (min budget)", x_star)]
-    
+
         A_ub2 = [np.array([-w_map[t] for t in TIERS], float), np.ones(n, float)]
         b_ub2 = [-float(target_value), float(B_cap)]
         for i, t in enumerate(TIERS):
@@ -1582,7 +1670,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             res2 = _solve_lp_general(c2, A_ub=A_ub2, b_ub=b_ub2, bounds=bounds)
             if res2.success:
                 scenarios.append(pack(f"Near-min (emphasize {t})", res2.x))
-    
+
         def key(s):
             return tuple(round(s['allocation'][t], 2) for t in TIERS)
         uniq = {}
@@ -1591,21 +1679,21 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out = list(uniq.values())
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
         return out[:5], list(dict.fromkeys([w for w in warnings if w]))
-    
+
     def _highlight_max(s):
         try:
             mx = s.max()
             return ['background-color: #d9fbe2; font-weight: 700' if v == mx else '' for v in s]
         except Exception:
             return [''] * len(s)
-    
+
     def _highlight_min(s):
         try:
             mn = s.min()
             return ['background-color: #fff3d6; font-weight: 700' if v == mn else '' for v in s]
         except Exception:
             return [''] * len(s)
-    
+
     def _style_header(styler):
         return styler.set_table_styles([
             {"selector": "th.col_heading",
@@ -1616,9 +1704,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                        ("font-weight", "900"),
                        ("border-bottom", "1px solid #eaeef5")]}
         ])
-    
+
     st.title("KOL Tier Optimizer (KTO)")
-    
+
+    # โหลด weights_df จาก session_state หรือ global
     if "weights_df" in st.session_state:
         weights_df = st.session_state["weights_df"]
     elif "weights_df" in globals():
@@ -1626,15 +1715,16 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     else:
         st.error("weights_df not found. Load it into a DataFrame named 'weights_df'.")
         st.stop()
-    
+
+    # เตรียม df_clean
     try:
         df_clean = _validate_and_prepare_weights(weights_df)
     except Exception as e:
         st.error(str(e))
         st.stop()
-    
+
     mode = st.radio("Select optimization mode:", ["Maximize KPI (given budget)", "Achieve KPI target (min budget)"])
-    
+
     if 'mode_prev' not in st.session_state:
         st.session_state.mode_prev = mode
     elif mode != st.session_state.mode_prev:
@@ -1643,11 +1733,30 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 st.session_state.pop(k, None)
         st.session_state.mode_prev = mode
         _rerun()
-    
+
+    # --------------------------
+    # เลือก Category (multi-select)
+    # --------------------------
     cats = sorted(df_clean['Category'].dropna().unique().tolist())
-    default_idx = cats.index("Total IPG") if "Total IPG" in cats else 0
-    category = st.selectbox("Select Category:", options=cats, index=default_idx)
-    
+    if not cats:
+        st.error("No Category found in weights_df.")
+        st.stop()
+
+    default_cat = "Total IPG" if "Total IPG" in cats else cats[0]
+    category_multi = st.multiselect("Select Category:", options=cats, default=[default_cat])
+
+    # ถ้าเลือก 1 category ให้ส่งเป็น string, ถ้ามากกว่า 1 ให้ส่งเป็น list
+    if len(category_multi) == 0:
+        st.warning("Please select at least one Category.")
+        st.stop()
+    elif len(category_multi) == 1:
+        category = category_multi[0]
+    else:
+        category = category_multi
+
+    # --------------------------
+    # ฟังก์ชันแสดงผล Scenario
+    # --------------------------
     def render_outputs(scenarios, scenario_ids, show_target_cols=False):
         recs = []
         for i, s in enumerate(scenarios):
@@ -1655,10 +1764,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 recs.append({"Scenario": scenario_ids[i], "Tier": tier, "Allocation": float(s['allocation'].get(tier, 0.0))})
         chart_df = pd.DataFrame(recs)
         chart_df["TierOrder"] = chart_df["Tier"].map({t: i for i, t in enumerate(DISPLAY_ORDER)})
-    
+
         tier_colors = ["#60a5fa", "#34d399", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]
         sel = alt.selection_multi(fields=['Tier'], bind='legend')
-    
+
         chart = (
             alt.Chart(chart_df)
             .mark_bar(cornerRadius=5, stroke='white', strokeWidth=0.5)
@@ -1679,7 +1788,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             .properties(height=420)
         )
         st.altair_chart(chart, use_container_width=True)
-    
+
         rows = []
         for i, s in enumerate(scenarios):
             sc = s['scores']
@@ -1699,7 +1808,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 row["Target KPI Achieved"] = s.get('target_kpi_value', 0.0)
             rows.append(row)
         kpi_df = pd.DataFrame(rows)
-    
+
         fmt = {
             "Priority KPI Score": "{:,.2f}",
             "Impressions": "{:,.2f}",
@@ -1716,7 +1825,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         if show_target_cols:
             min_cols.append("Required Budget")
             max_cols.append("Target KPI Achieved")
-    
+
         styled = _style_header(
             kpi_df.style
             .format(fmt)
@@ -1724,7 +1833,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             .apply(_highlight_min, subset=min_cols)
         )
         st.dataframe(styled, hide_index=True, use_container_width=True)
-    
+
+    # --------------------------
+    # Mode 1: Maximize KPI (given budget)
+    # --------------------------
     if mode == "Maximize KPI (given budget)":
         total_budget = st.number_input("Total Budget", min_value=0.0, value=10000.0, step=100.0, key="total_budget_max")
         priority = st.selectbox(
@@ -1732,7 +1844,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             ["balanced", "impressions", "views", "engagement", "share"],
             key="priority_max"
         )
-    
+
         with st.expander("Advanced constraints (per-tier min/max)", expanded=False):
             col1, col2 = st.columns(2)
             min_alloc, max_alloc = {}, {}
@@ -1744,7 +1856,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 st.subheader("Maximum Allocation")
                 for t in TIERS:
                     max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=float(total_budget), step=100.0, key=f"max_{t}_max")
-    
+
         if st.button("Generate 5 scenarios", key="run_max"):
             if any(min_alloc[t] > max_alloc[t] for t in TIERS):
                 st.error("Infeasible: some Min > Max.")
@@ -1752,7 +1864,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             if sum(min_alloc[t] for t in TIERS) > total_budget:
                 st.error("Infeasible: sum of minimums exceeds total budget.")
                 st.stop()
-    
+
             try:
                 scenarios, warns = get_five_budget_scenarios(
                     weights_df=weights_df,
@@ -1760,7 +1872,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                     min_alloc={k: float(v) for k, v in min_alloc.items()},
                     max_alloc={k: float(v) for k, v in max_alloc.items()},
                     priority=priority,
-                    category=category
+                    category=category   # ตรงนี้อาจเป็น string หรือ list
                 )
                 for w in (warns or []):
                     st.warning(w)
@@ -1770,22 +1882,28 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             except Exception as e:
                 st.exception(e)
                 st.stop()
-    
+
             if not scenarios:
                 st.error("No feasible scenarios.")
             else:
                 st.success("Generated scenarios.")
                 scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
                 render_outputs(scenarios, scenario_ids, show_target_cols=False)
-    
+
+    # --------------------------
+    # Mode 2: Achieve KPI target (min budget)
+    # --------------------------
     else:
         kpi_type = st.selectbox(
             "KPI to target",
             ["impressions", "views", "engagement", "share"],
             key="kpi_tgt"
         )
-        target_value = st.number_input(f"Target {kpi_type.title()}", min_value=0.0, value=1_000_000.0, step=1000.0, key="target_value_tgt")
-    
+        target_value = st.number_input(
+            f"Target {kpi_type.title()}",
+            min_value=0.0, value=1_000_000.0, step=1000.0, key="target_value_tgt"
+        )
+
         with st.expander("Advanced constraints (per-tier min/max)", expanded=True):
             col1, col2 = st.columns(2)
             min_alloc, max_alloc = {}, {}
@@ -1797,15 +1915,16 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 st.subheader("Maximum Allocation")
                 for t in TIERS:
                     max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=BIG_MAX, step=100.0, key=f"max_{t}_tgt")
-    
+
         if st.button("Generate 5 scenarios to achieve KPI", key="run_tgt_free"):
             try:
                 scenarios, warns = get_five_target_scenarios(
                     weights_df=weights_df,
                     target_value=float(target_value),
                     kpi_type=kpi_type,
-                    min_alloc=min_alloc, max_alloc=max_alloc,
-                    category=category
+                    min_alloc=min_alloc,
+                    max_alloc=max_alloc,
+                    category=category      # ตรงนี้อาจเป็น string หรือ list
                 )
                 for w in (warns or []):
                     st.warning(w)
@@ -1815,13 +1934,532 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             except Exception as e:
                 st.exception(e)
                 st.stop()
-    
+
             if not scenarios:
                 st.error("No feasible scenarios for the given target and constraints.")
             else:
                 st.success("Generated scenarios.")
                 scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
                 render_outputs(scenarios, scenario_ids, show_target_cols=True)
+
+# # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------
+# elif st.session_state.page == "KOL Tier Optimizer (KTO)":
+
+#     def _rerun():
+#         if hasattr(st, "rerun"):
+#             st.rerun()
+#         elif hasattr(st, "experimental_rerun"):
+#             st.experimental_rerun()
+    
+#     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
+#     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']
+#     BIG_MAX = 1_000_000_000.0
+#     KPI_CANON = ['Impression', 'View', 'Engagement', 'Share']
+    
+#     class NotEnoughDataError(Exception):
+#         pass
+    
+#     st.markdown(dedent("""
+#     <style>
+#     @keyframes dfShine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+#     </style>
+#     """), unsafe_allow_html=True)
+    
+#     def _validate_and_prepare_weights(df):
+#         required_cols = {'Category', 'Tier', 'KPI', 'Weights'}
+#         if df is None:
+#             raise ValueError("weights_df not provided.")
+#         missing = required_cols - set(df.columns)
+#         if missing:
+#             raise ValueError(f"weights_df missing columns: {missing}")
+    
+#         df = df.copy()
+#         for col in ['Category', 'Tier', 'KPI']:
+#             df[col] = df[col].astype(str).str.strip()
+    
+#         if 'Platform' not in df.columns:
+#             df['Platform'] = ''
+#         df['Platform'] = df['Platform'].astype(str).str.strip()
+    
+#         df['Weights'] = pd.to_numeric(df['Weights'], errors='coerce')
+#         if df['Weights'].isna().any():
+#             raise ValueError("Found non-numeric or missing Weights in weights_df.")
+    
+#         kpi_map = {
+#             'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
+#             'view': 'View', 'views': 'View',
+#             'engagement': 'Engagement', 'eng': 'Engagement',
+#             'share': 'Share', 'shares': 'Share'
+#         }
+#         df['KPI'] = df['KPI'].str.lower().map(kpi_map).fillna(df['KPI'])
+#         df = df[df['KPI'].isin(KPI_CANON)]
+#         return df
+    
+#     def _platform_set(series):
+#         return sorted({str(x).strip() for x in series if str(x).strip() != ''})
+    
+#     def _get_weights_for_kpi_lenient(df, category, kpi, agg='sum'):
+#         sub = df[(df['Category'] == category) & (df['KPI'] == kpi)]
+#         mp = {t: 0.0 for t in TIERS}
+#         if sub.empty:
+#             return mp, f"No rows for KPI='{kpi}' in Category='{category}'.", False
+    
+#         platforms = _platform_set(sub['Platform'])
+#         grouped = sub.groupby('Tier', as_index=False)['Weights'].agg(agg)
+#         for _, row in grouped.iterrows():
+#             t = str(row['Tier']).strip()
+#             if t in mp:
+#                 mp[t] = float(row['Weights'])
+#         has_any = any(v != 0.0 for v in mp.values())
+    
+#         warn = None
+#         if not has_any:
+#             warn = f"No usable weights for KPI='{kpi}' in Category='{category}'."
+#         return mp, warn, has_any
+    
+#     def _gather_kpi_maps_with_warnings(df, category, kpis=KPI_CANON):
+#         maps, warns = {}, []
+#         for k in kpis:
+#             m, w, _ = _get_weights_for_kpi_lenient(df, category, k)
+#             maps[k] = m
+#             if w: warns.append(w)
+#         warns = list(dict.fromkeys([w for w in warns if w]))
+#         return maps, warns
+    
+#     def _build_weights_vector_for_priority_lenient(df, category, priority):
+#         p = str(priority).strip().lower()
+#         warnings = []
+#         if p == 'balanced':
+#             imap, iwarn, iok = _get_weights_for_kpi_lenient(df, category, 'Impression')
+#             vmap, vwarn, vok = _get_weights_for_kpi_lenient(df, category, 'View')
+#             emap, ewarn, eok = _get_weights_for_kpi_lenient(df, category, 'Engagement')
+#             for w in [iwarn, vwarn, ewarn]:
+#                 if w: warnings.append(w)
+#             if not (iok or vok or eok):
+#                 raise NotEnoughDataError(f"No usable weights for Impressions, Views, or Engagement in Category='{category}'.")
+#             w = [(imap[t] + vmap[t] + emap[t]) / 3.0 for t in TIERS]
+#             return np.array(w, float), ['Impression', 'View', 'Engagement'], warnings
+#         else:
+#             kpi_map = {
+#                 'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
+#                 'view': 'View', 'views': 'View',
+#                 'engagement': 'Engagement', 'eng': 'Engagement',
+#                 'share': 'Share'
+#             }
+#             kpi_key = kpi_map.get(p, p)
+#             if kpi_key not in KPI_CANON:
+#                 raise NotEnoughDataError(f"KPI '{priority}' is not available for optimization.")
+#             mp, warn, ok = _get_weights_for_kpi_lenient(df, category, kpi_key)
+#             if warn: warnings.append(warn)
+#             if not ok:
+#                 raise NotEnoughDataError(warn or f"No usable weights for KPI='{kpi_key}' in Category='{category}'.")
+#             w = [mp[t] for t in TIERS]
+#             return np.array(w, float), [kpi_key], warnings
+    
+#     def _compute_named_scores(x, kpi_maps):
+#         def dot(w_map):
+#             return float(sum(x[i] * w_map.get(TIERS[i], 0.0) for i in range(len(TIERS))))
+#         return {name: dot(wmap) for name, wmap in kpi_maps.items()}
+    
+#     def _solve_lp(c, total_budget, min_alloc, max_alloc, A_ub=None, b_ub=None):
+#         n = len(TIERS)
+#         A_eq = [np.ones(n)]
+#         b_eq = [total_budget]
+#         bounds = [(min_alloc[t], max_alloc[t]) for t in TIERS]
+#         return linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+    
+#     def _solve_lp_general(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=None):
+#         return linprog(c, A_ub=A_ub, b_ub=b_ub, A_eq=A_eq, b_eq=b_eq, bounds=bounds, method='highs')
+    
+#     def _optimize_primary(df, total_budget, min_alloc, max_alloc, priority, category):
+#         weights_vec, used_kpis, warns = _build_weights_vector_for_priority_lenient(df, category, priority)
+#         res = _solve_lp(-weights_vec, total_budget, min_alloc, max_alloc)
+#         if not res.success:
+#             return None, warns
+#         kpi_maps, warn_all = _gather_kpi_maps_with_warnings(df, category, KPI_CANON)
+#         warns.extend(warn_all or [])
+#         scores = _compute_named_scores(res.x, kpi_maps)
+#         return dict(
+#             x=res.x,
+#             weights_vec=weights_vec,
+#             used_kpis=used_kpis,
+#             primary_score=float(np.dot(res.x, weights_vec)),
+#             kpi_maps=kpi_maps,
+#             scores=scores
+#         ), list(dict.fromkeys([w for w in warns if w]))
+    
+#     def get_five_budget_scenarios(weights_df, total_budget, min_alloc, max_alloc, priority='balanced', category='Total IPG'):
+#         warnings = []
+#         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
+#         if invalid:
+#             raise ValueError(f"Missing bounds for tiers: {invalid}")
+#         if any(min_alloc[t] > max_alloc[t] for t in TIERS):
+#             raise ValueError("Min > Max for some tiers.")
+#         if sum(min_alloc[t] for t in TIERS) > total_budget:
+#             raise ValueError("Sum of minimums exceeds total budget.")
+    
+#         df = _validate_and_prepare_weights(weights_df)
+#         base, warns = _optimize_primary(df, total_budget, min_alloc, max_alloc, priority, category)
+#         warnings.extend(warns or [])
+#         if base is None:
+#             return [], warnings
+    
+#         x_star = base['x']
+#         weights_vec = base['weights_vec']
+#         z_star = base['primary_score']
+#         kpi_maps = base['kpi_maps']
+    
+#         def pack(label, x_vec):
+#             alloc = {TIERS[i]: float(x_vec[i]) for i in range(len(TIERS))}
+#             scores = _compute_named_scores(x_vec, kpi_maps)
+#             total_b = float(np.sum(list(alloc.values())))
+#             cpe = (total_b / scores['Engagement']) if scores['Engagement'] else 0.0
+#             cps = (total_b / scores['Share']) if scores['Share'] else 0.0
+#             scores_derived = dict(scores)
+#             scores_derived['CPE'] = cpe
+#             scores_derived['CPShare'] = cps
+#             return dict(
+#                 label=label,
+#                 allocation=alloc,
+#                 primary_score=float(np.dot(x_vec, weights_vec)),
+#                 scores=scores_derived
+#             )
+    
+#         scenarios = [pack("Optimal", x_star)]
+    
+#         eps_abs = abs(z_star) * 0.015
+#         A_ub = [-weights_vec]
+#         b_ub = [-(z_star - eps_abs)]
+#         for i, t in enumerate(TIERS):
+#             c = np.zeros(len(TIERS))
+#             c[i] = -1.0
+#             res = _solve_lp(c, total_budget, min_alloc, max_alloc, A_ub=A_ub, b_ub=b_ub)
+#             if res.success:
+#                 scenarios.append(pack(f"Near-optimal (emphasize {t})", res.x))
+    
+#         def key(s):
+#             return tuple(round(s['allocation'][t], 2) for t in TIERS)
+#         uniq = {}
+#         for s in scenarios:
+#             uniq.setdefault(key(s), s)
+#         out = list(uniq.values())
+#         out.sort(key=lambda s: s['primary_score'], reverse=True)
+#         return out[:5], warnings
+    
+#     def get_five_target_scenarios(weights_df, target_value, kpi_type, min_alloc, max_alloc, category='Total IPG', epsilon_pct=1.5):
+#         warnings = []
+#         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
+#         if invalid:
+#             raise ValueError(f"Missing bounds: {invalid}")
+#         if any(min_alloc[t] > max_alloc[t] for t in TIERS):
+#             raise ValueError("Min > Max for some tiers.")
+    
+#         df = _validate_and_prepare_weights(weights_df)
+#         kpi_map = {
+#             'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
+#             'view': 'View', 'views': 'View',
+#             'engagement': 'Engagement', 'eng': 'Engagement',
+#             'share': 'Share'
+#         }
+#         kpi_key = kpi_map.get(str(kpi_type).lower(), kpi_type)
+#         if kpi_key not in KPI_CANON:
+#             raise NotEnoughDataError(f"KPI '{kpi_type}' is not available for targeting.")
+    
+#         w_map, warn, ok = _get_weights_for_kpi_lenient(df, category, kpi_key)
+#         if warn:
+#             warnings.append(warn)
+#         if not ok:
+#             raise NotEnoughDataError(warn or f"No usable weights for KPI='{kpi_key}' in Category='{category}'.")
+    
+#         max_possible = sum(float(max_alloc[t]) * w_map.get(t, 0.0) for t in TIERS)
+#         if float(target_value) > max_possible + 1e-9:
+#             return [], warnings
+    
+#         n = len(TIERS)
+#         c = np.ones(n, float)
+#         A_ub = [np.array([-w_map[t] for t in TIERS], float)]
+#         b_ub = [-float(target_value)]
+#         bounds = [(float(min_alloc[t]), float(max_alloc[t])) for t in TIERS]
+#         res = _solve_lp_general(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds)
+#         if not res.success:
+#             return [], warnings
+    
+#         x_star = res.x
+#         B_star = float(np.sum(x_star))
+#         B_cap = B_star * (1 + float(epsilon_pct)/100.0)
+    
+#         kpi_maps, warn_all = _gather_kpi_maps_with_warnings(df, category, KPI_CANON)
+#         warnings.extend(warn_all or [])
+    
+#         def pack(label, x):
+#             alloc = {TIERS[i]: float(x[i]) for i in range(n)}
+#             scores = _compute_named_scores(x, kpi_maps)
+#             total_b = float(np.sum(list(alloc.values())))
+#             cpe = (total_b / scores['Engagement']) if scores['Engagement'] else 0.0
+#             cps = (total_b / scores['Share']) if scores['Share'] else 0.0
+#             scores_derived = dict(scores)
+#             scores_derived['CPE'] = cpe
+#             scores_derived['CPShare'] = cps
+#             achieved_target_kpi = float(sum(x[i] * w_map.get(TIERS[i], 0.0) for i in range(n)))
+#             return dict(
+#                 label=label,
+#                 allocation=alloc,
+#                 required_budget=float(np.sum(x)),
+#                 target_kpi_name=kpi_key,
+#                 target_kpi_value=achieved_target_kpi,
+#                 scores=scores_derived
+#             )
+    
+#         scenarios = [pack("Target-Optimal (min budget)", x_star)]
+    
+#         A_ub2 = [np.array([-w_map[t] for t in TIERS], float), np.ones(n, float)]
+#         b_ub2 = [-float(target_value), float(B_cap)]
+#         for i, t in enumerate(TIERS):
+#             c2 = np.zeros(n, float)
+#             c2[i] = -1.0
+#             res2 = _solve_lp_general(c2, A_ub=A_ub2, b_ub=b_ub2, bounds=bounds)
+#             if res2.success:
+#                 scenarios.append(pack(f"Near-min (emphasize {t})", res2.x))
+    
+#         def key(s):
+#             return tuple(round(s['allocation'][t], 2) for t in TIERS)
+#         uniq = {}
+#         for s in scenarios:
+#             uniq.setdefault(key(s), s)
+#         out = list(uniq.values())
+#         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
+#         return out[:5], list(dict.fromkeys([w for w in warnings if w]))
+    
+#     def _highlight_max(s):
+#         try:
+#             mx = s.max()
+#             return ['background-color: #d9fbe2; font-weight: 700' if v == mx else '' for v in s]
+#         except Exception:
+#             return [''] * len(s)
+    
+#     def _highlight_min(s):
+#         try:
+#             mn = s.min()
+#             return ['background-color: #fff3d6; font-weight: 700' if v == mn else '' for v in s]
+#         except Exception:
+#             return [''] * len(s)
+    
+#     def _style_header(styler):
+#         return styler.set_table_styles([
+#             {"selector": "th.col_heading",
+#              "props": [("background", "linear-gradient(90deg, #f7faff, #eef2ff, #f7faff)"),
+#                        ("background-size", "200% 100%"),
+#                        ("animation", "dfShine 8s linear infinite"),
+#                        ("color", "#0f172a"),
+#                        ("font-weight", "900"),
+#                        ("border-bottom", "1px solid #eaeef5")]}
+#         ])
+    
+#     st.title("KOL Tier Optimizer (KTO)")
+    
+#     if "weights_df" in st.session_state:
+#         weights_df = st.session_state["weights_df"]
+#     elif "weights_df" in globals():
+#         weights_df = globals()["weights_df"]
+#     else:
+#         st.error("weights_df not found. Load it into a DataFrame named 'weights_df'.")
+#         st.stop()
+    
+#     try:
+#         df_clean = _validate_and_prepare_weights(weights_df)
+#     except Exception as e:
+#         st.error(str(e))
+#         st.stop()
+    
+#     mode = st.radio("Select optimization mode:", ["Maximize KPI (given budget)", "Achieve KPI target (min budget)"])
+    
+#     if 'mode_prev' not in st.session_state:
+#         st.session_state.mode_prev = mode
+#     elif mode != st.session_state.mode_prev:
+#         for k in list(st.session_state.keys()):
+#             if k.endswith('_max') or k.endswith('_tgt') or k.startswith('result_'):
+#                 st.session_state.pop(k, None)
+#         st.session_state.mode_prev = mode
+#         _rerun()
+    
+#     cats = sorted(df_clean['Category'].dropna().unique().tolist())
+#     default_idx = cats.index("Total IPG") if "Total IPG" in cats else 0
+#     category = st.selectbox("Select Category:", options=cats, index=default_idx)
+    
+#     def render_outputs(scenarios, scenario_ids, show_target_cols=False):
+#         recs = []
+#         for i, s in enumerate(scenarios):
+#             for tier in DISPLAY_ORDER:
+#                 recs.append({"Scenario": scenario_ids[i], "Tier": tier, "Allocation": float(s['allocation'].get(tier, 0.0))})
+#         chart_df = pd.DataFrame(recs)
+#         chart_df["TierOrder"] = chart_df["Tier"].map({t: i for i, t in enumerate(DISPLAY_ORDER)})
+    
+#         tier_colors = ["#60a5fa", "#34d399", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4"]
+#         sel = alt.selection_multi(fields=['Tier'], bind='legend')
+    
+#         chart = (
+#             alt.Chart(chart_df)
+#             .mark_bar(cornerRadius=5, stroke='white', strokeWidth=0.5)
+#             .encode(
+#                 x=alt.X("Scenario:N", sort=scenario_ids, axis=alt.Axis(title=None)),
+#                 y=alt.Y("Allocation:Q", stack="zero", title="Allocation (Budget)"),
+#                 color=alt.Color("Tier:N",
+#                                 sort=DISPLAY_ORDER,
+#                                 scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
+#                                 legend=alt.Legend(title="Tier")),
+#                 order=alt.Order("TierOrder:Q"),
+#                 opacity=alt.condition(sel, alt.value(1), alt.value(0.35)),
+#                 tooltip=[alt.Tooltip("Scenario:N"),
+#                          alt.Tooltip("Tier:N"),
+#                          alt.Tooltip("Allocation:Q", format=",.2f")]
+#             )
+#             .add_selection(sel)
+#             .properties(height=420)
+#         )
+#         st.altair_chart(chart, use_container_width=True)
+    
+#         rows = []
+#         for i, s in enumerate(scenarios):
+#             sc = s['scores']
+#             row = {
+#                 "Scenario": scenario_ids[i],
+#                 "Priority KPI Score": s.get('primary_score', 0.0),
+#                 "Impressions": sc.get('Impression', 0.0),
+#                 "Views": sc.get('View', 0.0),
+#                 "Engagement": sc.get('Engagement', 0.0),
+#                 "Share": sc.get('Share', 0.0),
+#                 "CPE": sc.get('CPE', 0.0),
+#                 "CPShare": sc.get('CPShare', 0.0),
+#             }
+#             if show_target_cols:
+#                 row["Required Budget"] = s.get('required_budget', 0.0)
+#                 row["Target KPI"] = s.get('target_kpi_name', '')
+#                 row["Target KPI Achieved"] = s.get('target_kpi_value', 0.0)
+#             rows.append(row)
+#         kpi_df = pd.DataFrame(rows)
+    
+#         fmt = {
+#             "Priority KPI Score": "{:,.2f}",
+#             "Impressions": "{:,.2f}",
+#             "Views": "{:,.2f}",
+#             "Engagement": "{:,.2f}",
+#             "Share": "{:,.2f}",
+#             "CPE": "{:,.2f}",
+#             "CPShare": "{:,.2f}",
+#             "Required Budget": "{:,.2f}",
+#             "Target KPI Achieved": "{:,.2f}",
+#         }
+#         max_cols = ["Priority KPI Score", "Impressions", "Views", "Engagement", "Share"]
+#         min_cols = ["CPE", "CPShare"]
+#         if show_target_cols:
+#             min_cols.append("Required Budget")
+#             max_cols.append("Target KPI Achieved")
+    
+#         styled = _style_header(
+#             kpi_df.style
+#             .format(fmt)
+#             .apply(_highlight_max, subset=max_cols)
+#             .apply(_highlight_min, subset=min_cols)
+#         )
+#         st.dataframe(styled, hide_index=True, use_container_width=True)
+    
+#     if mode == "Maximize KPI (given budget)":
+#         total_budget = st.number_input("Total Budget", min_value=0.0, value=10000.0, step=100.0, key="total_budget_max")
+#         priority = st.selectbox(
+#             "Optimization Priority",
+#             ["balanced", "impressions", "views", "engagement", "share"],
+#             key="priority_max"
+#         )
+    
+#         with st.expander("Advanced constraints (per-tier min/max)", expanded=False):
+#             col1, col2 = st.columns(2)
+#             min_alloc, max_alloc = {}, {}
+#             with col1:
+#                 st.subheader("Minimum Allocation")
+#                 for t in TIERS:
+#                     min_alloc[t] = st.number_input(f"Min {t}", min_value=0.0, value=0.0, step=100.0, key=f"min_{t}_max")
+#             with col2:
+#                 st.subheader("Maximum Allocation")
+#                 for t in TIERS:
+#                     max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=float(total_budget), step=100.0, key=f"max_{t}_max")
+    
+#         if st.button("Generate 5 scenarios", key="run_max"):
+#             if any(min_alloc[t] > max_alloc[t] for t in TIERS):
+#                 st.error("Infeasible: some Min > Max.")
+#                 st.stop()
+#             if sum(min_alloc[t] for t in TIERS) > total_budget:
+#                 st.error("Infeasible: sum of minimums exceeds total budget.")
+#                 st.stop()
+    
+#             try:
+#                 scenarios, warns = get_five_budget_scenarios(
+#                     weights_df=weights_df,
+#                     total_budget=float(total_budget),
+#                     min_alloc={k: float(v) for k, v in min_alloc.items()},
+#                     max_alloc={k: float(v) for k, v in max_alloc.items()},
+#                     priority=priority,
+#                     category=category
+#                 )
+#                 for w in (warns or []):
+#                     st.warning(w)
+#             except NotEnoughDataError as e:
+#                 st.warning("We don't have enough data to optimize for this selection. " + str(e))
+#                 st.stop()
+#             except Exception as e:
+#                 st.exception(e)
+#                 st.stop()
+    
+#             if not scenarios:
+#                 st.error("No feasible scenarios.")
+#             else:
+#                 st.success("Generated scenarios.")
+#                 scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
+#                 render_outputs(scenarios, scenario_ids, show_target_cols=False)
+    
+#     else:
+#         kpi_type = st.selectbox(
+#             "KPI to target",
+#             ["impressions", "views", "engagement", "share"],
+#             key="kpi_tgt"
+#         )
+#         target_value = st.number_input(f"Target {kpi_type.title()}", min_value=0.0, value=1_000_000.0, step=1000.0, key="target_value_tgt")
+    
+#         with st.expander("Advanced constraints (per-tier min/max)", expanded=True):
+#             col1, col2 = st.columns(2)
+#             min_alloc, max_alloc = {}, {}
+#             with col1:
+#                 st.subheader("Minimum Allocation")
+#                 for t in TIERS:
+#                     min_alloc[t] = st.number_input(f"Min {t}", min_value=0.0, value=0.0, step=100.0, key=f"min_{t}_tgt")
+#             with col2:
+#                 st.subheader("Maximum Allocation")
+#                 for t in TIERS:
+#                     max_alloc[t] = st.number_input(f"Max {t}", min_value=0.0, value=BIG_MAX, step=100.0, key=f"max_{t}_tgt")
+    
+#         if st.button("Generate 5 scenarios to achieve KPI", key="run_tgt_free"):
+#             try:
+#                 scenarios, warns = get_five_target_scenarios(
+#                     weights_df=weights_df,
+#                     target_value=float(target_value),
+#                     kpi_type=kpi_type,
+#                     min_alloc=min_alloc, max_alloc=max_alloc,
+#                     category=category
+#                 )
+#                 for w in (warns or []):
+#                     st.warning(w)
+#             except NotEnoughDataError as e:
+#                 st.warning("We don't have enough data to optimize for this selection. " + str(e))
+#                 st.stop()
+#             except Exception as e:
+#                 st.exception(e)
+#                 st.stop()
+    
+#             if not scenarios:
+#                 st.error("No feasible scenarios for the given target and constraints.")
+#             else:
+#                 st.success("Generated scenarios.")
+#                 scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
+#                 render_outputs(scenarios, scenario_ids, show_target_cols=True)
 
 # ----------------------- PAGE 4: Upload Data -----------------------
 if st.session_state.page == "Upload Data":

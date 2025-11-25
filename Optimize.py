@@ -1320,7 +1320,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         elif hasattr(st, "experimental_rerun"):
             st.experimental_rerun()
 
-    # ลำดับ Tier ที่จะใช้ในการคำนวณ/แสดงผล
+    # ลำดับ Tier
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']
     BIG_MAX = 1_000_000_000.0
@@ -1329,18 +1329,16 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     class NotEnoughDataError(Exception):
         pass
 
-    # CSS สำหรับ table header + widget เพิ่มเติม
+    # CSS
     st.markdown(dedent("""
     <style>
     @keyframes dfShine { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-    /* ให้ label ของ radio เป็นตัวหนาและสีแดง */
     .stRadio > label {
         font-weight: 700;
         color: #dc2626;
     }
 
-    /* ปรับ multi-select: ทำ font ของ chips ให้ใหญ่และหนา + หด bar สีเทาให้เตี้ยลง */
     .stMultiSelect div[data-baseweb="tag"] {
         font-size: 1rem;
         font-weight: 700;
@@ -1353,18 +1351,8 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     </style>
     """), unsafe_allow_html=True)
 
-    # -------------------------------------------------
-    # 1) เตรียม weights_df ให้พร้อมใช้ + รองรับ N
-    # -------------------------------------------------
+    # ---------------- Utils: เตรียม weights, คำนวณ weights per tier ----------------
     def _validate_and_prepare_weights(df):
-        """
-        ตรวจสอบและเตรียม weights_df ให้ใช้ใน Optimizer ได้
-
-        - ต้องมี: Category, Tier, KPI, Weights
-        - ถ้าไม่มี Platform ให้สร้างเป็นคอลัมน์ว่าง
-        - ถ้ามี N ใช้เป็น sample size ในการถ่วงน้ำหนัก
-        - ถ้าไม่มี N ให้ตั้ง N = 1 ทุกแถว (เท่ากับไม่ถ่วงน้ำหนักพิเศษ)
-        """
         required_cols = {'Category', 'Tier', 'KPI', 'Weights'}
         if df is None:
             raise ValueError("weights_df not provided.")
@@ -1373,29 +1361,23 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             raise ValueError(f"weights_df missing columns: {missing}")
 
         df = df.copy()
-
-        # ทำให้ string สะอาด
         for col in ['Category', 'Tier', 'KPI']:
             df[col] = df[col].astype(str).str.strip()
 
-        # ถ้าไม่มี Platform ให้สร้างเป็นคอลัมน์ว่าง
         if 'Platform' not in df.columns:
             df['Platform'] = ''
         df['Platform'] = df['Platform'].astype(str).str.strip()
 
-        # แปลง Weights เป็นตัวเลข
         df['Weights'] = pd.to_numeric(df['Weights'], errors='coerce')
 
-        # จัดการ N (ถ้าไม่มีให้ตั้งเป็น 1)
         if 'N' not in df.columns:
             df['N'] = 1
         df['N'] = pd.to_numeric(df['N'], errors='coerce').fillna(0)
-        df.loc[df['N'] < 0, 'N'] = 0  # ไม่ให้ N ติดลบ
+        df.loc[df['N'] < 0, 'N'] = 0
 
         if df['Weights'].isna().any():
             raise ValueError("Found non-numeric or missing Weights in weights_df.")
 
-        # map ชื่อ KPI ให้มาตรฐานตาม KPI_CANON
         kpi_map = {
             'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
             'view': 'View', 'views': 'View',
@@ -1404,22 +1386,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         }
         df['KPI'] = df['KPI'].str.lower().map(kpi_map).fillna(df['KPI'])
         df = df[df['KPI'].isin(KPI_CANON)]
-
         return df
 
-    def _platform_set(series):
-        return sorted({str(x).strip() for x in series if str(x).strip() != ''})
-
-    # -------------------------------------------------
-    # 2) helper: กรองตาม Category (รองรับ multi-select)
-    # -------------------------------------------------
     def _filter_by_category(df, category):
-        """
-        รองรับทั้งกรณี category เป็น string เดียว หรือ list/tuple/set ของ category หลายตัว
-
-        - ถ้าเป็น string → เทียบเท่ากับ Category == category
-        - ถ้าเป็น list/tuple/set → เทียบเท่ากับ Category.isin(list)
-        """
         if isinstance(category, (list, tuple, set)):
             cats = [str(c).strip() for c in category]
             return df[df['Category'].isin(cats)]
@@ -1427,34 +1396,20 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             cat = str(category).strip()
             return df[df['Category'] == cat]
 
-    # -------------------------------------------------
-    # 3) คำนวณ weights ต่อ Tier สำหรับ KPI หนึ่งตัว (ใช้ weighted average ด้วย N)
-    # -------------------------------------------------
     def _get_weights_for_kpi_lenient(df, category, kpi, agg='weighted_mean'):
-        """
-        ดึงน้ำหนักต่อ Tier สำหรับ KPI หนึ่งตัว ภายใต้ Category ที่ระบุ
-        - ใช้ค่าเฉลี่ยถ่วงน้ำหนักด้วย N (sample size) ในการรวม across Platform / หลาย record
-        - ถ้า sum(N) == 0 → fallback เป็น mean ปกติ
-
-        รองรับ category เป็น string เดียว หรือ list ของหลาย category
-        """
-        # 1) กรองตาม Category (รองรับ multi-select) และ KPI
         sub = _filter_by_category(df, category)
         sub = sub[sub['KPI'] == kpi]
 
         mp = {t: 0.0 for t in TIERS}
-
         if sub.empty:
             cats_str = category if isinstance(category, str) else ", ".join(map(str, category))
             return mp, f"No rows for KPI='{kpi}' in Category='{cats_str}'.", False
 
-        # 2) ให้แน่ใจว่า N เป็นตัวเลข
         if 'N' not in sub.columns:
             sub['N'] = 1.0
         sub['N'] = pd.to_numeric(sub['N'], errors='coerce').fillna(0)
         sub.loc[sub['N'] < 0, 'N'] = 0
 
-        # 3) group ตาม Tier และคำนวณค่าเฉลี่ยถ่วงน้ำหนักด้วย N
         def _weighted_avg(g):
             w = g['N'].to_numpy(dtype=float)
             v = g['Weights'].to_numpy(dtype=float)
@@ -1462,11 +1417,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             if sw > 0:
                 return float((v * w).sum() / sw)
             else:
-                # ถ้ารวม N แล้วได้ 0 → ใช้ mean ปกติ
                 return float(np.nanmean(v)) if len(v) > 0 else 0.0
 
         grouped = sub.groupby('Tier').apply(_weighted_avg).reset_index(name='Weights')
-
         for _, row in grouped.iterrows():
             t = str(row['Tier']).strip()
             if t in mp:
@@ -1489,13 +1442,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         warns = list(dict.fromkeys([w for w in warns if w]))
         return maps, warns
 
-    # -------------------------------------------------
-    # 4) เวคเตอร์ weight ตาม Priority
-    # -------------------------------------------------
     def _build_weights_vector_for_priority_lenient(df, category, priority):
-        """
-        priority: ชื่อ KPI ที่อยาก optimize โดยตรง (IMPRESSION, VIEWS, ENGAGEMENT, SHARE)
-        """
         p = str(priority).strip().lower()
         warnings = []
 
@@ -1548,7 +1495,8 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             scores=scores
         ), list(dict.fromkeys([w for w in warns if w]))
 
-    def get_five_budget_scenarios(weights_df, total_budget, min_alloc, max_alloc, priority='IMPRESSION', category='Total IPG'):
+    def get_five_budget_scenarios(weights_df, total_budget, min_alloc, max_alloc,
+                                  priority='IMPRESSION', category='Total IPG', top_n=5):
         warnings = []
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
         if invalid:
@@ -1604,9 +1552,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             uniq.setdefault(key(s), s)
         out = list(uniq.values())
         out.sort(key=lambda s: s['primary_score'], reverse=True)
-        return out[:5], warnings
+        return out[:top_n], warnings
 
-    def get_five_target_scenarios(weights_df, target_value, kpi_type, min_alloc, max_alloc, category='Total IPG', epsilon_pct=1.5):
+    def get_five_target_scenarios(weights_df, target_value, kpi_type, min_alloc, max_alloc,
+                                  category='Total IPG', epsilon_pct=1.5):
         warnings = []
         invalid = [t for t in TIERS if t not in min_alloc or t not in max_alloc]
         if invalid:
@@ -1718,7 +1667,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     st.title("KOL Tier Optimizer (KTO)")
 
-    # โหลด weights_df จาก session_state หรือ global
     if "weights_df" in st.session_state:
         weights_df = st.session_state["weights_df"]
     elif "weights_df" in globals():
@@ -1727,20 +1675,20 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         st.error("weights_df not found. Load it into a DataFrame named 'weights_df'.")
         st.stop()
 
-    # เตรียม df_clean
     try:
         df_clean = _validate_and_prepare_weights(weights_df)
     except Exception as e:
         st.error(str(e))
         st.stop()
 
-    # เปลี่ยนชื่อโหมด
+    if 'show_step2_max' not in st.session_state:
+        st.session_state.show_step2_max = False
+
     mode = st.radio(
         "Select optimization mode:",
         ["Maximize Performance (KPIs)", "Minimize Spend (Budget)"]
     )
 
-    # แสดงคำอธิบายใต้ radio (ตัวธรรมดา สีดำ เอียง)
     if mode == "Maximize Performance (KPIs)":
         st.markdown("*Requires the user to input the Total Budget amount.*")
     else:
@@ -1753,11 +1701,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             if k.endswith('_max') or k.endswith('_tgt') or k.startswith('result_'):
                 st.session_state.pop(k, None)
         st.session_state.mode_prev = mode
+        st.session_state.show_step2_max = False
         _rerun()
 
-    # --------------------------
-    # เลือก KOL Category (multi-select + label ใหม่)
-    # --------------------------
     cats = sorted(df_clean['Category'].dropna().unique().tolist())
     if not cats:
         st.error("No Category found in weights_df.")
@@ -1770,7 +1716,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         default=[default_cat]
     )
 
-    # ถ้าเลือก 1 category ให้ส่งเป็น string, ถ้ามากกว่า 1 ให้ส่งเป็น list
     if len(category_multi) == 0:
         st.warning("Please select at least one KOL Category.")
         st.stop()
@@ -1779,9 +1724,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     else:
         category = category_multi
 
-    # --------------------------
-    # ฟังก์ชันแสดงผล Scenario
-    # --------------------------
     def render_outputs(scenarios, scenario_ids, show_target_cols=False):
         recs = []
         for i, s in enumerate(scenarios):
@@ -1859,75 +1801,160 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         )
         st.dataframe(styled, hide_index=True, use_container_width=True)
 
-    # --------------------------
-    # Mode 1: Maximize Performance (KPIs)
-    # --------------------------
+    # ---------------- Mode 1: Maximize Performance (KPIs) ----------------
     if mode == "Maximize Performance (KPIs)":
         total_budget = st.number_input(
             "Total Budget",
             min_value=0.0, value=10000.0, step=100.0, key="total_budget_max"
         )
-        # dropdown เป็นตัวพิมพ์ใหญ่ทั้งหมด
         priority = st.selectbox(
             "Optimization Priority",
             ["IMPRESSION", "VIEWS", "ENGAGEMENT", "SHARE"],
             key="priority_max"
         )
 
-        with st.expander("Advanced constraints (per-tier min/max)", expanded=False):
-            col1, col2 = st.columns(2)
-            min_alloc, max_alloc = {}, {}
-            with col1:
-                st.subheader("Minimum Allocation")
-                for t in TIERS:
-                    min_alloc[t] = st.number_input(
-                        f"Min {t}", min_value=0.0, value=0.0, step=100.0, key=f"min_{t}_max"
-                    )
-            with col2:
-                st.subheader("Maximum Allocation")
-                for t in TIERS:
-                    max_alloc[t] = st.number_input(
-                        f"Max {t}", min_value=0.0, value=float(total_budget), step=100.0, key=f"max_{t}_max"
-                    )
+        # ปุ่ม NEXT – auto-set Min=0, Max=Total Budget ทุก tier
+        if st.button("➜ NEXT", key="next_max"):
+            for t in TIERS:
+                st.session_state[f"min_{t}_max_step2"] = 0.0
+                st.session_state[f"max_{t}_max_step2"] = float(total_budget)
+            st.session_state.show_step2_max = True
 
-        if st.button("Generate 5 scenarios", key="run_max"):
-            if any(min_alloc[t] > max_alloc[t] for t in TIERS):
-                st.error("Infeasible: some Min > Max.")
-                st.stop()
-            if sum(min_alloc[t] for t in TIERS) > total_budget:
-                st.error("Infeasible: sum of minimums exceeds total budget.")
-                st.stop()
+        if st.session_state.show_step2_max:
+            st.markdown("### KOL Tier Optimizer (KTO) : Custom Budget Floors/Ceilings")
 
-            try:
-                scenarios, warns = get_five_budget_scenarios(
-                    weights_df=weights_df,
-                    total_budget=float(total_budget),
-                    min_alloc={k: float(v) for k, v in min_alloc.items()},
-                    max_alloc={k: float(v) for k, v in max_alloc.items()},
-                    priority=priority,      # ใช้ชื่อ KPI ตัวใหญ่ เช่น "IMPRESSION"
-                    category=category       # string หรือ list
+            run_style = st.radio(
+                "How would you like to run the optimization?",
+                ["Free Run solution", "Set Budget Constraints"],
+                key="run_style_max"
+            )
+
+            top_n = st.number_input(
+                "Number of top best Solutions (1-10):",
+                min_value=1, max_value=10, value=5, step=1,
+                key="n_best_max"
+            )
+
+            if run_style == "Set Budget Constraints":
+                show_free_along = st.selectbox(
+                    "Do you want to see the Free Run solution alongside your constrained solution? Y/N",
+                    ["Y", "N"],
+                    index=0,
+                    key="show_free_along_max"
                 )
-                for w in (warns or []):
-                    st.warning(w)
-            except NotEnoughDataError as e:
-                st.warning("We don't have enough data to optimize for this selection. " + str(e))
-                st.stop()
-            except Exception as e:
-                st.exception(e)
-                st.stop()
 
-            if not scenarios:
-                st.error("No feasible scenarios.")
+                st.subheader("Budget floors/ceilings by Tier")
+                col1, col2 = st.columns(2)
+                min_alloc, max_alloc = {}, {}
+                with col1:
+                    st.markdown("**Minimum Allocation**")
+                    for t in TIERS:
+                        min_alloc[t] = st.number_input(
+                            f"Min {t}", min_value=0.0,
+                            value=st.session_state.get(f"min_{t}_max_step2", 0.0),
+                            step=100.0, key=f"min_{t}_max_step2"
+                        )
+                with col2:
+                    st.markdown("**Maximum Allocation**")
+                    for t in TIERS:
+                        max_alloc[t] = st.number_input(
+                            f"Max {t}", min_value=0.0,
+                            value=st.session_state.get(f"max_{t}_max_step2", float(total_budget)),
+                            step=100.0, key=f"max_{t}_max_step2"
+                        )
+
+                if st.button("RUN", key="run_max_constraints"):
+                    if any(min_alloc[t] > max_alloc[t] for t in TIERS):
+                        st.error("Infeasible: some Min > Max.")
+                        st.stop()
+                    if sum(min_alloc[t] for t in TIERS) > total_budget:
+                        st.error("Infeasible: sum of minimums exceeds total budget.")
+                        st.stop()
+
+                    try:
+                        cons_scenarios, cons_warns = get_five_budget_scenarios(
+                            weights_df=weights_df,
+                            total_budget=float(total_budget),
+                            min_alloc={k: float(v) for k, v in min_alloc.items()},
+                            max_alloc={k: float(v) for k, v in max_alloc.items()},
+                            priority=priority,
+                            category=category,
+                            top_n=int(top_n)
+                        )
+                        warns_all = cons_warns or []
+
+                        free_scenarios = []
+                        if show_free_along == "Y":
+                            free_min = {t: 0.0 for t in TIERS}
+                            free_max = {t: float(total_budget) for t in TIERS}
+                            free_scenarios, free_warns = get_five_budget_scenarios(
+                                weights_df=weights_df,
+                                total_budget=float(total_budget),
+                                min_alloc=free_min,
+                                max_alloc=free_max,
+                                priority=priority,
+                                category=category,
+                                top_n=int(top_n)
+                            )
+                            warns_all.extend(free_warns or [])
+
+                        for w in list(dict.fromkeys([w for w in warns_all if w])):
+                            st.warning(w)
+
+                    except NotEnoughDataError as e:
+                        st.warning("We don't have enough data to optimize for this selection. " + str(e))
+                        st.stop()
+                    except Exception as e:
+                        st.exception(e)
+                        st.stop()
+
+                    if not cons_scenarios and not free_scenarios:
+                        st.error("No feasible scenarios.")
+                    else:
+                        st.success("Generated scenarios.")
+                        if free_scenarios:
+                            st.subheader("Free Run solution")
+                            ids_free = [f"Free Scenario {i+1}" for i in range(len(free_scenarios))]
+                            render_outputs(free_scenarios, ids_free, show_target_cols=False)
+                            st.subheader("Constrained solution")
+                        else:
+                            st.subheader("Constrained solution")
+
+                        ids_cons = [f"Scenario {i+1}" for i in range(len(cons_scenarios))]
+                        render_outputs(cons_scenarios, ids_cons, show_target_cols=False)
+
             else:
-                st.success("Generated scenarios.")
-                scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
-                render_outputs(scenarios, scenario_ids, show_target_cols=False)
+                if st.button("RUN", key="run_max_free"):
+                    free_min = {t: 0.0 for t in TIERS}
+                    free_max = {t: float(total_budget) for t in TIERS}
+                    try:
+                        scenarios, warns = get_five_budget_scenarios(
+                            weights_df=weights_df,
+                            total_budget=float(total_budget),
+                            min_alloc=free_min,
+                            max_alloc=free_max,
+                            priority=priority,
+                            category=category,
+                            top_n=int(top_n)
+                        )
+                        for w in (warns or []):
+                            st.warning(w)
+                    except NotEnoughDataError as e:
+                        st.warning("We don't have enough data to optimize for this selection. " + str(e))
+                        st.stop()
+                    except Exception as e:
+                        st.exception(e)
+                        st.stop()
 
-    # --------------------------
-    # Mode 2: Minimize Spend (Budget)
-    # --------------------------
+                    if not scenarios:
+                        st.error("No feasible scenarios.")
+                    else:
+                        st.success("Generated scenarios.")
+                        scenario_ids = [f"Scenario {i+1}" for i in range(len(scenarios))]
+                        render_outputs(scenarios, scenario_ids, show_target_cols=False)
+
+    # ---------------- Mode 2: Minimize Spend (Budget) (เหมือนเดิม) ----------------
     else:
-        # KPI list ตัวพิมพ์ใหญ่ทั้งหมด
         kpi_type = st.selectbox(
             "KPI to target",
             ["IMPRESSION", "VIEWS", "ENGAGEMENT", "SHARE"],
@@ -1959,7 +1986,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 scenarios, warns = get_five_target_scenarios(
                     weights_df=weights_df,
                     target_value=float(target_value),
-                    kpi_type=kpi_type,   # ใช้ชื่อ KPI ตัวใหญ่ เช่น "IMPRESSION"
+                    kpi_type=kpi_type,
                     min_alloc=min_alloc,
                     max_alloc=max_alloc,
                     category=category

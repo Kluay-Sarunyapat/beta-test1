@@ -1638,7 +1638,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
         return out[:top_n], list(dict.fromkeys([w for w in warnings if w]))
 
-    # ---------- Dashboard (เวอร์ชันใหม่) ----------
+    # ---------- Dashboard (เวอร์ชันใหม่: ตารางคู่, สีอ่อน, ซ่อน index) ----------
     def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
                              primary_kpi_name, primary_value, category,
                              show_target_cols, compare_key):
@@ -1687,14 +1687,12 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                              "Allocation": val, "Pct": pct})
         bud_df = pd.DataFrame(rows)
 
-        # ทำ Tier เป็น Categorical เพื่อควบคุมลำดับตลอด
         bud_df["Tier"] = pd.Categorical(
             bud_df["Tier"],
             categories=DISPLAY_ORDER,
             ordered=True
         )
 
-        # สีตามลำดับ VIP->Nano (ปรับได้ตามต้องการ)
         tier_colors = ["#06b6d4", "#ef4444", "#8b5cf6",
                        "#f59e0b", "#34d399", "#60a5fa"]
 
@@ -1772,34 +1770,76 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             )
             st.altair_chart(chart_pct, use_container_width=True)
 
-        # ================== SPLIT TABLES ==================
-        st.markdown("#### Budget allocation table – Baht")
+        # ================== TABLES SIDE-BY-SIDE ==================
+        st.markdown("#### Budget allocation tables")
 
-        alloc_tbl = (
-            bud_df
-            .pivot_table(index="Tier", columns="Scenario",
-                         values="Allocation", aggfunc="first")
-            .reindex(DISPLAY_ORDER)
-            .reset_index()
-        )
-        alloc_style = alloc_tbl.style.format(
-            {col: "{:,.0f}" for col in alloc_tbl.columns if col != "Tier"}
-        )
-        st.dataframe(alloc_style, use_container_width=True)
+        tcol1, tcol2 = st.columns(2)
 
-        st.markdown("#### Budget allocation table – %")
+        # --- ตาราง Baht ---
+        with tcol1:
+            st.markdown("**Baht (งบประมาณต่อ Tier)**")
 
-        pct_tbl = (
-            bud_df
-            .pivot_table(index="Tier", columns="Scenario",
-                         values="Pct", aggfunc="first")
-            .reindex(DISPLAY_ORDER)
-            .reset_index()
-        )
-        pct_style = pct_tbl.style.format(
-            {col: "{:,.1f}" for col in pct_tbl.columns if col != "Tier"}
-        )
-        st.dataframe(pct_style, use_container_width=True)
+            alloc_tbl = (
+                bud_df
+                .pivot_table(index="Tier", columns="Scenario",
+                             values="Allocation", aggfunc="first")
+                .reindex(DISPLAY_ORDER)
+                .reset_index()
+            )
+
+            alloc_style = (
+                alloc_tbl.style
+                .format({col: "{:,.0f}" for col in alloc_tbl.columns if col != "Tier"})
+                .set_table_styles([
+                    dict(selector="th", props=[
+                        ("background-color", "#e0f2fe"),
+                        ("color", "#111827"),
+                        ("font-weight", "700"),
+                        ("border-color", "#bfdbfe")
+                    ]),
+                    dict(selector="td", props=[
+                        ("background-color", "#f9fbff"),
+                        ("color", "#111827"),
+                        ("font-weight", "600"),
+                        ("border-color", "#e5e7eb")
+                    ]),
+                ])
+            )
+
+            st.dataframe(alloc_style, hide_index=True, use_container_width=True)
+
+        # --- ตาราง % ---
+        with tcol2:
+            st.markdown("**Percentage (%)**")
+
+            pct_tbl = (
+                bud_df
+                .pivot_table(index="Tier", columns="Scenario",
+                             values="Pct", aggfunc="first")
+                .reindex(DISPLAY_ORDER)
+                .reset_index()
+            )
+
+            pct_style = (
+                pct_tbl.style
+                .format({col: "{:,.1f}" for col in pct_tbl.columns if col != "Tier"})
+                .set_table_styles([
+                    dict(selector="th", props=[
+                        ("background-color", "#fef3c7"),
+                        ("color", "#111827"),
+                        ("font-weight", "700"),
+                        ("border-color", "#fed7aa")
+                    ]),
+                    dict(selector="td", props=[
+                        ("background-color", "#fffbeb"),
+                        ("color", "#111827"),
+                        ("font-weight", "600"),
+                        ("border-color", "#e5e7eb")
+                    ]),
+                ])
+            )
+
+            st.dataframe(pct_style, hide_index=True, use_container_width=True)
 
         # ---------------- Performance Comparison ----------------
         st.markdown("### Performance Comparison")

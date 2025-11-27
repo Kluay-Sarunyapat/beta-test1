@@ -680,12 +680,18 @@ if st.session_state.page == "Tier Scenario Planner":
 
     # ---------- 2) KPI OBJECTIVE (อยู่ใต้ platform ทั้งคู่) ----------
     st.markdown("#### Select KPI objective for comparison")
-    st.session_state['tsp_kpi_obj'] = st.selectbox(
+
+    # แสดง label เป็นตัวใหญ่ทั้งหมด แต่ map กลับเป็นชื่อ KPI เดิม
+    kpi_labels = [k.upper() for k in all_kpis]
+    current_index = all_kpis.index(st.session_state['tsp_kpi_obj'])
+    selected_label = st.selectbox(
         "Select KPIs objective:",
-        options=all_kpis,
-        index=all_kpis.index(st.session_state['tsp_kpi_obj']),
+        options=kpi_labels,
+        index=current_index,
         key="tsp_kpi_obj_sel"
     )
+    # map label (upper) -> ชื่อ KPI canonical เดิม
+    st.session_state['tsp_kpi_obj'] = all_kpis[kpi_labels.index(selected_label)]
 
     # ---------- 3) BUDGET BY TIER + TOTAL BUDGET ----------
     bcol1, bcol2 = st.columns(2)
@@ -864,9 +870,9 @@ if st.session_state.page == "Tier Scenario Planner":
         """, unsafe_allow_html=True)
 
         def best_class(metric, v1, v2):
-            # กำหนดว่า metric ไหนน้อยดีกว่า / มากดีกว่า
+            # นิยามอะไรดีกว่า
             if "Cost per" in metric or "CPK" in metric or "CP" in metric:
-                # น้อยดีกว่า
+                # ต่ำดีกว่า
                 if v1 == v2:
                     return ("best", "best")
                 elif v1 < v2:
@@ -874,7 +880,7 @@ if st.session_state.page == "Tier Scenario Planner":
                 else:
                     return ("", "best")
             elif "Total Budget" in metric:
-                # น้อยดีกว่า (ใช้งบน้อยกว่า)
+                # ต่ำดีกว่า (ใช้งบน้อยกว่า)
                 if v1 == v2:
                     return ("best", "best")
                 elif v1 < v2:
@@ -882,7 +888,7 @@ if st.session_state.page == "Tier Scenario Planner":
                 else:
                     return ("", "best")
             else:
-                # KPI Score: มากดีกว่า
+                # KPI Score สูงดีกว่า
                 if v1 == v2:
                     return ("best", "best")
                 elif v1 > v2:

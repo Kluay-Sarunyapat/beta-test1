@@ -560,7 +560,6 @@ weights_df = load_weights(csv_url)
 # ----------------------- PAGE 1: Tier Scenario Planner -----------------------
 if st.session_state.page == "Tier Scenario Planner":
 
-    # ===== Tier Scenario Planner (เวอร์ชันใหม่) =====
     st.title("Tier Scenario Planner")
 
     # LOAD weights_df
@@ -585,7 +584,6 @@ if st.session_state.page == "Tier Scenario Planner":
     weights_df = weights_df.copy()
     for c in ['Category', 'Tier', 'Platform', 'KPI']:
         weights_df[c] = weights_df[c].astype(str).str.strip()
-
     weights_df['Weights'] = pd.to_numeric(weights_df['Weights'], errors='coerce')
 
     # ถ้าไม่มี N ให้สร้าง = 1
@@ -704,13 +702,13 @@ if st.session_state.page == "Tier Scenario Planner":
                 unsafe_allow_html=True
             )
 
+    # Panels สำหรับ 2 options
     panel_option(col_opt1, "Option 1", 'opt1_categories', 'opt1_platforms', 'inputs_opt1',
                  '#e0f7fa', '#0277bd')
     panel_option(col_opt2, "Option 2", 'opt2_categories', 'opt2_platforms', 'inputs_opt2',
                  '#f3e5f5', '#8e24aa')
 
-    # ---------- KPI objective (global) ----------
-    st.markdown("---")
+    # ---------- KPI objective (ย้ายมาอยู่ใต้ Platform / budgets ตามคำขอ) ----------
     st.markdown("#### Select KPI objective for comparison")
     st.session_state['tsp_kpi_obj'] = st.selectbox(
         "Select KPIs objective:",
@@ -723,7 +721,7 @@ if st.session_state.page == "Tier Scenario Planner":
     def get_weights_multi(categories, platforms, kpi):
         """
         คืน mapping {Tier: weighted_avg_weight} จากหลาย Category + Platform
-        ใช้คอลัมน์ N เป็นน้ำหนักเฉลี่ยถ่วงน้ำหนัก
+        ใช้คอลัมน์ N เป็นค่าเฉลี่ยถ่วงน้ำหนัก
         """
         if not categories or not platforms or kpi not in ALLOWED_KPIS:
             return {}
@@ -744,7 +742,6 @@ if st.session_state.page == "Tier Scenario Planner":
             if sw > 0:
                 return float((v * w).sum() / sw)
             else:
-                # fallback: ค่าเฉลี่ยธรรมดา
                 return float(np.nanmean(v)) if len(v) > 0 else 0.0
 
         grouped = sub.groupby('Tier').apply(weighted_avg).reset_index(name='Weights')
@@ -799,13 +796,14 @@ if st.session_state.page == "Tier Scenario Planner":
     if "tsp_results" in st.session_state:
         res = st.session_state["tsp_results"]
         kpi_name = res["kpi"]
+
         st.markdown("---")
         st.subheader(f"Results Comparison (KPI Objective: {kpi_name})")
 
         opt1 = res["opt1"]
         opt2 = res["opt2"]
 
-        # ตาราง summary
+        # เตรียมข้อมูล summary
         summary_rows = [
             {"Metric": "Total Budget",
              "Option 1": opt1["budget"],
@@ -817,13 +815,88 @@ if st.session_state.page == "Tier Scenario Planner":
              "Option 1": opt1["cp"],
              "Option 2": opt2["cp"]},
         ]
-        sum_df = pd.DataFrame(summary_rows)
 
-        def fmt(x):
-            return f"{x:,.2f}" if isinstance(x, (int, float, np.floating)) else x
+        # CSS ตารางผลลัพธ์ + highlight best performance
+        st.markdown("""
+        <style>
+        table.tsp-table{
+          border-collapse: collapse;
+          width: 100%;
+          font-size: 0.9rem;
+          border-radius: 10px;
+          overflow: hidden;
+          margin-bottom: 8px;
+        }
+        table.tsp-table th,
+        table.tsp-table td{
+          padding: 8px 10px;
+          border: 1px solid #e5e7eb;
+        }
+        table.tsp-table thead th{
+          background-color:#eef2ff;
+          color:#0f172a;
+          font-weight:700;
+        }
+        table.tsp-table tbody th{
+          background-color:#f3f4ff;
+          color:#111827;
+          font-weight:700;
+          width:32%;
+        }
+        table.tsp-table td{
+          background-color:#ffffff;
+          color:#111827;
+          font-weight:600;
+          text-align:right;
+        }
+        table.tsp-table td.best{
+          background-color:#dcfce7;
+          color:#14532d;
+          font-weight:700;
+        }
+        </style>
+        """, unsafe_allow_html=True)
 
-        styled = sum_df.style.format(fmt)
-        st.dataframe(styled, hide_index=True, use_container_width=True)
+        # ฟังก์ชันตัดสิน best ต่อแถว
+        def best_class(metric, v1, v2):
+            # นิยามว่าอะไรดีกว่าอะไร
+            if "Cost per" in metric or "CPK" in metric or "CP" in metric:
+                # ต่ำกว่าดี
+                if v1 == v2:
+                    return ("best", "best")
+                elif v1 < v2:
+                    return ("best", "")
+                else:
+                    return ("", "best")
+            elif "Total Budget" in metric:
+                # ต่ำกว่าดีกว่า (ใช้เงินน้อยกว่า)
+                if v1 == v2:
+                    return ("best", "best")
+                elif v1 < v2:
+                    return ("best", "")
+                else:
+                    return ("", "best")
+            else:
+                # ค่า KPI สูงกว่าดี
+                if v1 == v2:
+                    return ("best", "best")
+                elif v1 > v2:
+                    return ("best", "")
+                else:
+                    return ("", "best")
+
+        # สร้าง HTML ตาราง
+        html = "<table class='tsp-table'><thead><tr><th>Metric</th><th>Option 1</th><th>Option 2</th></tr></thead><tbody>"
+        for row in summary_rows:
+            m = row["Metric"]
+            v1 = row["Option 1"]
+            v2 = row["Option 2"]
+            cls1, cls2 = best_class(m, v1, v2)
+            v1s = f"{v1:,.2f}" if isinstance(v1,(int,float,np.floating)) else v1
+            v2s = f"{v2:,.2f}" if isinstance(v2,(int,float,np.floating)) else v2
+            html += f"<tr><th>{m}</th><td class='{cls1}'>{v1s}</td><td class='{cls2}'>{v2s}</td></tr>"
+        html += "</tbody></table>"
+        st.markdown(html, unsafe_allow_html=True)
 
         # แสดง Category / Platform ที่เลือกแต่ละ Option
         c1, c2 = st.columns(2)

@@ -1849,6 +1849,8 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .reindex(DISPLAY_ORDER)
                 .reset_index()
             )
+            # ลบชื่อ columns axis ("Scenario") ไม่ให้กลายเป็นคอลัมน์หัวซ้ายสุด
+            alloc_tbl = alloc_tbl.rename_axis(None, axis=1)
 
             html_alloc = alloc_tbl.to_html(
                 index=False,
@@ -1867,6 +1869,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .reindex(DISPLAY_ORDER)
                 .reset_index()
             )
+            pct_tbl = pct_tbl.rename_axis(None, axis=1)
 
             html_pct = pct_tbl.to_html(
                 index=False,

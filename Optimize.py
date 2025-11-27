@@ -1447,7 +1447,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
             'view': 'View', 'views': 'View',
             'engagement': 'Engagement', 'eng': 'Engagement',
-            'share': 'Share'
+            'share': 'Share', 'shares': 'Share'
         }
         kpi_key = kpi_map.get(p, p)
         if kpi_key not in KPI_CANON:
@@ -1565,7 +1565,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             'impression': 'Impression', 'impressions': 'Impression', 'imp': 'Impression',
             'view': 'View', 'views': 'View',
             'engagement': 'Engagement', 'eng': 'Engagement',
-            'share': 'Share'
+            'share': 'Share', 'shares': 'Share'
         }
         p = str(kpi_type).lower()
         kpi_key = kpi_map.get(p, p)
@@ -1637,7 +1637,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
         return out[:top_n], list(dict.fromkeys([w for w in warnings if w]))
 
-    # ---------- Dashboard ----------
+    # ---------- Dashboard (เวอร์ชันใหม่ แสดงทุก scenario) ----------
     def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
                              primary_kpi_name, primary_value, category,
                              show_target_cols, compare_key):
@@ -1689,58 +1689,78 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         tier_colors = ["#60a5fa", "#34d399", "#f59e0b",
                        "#8b5cf6", "#ef4444", "#06b6d4"]
 
-        # ---- Budget Allocation by tier (faceted per Scenario, horizontal bars) ----
-        base_budget = alt.Chart(bud_df).mark_bar().encode(
-            x=alt.X("Allocation:Q", title="Budget"),
-            y=alt.Y("Tier:N", sort=DISPLAY_ORDER, title=None),
-            color=alt.Color("Tier:N",
-                            sort=DISPLAY_ORDER,
-                            scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
-                            legend=None),
-            tooltip=[
-                alt.Tooltip("Scenario:N"),
-                alt.Tooltip("Tier:N"),
-                alt.Tooltip("Allocation:Q", format=",.0f", title="Budget"),
-                alt.Tooltip("Pct:Q", format=",.1f", title="% of scenario")
-            ]
-        ).properties(height=140, width=130)
-
-        chart_budget = base_budget.facet(
-            column=alt.Column("Scenario:N",
-                              sort=scenario_order,
-                              header=alt.Header(title=None,
-                                                labelFontWeight="bold",
-                                                labelOrient="bottom")),
-            columns=len(scenario_order)   # <<< ให้แสดงครบทุก scenario ในแถวเดียว
-        ).resolve_scale(x='shared')
-
-        # ---- % Percentage chart ----
-        chart_pct = (
-            alt.Chart(bud_df)
-            .mark_bar()
-            .encode(
-                x=alt.X("Scenario:N", sort=scenario_order, title=None),
-                y=alt.Y("Pct:Q", stack="normalize", title="% Percentage by tier"),
-                color=alt.Color("Tier:N",
-                                sort=DISPLAY_ORDER,
-                                scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
-                                legend=alt.Legend(title="Tier")),
-                tooltip=[
-                    alt.Tooltip("Scenario:N"),
-                    alt.Tooltip("Tier:N"),
-                    alt.Tooltip("Allocation:Q", format=",.0f", title="Budget"),
-                    alt.Tooltip("Pct:Q", format=",.1f", title="% of scenario")
-                ]
-            )
-            .properties(height=280)
-        )
-
         c1, c2 = st.columns(2)
+
+        # ====== FIX: Budget Allocation by tier – แสดงทุก scenario โดยแบ่งเป็นหลายแถว ======
         with c1:
             st.markdown("**Budget Allocation by tier**")
-            st.altair_chart(chart_budget, use_container_width=True)
+
+            max_charts_per_row = 3   # ปรับได้เป็น 3 หรือ 4 ตามที่ต้องการ
+            for i in range(0, len(scenario_order), max_charts_per_row):
+                subset = scenario_order[i:i + max_charts_per_row]
+                sub_df = bud_df[bud_df["Scenario"].isin(subset)]
+
+                base_budget = (
+                    alt.Chart(sub_df)
+                    .mark_bar()
+                    .encode(
+                        x=alt.X("Allocation:Q", title="Budget"),
+                        y=alt.Y("Tier:N", sort=DISPLAY_ORDER, title=None),
+                        color=alt.Color(
+                            "Tier:N",
+                            sort=DISPLAY_ORDER,
+                            scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
+                            legend=None
+                        ),
+                        tooltip=[
+                            alt.Tooltip("Scenario:N"),
+                            alt.Tooltip("Tier:N"),
+                            alt.Tooltip("Allocation:Q", format=",.0f", title="Budget"),
+                            alt.Tooltip("Pct:Q", format=",.1f", title="% of scenario")
+                        ]
+                    )
+                    .properties(height=140, width=130)
+                )
+
+                chart_budget_row = base_budget.facet(
+                    column=alt.Column(
+                        "Scenario:N",
+                        sort=subset,
+                        header=alt.Header(
+                            title=None,
+                            labelFontWeight="bold",
+                            labelOrient="bottom"
+                        )
+                    ),
+                    columns=len(subset)
+                ).resolve_scale(x="shared")
+
+                st.altair_chart(chart_budget_row, use_container_width=True)
+
+        # ---- % Percentage chart ----
         with c2:
             st.markdown("**% Percentage**")
+            chart_pct = (
+                alt.Chart(bud_df)
+                .mark_bar()
+                .encode(
+                    x=alt.X("Scenario:N", sort=scenario_order, title=None),
+                    y=alt.Y("Pct:Q", stack="normalize", title="% Percentage by tier"),
+                    color=alt.Color(
+                        "Tier:N",
+                        sort=DISPLAY_ORDER,
+                        scale=alt.Scale(domain=DISPLAY_ORDER, range=tier_colors),
+                        legend=alt.Legend(title="Tier")
+                    ),
+                    tooltip=[
+                        alt.Tooltip("Scenario:N"),
+                        alt.Tooltip("Tier:N"),
+                        alt.Tooltip("Allocation:Q", format=",.0f", title="Budget"),
+                        alt.Tooltip("Pct:Q", format=",.1f", title="% of scenario")
+                    ]
+                )
+                .properties(height=280)
+            )
             st.altair_chart(chart_pct, use_container_width=True)
 
         # Budget allocation table
@@ -1751,7 +1771,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         tbl = tbl.reset_index()
         st.dataframe(tbl, use_container_width=True)
 
-        # Performance Comparison
+        # ---------------- Performance Comparison ----------------
         st.markdown("### Performance Comparison")
 
         scen_names_for_select = scenario_order

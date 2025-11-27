@@ -1638,7 +1638,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
         return out[:top_n], list(dict.fromkeys([w for w in warnings if w]))
 
-    # ---------- Dashboard (เวอร์ชันใหม่: ตารางคู่, สีอ่อน, ซ่อน index) ----------
+    # ---------- Dashboard (มีตารางคู่, สีอ่อน, ซ่อน index) ----------
     def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
                              primary_kpi_name, primary_value, category,
                              show_target_cols, compare_key):
@@ -1777,7 +1777,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         # --- ตาราง Baht ---
         with tcol1:
-            st.markdown("**Baht (งบประมาณต่อ Tier)**")
+            st.markdown("**Tier Allocation (Baht)**")
 
             alloc_tbl = (
                 bud_df
@@ -1792,13 +1792,13 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .format({col: "{:,.0f}" for col in alloc_tbl.columns if col != "Tier"})
                 .set_table_styles([
                     dict(selector="th", props=[
-                        ("background-color", "#e0f2fe"),
+                        ("background-color", "#dcfce7"),  # green-100
                         ("color", "#111827"),
                         ("font-weight", "700"),
-                        ("border-color", "#bfdbfe")
+                        ("border-color", "#bbf7d0")
                     ]),
                     dict(selector="td", props=[
-                        ("background-color", "#f9fbff"),
+                        ("background-color", "#f0fdf4"),  # green-50
                         ("color", "#111827"),
                         ("font-weight", "600"),
                         ("border-color", "#e5e7eb")
@@ -1825,13 +1825,13 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .format({col: "{:,.1f}" for col in pct_tbl.columns if col != "Tier"})
                 .set_table_styles([
                     dict(selector="th", props=[
-                        ("background-color", "#fef3c7"),
+                        ("background-color", "#ede9fe"),  # violet-100
                         ("color", "#111827"),
                         ("font-weight", "700"),
-                        ("border-color", "#fed7aa")
+                        ("border-color", "#ddd6fe")
                     ]),
                     dict(selector="td", props=[
-                        ("background-color", "#fffbeb"),
+                        ("background-color", "#f5f3ff"),  # violet-50
                         ("color", "#111827"),
                         ("font-weight", "600"),
                         ("border-color", "#e5e7eb")

@@ -557,632 +557,82 @@ def load_weights(csv_url):
 csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
 weights_df = load_weights(csv_url)
 
-#############################################################################################################################################
-# import streamlit as st
-# import pandas as pd
-# import numpy as np
-# import plotly.express as px
-# import plotly.graph_objects as go
-# import base64
-# import requests
-# import io
-# import time
-# from scipy.optimize import linprog
-# from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
-# import altair as alt
-# from textwrap import dedent
-# import urllib.parse as _url
-
-# # ===================== FRONTGATE V2 (LOGIN + INTRO PAGE) =====================
-
-# # Page config (ignore error if already set later)
-# try:
-#     st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="wide")
-# except Exception:
-#     pass
-
-# # Session keys
-# st.session_state.setdefault("authenticated", False)
-# st.session_state.setdefault("FG2_invalid_login", False)
-# st.session_state.setdefault("FG2_onboard_done", False)  # False = still show Intro
-
-# # Credentials
-# FG2_VALID_USERS = {"mbcs": "1234", "mbcs1": "5678", "admin": "adminpass"}
-
-# # Assets / Options
-# FG2_LOGO_URL = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-# FG2_TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
-# FG2_TICKER_ITEMS = [
-#     {"text": "MBCS AI Optimization Tool", "color": "#000000"},
-#     {"text": "Smart budget simulation",   "color": "#16a34a"},
-#     {"text": "Influencer optimization",   "color": "#2563eb"},
-# ]
-
-# # Base styles (เหมือนเดิมทั้งหมด)
-# st.markdown("""
-# <style>
-# .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
-# body {
-#   background:
-#     radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
-#     radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
-#     linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
-# }
-# .login-hero { position:relative; padding-top: 4px; }
-# .ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
-# .ambient::before, .ambient::after, .ambient i {
-#   content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
-# }
-# .ambient::before { top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: glow1 7s ease-in-out infinite; }
-# .ambient::after  { top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: glow2 10s ease-in-out infinite .8s; }
-# .ambient i       { top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: glow3 12s ease-in-out infinite .4s; }
-# @keyframes glow1{0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)}}
-# @keyframes glow2{0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)}}
-# @keyframes glow3{0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)}}
-
-# .gradient-title {
-#   font-weight:800; line-height:1.1; margin:0.1rem 0 0.6rem 0; text-align:center; font-size:44px;
-#   background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
-#   -webkit-background-clip: text; background-clip: text; color: transparent;
-#   background-size:200% auto; animation: gradMove 10s linear infinite;
-#   text-shadow: 0 1px 0 rgba(255,255,255,.4);
-# }
-# @keyframes gradMove {0%{background-position:0% 50%} 100%{background-position:200% 50%}}
-# .subtitle { color:#526273; text-align:center; margin-bottom:22px; }
-# .logo-wrap { position:relative; width:130px; height:130px; margin:0 auto 10px; }
-# .logo-wrap::before{
-#   content:""; position:absolute; inset:-10px; border-radius:50%;
-#   background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-#   animation: spin 10s linear infinite; filter: blur(10px); opacity:.7;
-# }
-# @keyframes spin {to{transform:rotate(360deg)}}
-# .logo-wrap img{ position:relative; z-index:1; width:100%; height:100%; border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,.25); }
-
-# .top-wrap { margin-top:10px; margin-bottom:22px; }
-# .pill { width:min(720px, 90vw); margin:0 auto 12px; border-radius:9999px; position:relative; overflow:hidden; background:linear-gradient(180deg,#fff,#f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
-# .pill .sheen { position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
-# @keyframes sheenMove {0%{ transform:translateX(-150%) skewX(-18deg)} 100%{ transform:translateX(250%) skewX(-18deg)}}
-# .glass{ height:22px; background:linear-gradient(180deg,rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
-
-# /* ปุ่ม login เท่านั้น (เดิม) */
-# .stButton > button{ width:100%; border-radius:10px; height:44px; background: linear-gradient(90deg, #22c55e, #06b6d4); border:none; color:#fff; font-weight:700; letter-spacing:.2px; box-shadow:0 8px 22px rgba(3,105,161,.28); }
-# .stButton > button:hover{ filter:brightness(1.04); transform: translateY(-1px); }
-# </style>
-# """, unsafe_allow_html=True)
-
-# # Ticker
-# def FG2_render_top_banner():
-#     import json as _json
-#     items_json = _json.dumps(FG2_TICKER_ITEMS)
-#     html = f"""
-#     <div class="top-wrap">
-#       <div class="pill"><div class="sheen"></div>
-#         <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
-#           <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
-#         </div>
-#       </div>
-#       <div class="glass pill"></div>
-#     </div>
-#     <style>
-#       @keyframes marq {{0%{{transform:translateX(0)}}100%{{transform:translateX(-50%)}}}}
-#       .t-item {{display:inline-flex; align-items:center; font-weight:600;}}
-#       .t-sep {{color:#94a3b8; margin:0 12px;}}
-#       #track::after {{
-#         content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
-#         background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
-#         transform: skewX(-18deg); animation: sweepT 7s.linear infinite;
-#       }}
-#       @keyframes sweepT {{0%{{left:-120px}} 100%{{left:120%}}}}
-#     </style>
-#     <script>
-#       const ITEMS = {items_json};
-#       const SEPARATOR = "•"; const END_SPACE_PX = 40;
-#       const track = document.getElementById("track");
-#       if(track && ITEMS.length){{
-#         const make = () => {{
-#           const frag = document.createDocumentFragment();
-#           ITEMS.forEach((it,i)=>{{ const s=document.createElement("span"); s.className="t-item"; s.style.color=it.color; s.textContent=it.text; frag.appendChild(s);
-#             if(i<ITEMS.length-1){{ const sep=document.createElement("span"); sep.className="t-sep"; sep.textContent=SEPARATOR; frag.appendChild(sep); }} }});
-#           const spacer=document.createElement("span"); spacer.style.display="inline-block"; spacer.style.width=END_SPACE_PX+"px"; frag.appendChild(spacer); return frag; }};
-#         const c1=document.createElement("div"); c1.appendChild(make());
-#         const c2=document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
-#         track.appendChild(c1); track.appendChild(c2);
-#         requestAnimationFrame(()=>{{ const w=c1.getBoundingClientRect().width; const dur=Math.max(16, w/90); track.style.animationDuration = dur+"s"; }});
-#       }}
-#     </script>
-#     """
-#     st.components.v1.html(html, height=110, scrolling=False)
-
-# # Cleanup duplicate tickers (keep first)
-# def FG2_cleanup_keep_first_ticker():
-#     st.markdown("""
-#     <script>
-#     (function(){
-#       function hideDuplicateTickers(){
-#         const ifrms = Array.from(document.querySelectorAll('iframe'));
-#         const bands = [];
-#         for(const f of ifrms){
-#           try{
-#             const doc = f.contentDocument || f.contentWindow?.document;
-#             const t = (doc?.body?.innerText || "").replace(/\\s+/g,' ');
-#             if(t.includes('MBCS AI Optimization Tool') &&
-#                t.includes('Smart budget simulation') &&
-#                t.includes('Influencer optimization')){
-#               bands.push(f);
-#             }
-#           }catch(e){}
-#         }
-#         if(bands.length > 1){
-#           for(let i=1;i<bands.length;i++){ bands[i].style.display='none'; }
-#         }
-#       }
-#       hideDuplicateTickers();
-#       setTimeout(hideDuplicateTickers, 250);
-#       setTimeout(hideDuplicateTickers, 800);
-#       setTimeout(hideDuplicateTickers, 2000);
-#     })();
-#     </script>
-#     """, unsafe_allow_html=True)
-
-# # Login
-# def FG2_login_view():
-#     try:
-#         st.query_params.update({"intro": "1"})
-#     except Exception:
-#         st.experimental_set_query_params(intro="1")
-
-#     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
-#     FG2_render_top_banner()
-
-#     mid = st.columns([1,1,1])[1]
-#     with mid:
-#         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo" /></div>', unsafe_allow_html=True)
-
-#     st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
-#     st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
-#     st.markdown(f'<div class="subtitle">{FG2_TAGLINE_TEXT}</div>', unsafe_allow_html=True)
-
-#     st.markdown('<div class="login-card">', unsafe_allow_html=True)
-#     with st.form("FG2_login_form"):
-#         u = st.text_input("Username")
-#         p = st.text_input("Password", type="password")
-#         submitted = st.form_submit_button("Sign in")
-#     st.markdown('</div>', unsafe_allow_html=True)
-#     st.markdown('</div>', unsafe_allow_html=True)
-
-#     if submitted:
-#         if u in FG2_VALID_USERS and p == FG2_VALID_USERS[u]:
-#             st.session_state.authenticated = True
-#             st.session_state.FG2_invalid_login = False
-#             st.session_state.FG2_onboard_done = False
-#             try:
-#                 st.query_params.update({"intro": "1"})
-#             except Exception:
-#                 st.experimental_set_query_params(intro="1")
-#             st.rerun()
-#         else:
-#             st.session_state.FG2_invalid_login = True
-
-#     if st.session_state.FG2_invalid_login:
-#         st.error("Invalid username or password.")
-
-# # Introduction
-# def FG2_render_intro():
-#     FG2_render_top_banner()
-
-#     mid = st.columns([1,1,1])[1]
-#     with mid:
-#         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
-
-#     st.markdown("<h3>Introducing NEST OPTIMIZER</h3>", unsafe_allow_html=True)
-#     st.markdown("""
-#     <div style="font-size:16px; line-height:1.7; color:#111827;">
-#       <p>In a world with countless influencers across countless platforms, knowing where to begin is the biggest challenge.
-#       "<strong>NEST OPTIMIZER</strong>" is our proprietary KOL engine, designed to bring precision to influencer marketing and solve the two
-#       biggest challenges in the industry:</p>
-
-#       <div style="display:flex; align-items:flex-start; gap:10px; margin:10px 0;">
-#         <div style="font-size:24px;">🔺</div>
-#         <div>
-#           <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:#ecfdf5;">
-#             KOL TIER OPTIMIZATION
-#           </span>
-#           <span>: Strategically allocates your budget across influencer tiers to ensure maximum impact and cost efficiency.</span>
-#         </div>
-#       </div>
-
-#       <div style="display:flex; align-items:flex-start; gap:10px; margin:6px 0 14px;">
-#         <div style="font-size:24px;">🧩</div>
-#         <div>
-#           <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:#ecfdf5;">
-#             KOL LIST OPTIMIZATION
-#           </span>
-#           <span>: Selects the most effective creators within each tier, based on their performance and relevance.</span>
-#         </div>
-#       </div>
-
-#       <p>This is where we bring science to the art of influencer marketing. Our platform allows us to combine human expertise
-#       with data-driven insights. It provides a scientifically-backed KOL strategy that ensures every dollar spent delivers
-#       maximum effectiveness and cost efficiency, giving us a unique competitive advantage in the market.</p>
-#     </div>
-#     """, unsafe_allow_html=True)
-
-#     st.markdown("<hr/>", unsafe_allow_html=True)
-#     btn_col = st.columns([3,1])[1]
-#     with btn_col:
-#         if st.button("Next →", key="FG2_next", use_container_width=True):
-#             st.session_state.FG2_onboard_done = True
-#             st.session_state.page = "KOL Tier Optimizer (KTO)"
-#             try:
-#                 st.query_params.update({"intro": "0", "page": "KOL Tier Optimizer (KTO)"})
-#             except Exception:
-#                 st.experimental_set_query_params(intro="0", page="KOL Tier Optimizer (KTO)")
-#             st.rerun()
-
-# # ROUTING
-# if not st.session_state.authenticated:
-#     FG2_login_view()
-#     st.stop()
-
-# try:
-#     qp = st.query_params
-#     if qp.get("intro") == "0":
-#         st.session_state.FG2_onboard_done = True
-#     elif qp.get("intro") == "1":
-#         st.session_state.FG2_onboard_done = False
-# except Exception:
-#     qp = st.experimental_get_query_params()
-#     if qp.get("intro", ["1"])[0] == "0":
-#         st.session_state.FG2_onboard_done = True
-#     else:
-#         st.session_state.FG2_onboard_done = False
-
-# if not st.session_state.FG2_onboard_done:
-#     FG2_render_intro()
-#     st.stop()
-# else:
-#     FG2_cleanup_keep_first_ticker()
-
-# # ===================== END FRONTGATE V2 =====================
-
-# # -------------------- PAGE CONFIG --------------------
-# st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wide")
-
-# # -------------------- SESSION STATE --------------------
-# st.session_state.setdefault("authenticated", False)
-# st.session_state.setdefault("page", "KOL Tier Optimizer (KTO)")
-# st.session_state.setdefault("prev_page", None)
-# st.session_state.setdefault("ticker_rendered_once", False)
-
-# if "inputs" not in st.session_state:
-#     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
-
-# # -------------------- OPTIONS --------------------
-# logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
-# SHOW_TICKER_APP = True
-# TICKER_ITEMS = [
-#     {"text": "MBCS AI Optimization Tool", "color": "#000000"},
-#     {"text": "Smart budget simulation",   "color": "#16a34a"},
-#     {"text": "Influencer optimization",   "color": "#2563eb"},
-# ]
-
-# # -------------------- GLOBAL STYLES (header + hero) --------------------
-# st.markdown("""
-# <style>
-# .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
-
-# /* Ticker pills */
-# .top-wrap { margin-top: 10px; margin-bottom: 22px; }
-# .pill { width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px; position:relative; overflow:hidden;
-#   background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
-# .pill .sheen{ content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
-# @keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg)} 100%{ transform: translateX(250%) skewX(-18deg)} }
-# .glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
-
-# /* Header หลังล็อกอิน */
-# .app-header{
-#   position: relative; overflow: hidden; padding: 26px 26px 20px; border-radius: 18px;
-#   background: rgba(255,255,255,.78); backdrop-filter: blur(8px);
-#   border: 1px solid rgba(17,24,39,.08); box-shadow: 0 12px 35px rgba(17,24,39,.10); margin-bottom: 18px;
-# }
-# .app-header:before{ content:""; position:absolute; inset:-2px;
-#   background: conic-gradient(from 0deg, #6366f1, #22d3ee, #a78bfa, #6366f1);
-#   filter: blur(28px); opacity:.25; animation: spin 10s linear infinite; }
-# .shine{ position:absolute; inset:1px; border-radius:16px;
-#   background: linear-gradient(120deg, rgba(255,255,255,.18), transparent 35%, transparent 65%, rgba(255,255,255,.18));
-#   background-size:220% 100%; animation: gradientMove 6s linear infinite; pointer-events:none; }
-# .headline{ font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); -webkit-background-clip: text; background-clip: text; color: transparent; }
-# .subline{ margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px); }
-
-# /* Brand hero */
-# .brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
-# .brand-hero .brand-stage{ position:relative; z-index:1; }
-# .brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
-# .brand-ambient .g1, .brand-ambient .g2, .brand-ambient .g3{
-#   position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
-# }
-# .brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
-# .brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
-# .brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
-# @keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
-# @keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
-# @keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
-# .brand-logo{ position:relative; width:120px; height:120px; }
-# .brand-logo::before{
-#   content:""; position:absolute; inset:-10px; border-radius:50%;
-#   background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-#   animation: bh_spin 10s linear infinite; filter: blur(10px); opacity:.7;
-# }
-# .brand-logo img{
-#   position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
-#   box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s.ease-in-out infinite;
-# }
-# @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
-# @keyframes spin{ to{ transform: rotate(360deg);} }
-# </style>
-# """, unsafe_allow_html=True)
-
-# def inject_cleanup_js():
-#     st.markdown("""
-#     <script>
-#     (function(){
-#       function hideDuplicateTickers(){
-#         const iframes = Array.from(document.querySelectorAll('iframe'));
-#         const tickers = [];
-#         for (const f of iframes){
-#           try{
-#             const doc = f.contentDocument || f.contentWindow?.document;
-#             if(!doc) continue;
-#             const txt = (doc.body?.innerText || "").replace(/\\s+/g,' ').trim();
-#             if (txt.includes('MBCS AI Optimization Tool') &&
-#                 txt.includes('Smart budget simulation') &&
-#                 txt.includes('Influencer optimization')){
-#               tickers.push(f);
-#             }
-#           }catch(e){}
-#         }
-#         if (tickers.length > 1){
-#           for(let i=0;i<tickers.length-1;i++){
-#             tickers[i].style.display = 'none';
-#           }
-#         }
-#       }
-
-#       function hideLoggedInBanner(){
-#         const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
-#         alerts.forEach(a=>{
-#           const t = (a.innerText||"").trim();
-#           if (t.startsWith('You are logged in. Build your app content here.')){
-#             a.style.display = 'none';
-#           }
-#         });
-#       }
-
-#       hideDuplicateTickers(); hideLoggedInBanner();
-#       setTimeout(hideDuplicateTickers, 250);  setTimeout(hideLoggedInBanner, 250);
-#       setTimeout(hideDuplicateTickers, 800);  setTimeout(hideLoggedInBanner, 800);
-#       setTimeout(hideDuplicateTickers, 2000); setTimeout(hideLoggedInBanner, 2000);
-#     })();
-#     </script>
-#     """, unsafe_allow_html=True)
-
-# def render_header():
-#     st.markdown("""
-#     <div class="app-header">
-#       <div class="shine"></div>
-#       <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
-#       <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
-#     </div>
-#     """, unsafe_allow_html=True)
-
-# def render_brand_hero():
-#     st.markdown(f"""
-#     <div class="brand-hero">
-#       <div class="brand-ambient">
-#         <span class="g1"></span><span class="g2"></span><span class="g3"></span>
-#       </div>
-#       <div class="brand-stage">
-#         <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
-#       </div>
-#     </div>
-#     """, unsafe_allow_html=True)
-
-# def render_top_banner_once():
-#     if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
-#         return
-#     FG2_render_top_banner()
-#     st.session_state.ticker_rendered_once = True
-
-# # -------------------- NAV (ตรงนี้คือส่วนที่แก้จริง ๆ) --------------------
-# def sync_page_from_query():
-#     try:
-#         qp = st.query_params
-#         if "page" in qp:
-#             st.session_state.page = qp["page"]
-#     except Exception:
-#         qp = st.experimental_get_query_params()
-#         if "page" in qp:
-#             st.session_state.page = qp["page"][0]
-
-# def set_page(name: str):
-#     st.session_state.page = name
-#     try:
-#         st.query_params.update({"page": name})
-#     except Exception:
-#         st.experimental_set_query_params(page=name)
-
-# def render_nav_pills():
-#     # ส่วน CSS ด้านบนของคุณเหมือนเดิม ไม่ต้องแก้
-#     # (วางโค้ด CSS ของเดิมไว้ตรงนี้ ถ้ามี)
-
-#     sync_page_from_query()
-#     curr = st.session_state.page
-
-#     def make_label(base: str, page_name: str) -> str:
-#         return f"{'🔴' if curr == page_name else '⚪'} {base}"
-
-#     label_kto = make_label("KOL Tier Optimizer (KTO)", "KOL Tier Optimizer (KTO)")
-#     label_tsp = make_label("Tier Scenario Planner", "Tier Scenario Planner")
-#     label_ipe = make_label("Influencer Precision Engine (IPE)", "Influencer Precision Engine (IPE)")
-#     label_up  = make_label("Upload Data", "Upload Data")
-
-#     st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
-#     c1, c2, c3, c4 = st.columns(4)
-
-#     with c1:
-#         page_name = "KOL Tier Optimizer (KTO)"
-#         cls = "nav-btn p1 active" if curr == page_name else "nav-btn p1 inactive"
-#         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-#         st.button(
-#             label_kto,
-#             use_container_width=True,
-#             key="nav_kto",
-#             on_click=set_page,
-#             args=(page_name,),
-#         )
-#         st.markdown('</div>', unsafe_allow_html=True)
-
-#     with c2:
-#         page_name = "Tier Scenario Planner"
-#         cls = "nav-btn p2.active" if curr == page_name else "nav-btn p2 inactive"
-#         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-#         st.button(
-#             label_tsp,
-#             use_container_width=True,
-#             key="nav_tsp",
-#             on_click=set_page,
-#             args=(page_name,),
-#         )
-#         st.markdown('</div>', unsafe_allow_html=True)
-
-#     with c3:
-#         page_name = "Influencer Precision Engine (IPE)"
-#         cls = "nav-btn p3 active" if curr == page_name else "nav-btn p3 inactive"
-#         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-#         st.button(
-#             label_ipe,
-#             use_container_width=True,
-#             key="nav_ipe",
-#             on_click=set_page,
-#             args=(page_name,),
-#         )
-#         st.markdown('</div>', unsafe_allow_html=True)
-
-#     with c4:
-#         page_name = "Upload Data"
-#         cls = "nav-btn p4 active" if curr == page_name else "nav-btn p4 inactive"
-#         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-#         st.button(
-#             label_up,
-#             use_container_width=True,
-#             key="nav_upload",
-#             on_click=set_page,
-#             args=(page_name,),
-#         )
-#         st.markdown('</div>', unsafe_allow_html=True)
-
-#     st.markdown('</div></div>', unsafe_allow_html=True)
-    
-# # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
-# if not st.session_state.authenticated:
-#     st.info("Please sign in on your existing login view.")
-#     st.stop()
-
-# inject_cleanup_js()
-# render_top_banner_once()
-# render_brand_hero()
-# render_header()
-# render_nav_pills()
-
-# # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
-# @st.cache_data
-# def load_weights(csv_url):
-#     df = pd.read_csv(csv_url)
-#     return df
-
-# # Load weights from the published Google Sheet
-# csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
-# weights_df = load_weights(csv_url)
-
-# ----------------------- PAGE 1: Tier Scenario Planner (เดิม Simulation Budget) -----------------------
+# ----------------------- PAGE 1: Tier Scenario Planner -----------------------
 if st.session_state.page == "Tier Scenario Planner":
 
-    # ===== เดิม: Simulation Budget ทั้งก้อน (เปลี่ยนชื่อ title แล้วอย่างเดียว) =====
-    st.title("📊 Tier Scenario Planner")
-    
+    # ===== Tier Scenario Planner (เวอร์ชันใหม่) =====
+    st.title("Tier Scenario Planner")
+
     # LOAD weights_df
     if "weights_df" in st.session_state:
         weights_df = st.session_state["weights_df"]
     elif "weights_df" in globals():
         weights_df = globals()["weights_df"]
     else:
-        st.error("weights_df is not defined. Please load it before this page. Required columns: Category, Tier, Platform, KPI, Weights")
+        st.error("weights_df is not defined. Please load it before this page. Required columns: Category, Tier, Platform, KPI, Weights, N")
         st.stop()
-    
-    ALLOWED_KPIS = {"Impression", "View", "Engagement", "Share"}
+
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
-    
+    ALLOWED_KPIS = {"Impression", "View", "Engagement", "Share"}
+
     required_cols = {'Category', 'Tier', 'Platform', 'KPI', 'Weights'}
     missing_cols = required_cols - set(weights_df.columns)
     if missing_cols:
         st.error(f"weights_df missing columns: {missing_cols}")
         st.stop()
-    
+
+    # เตรียมข้อมูล
     weights_df = weights_df.copy()
     for c in ['Category', 'Tier', 'Platform', 'KPI']:
         weights_df[c] = weights_df[c].astype(str).str.strip()
+
     weights_df['Weights'] = pd.to_numeric(weights_df['Weights'], errors='coerce')
-    
+
+    # ถ้าไม่มี N ให้สร้าง = 1
+    if 'N' not in weights_df.columns:
+        weights_df['N'] = 1
+    weights_df['N'] = pd.to_numeric(weights_df['N'], errors='coerce').fillna(1)
+    weights_df.loc[weights_df['N'] < 0, 'N'] = 0
+
     unknown_kpis = set(weights_df['KPI'].unique()) - ALLOWED_KPIS
     if unknown_kpis:
         st.warning(f"Ignored KPIs in weights_df (not used anymore): {sorted(list(unknown_kpis))}")
-    
+
     def zero_inputs():
         return {t: 0 for t in TIERS}
-    
-    if 'inputs_a' not in st.session_state:
-        st.session_state.inputs_a = zero_inputs()
-    if 'inputs_b' not in st.session_state:
-        st.session_state.inputs_b = zero_inputs()
-    if 'inputs_c' not in st.session_state:
-        st.session_state.inputs_c = zero_inputs()
-    
+
+    # state budgets
+    if 'inputs_opt1' not in st.session_state:
+        st.session_state.inputs_opt1 = zero_inputs()
+    if 'inputs_opt2' not in st.session_state:
+        st.session_state.inputs_opt2 = zero_inputs()
+
+    # list category / platform
     available_categories = sorted(weights_df['Category'].dropna().unique().tolist())
     if not available_categories:
         st.error("No categories found in weights_df.")
         st.stop()
-    
-    for k in ['category_a', 'category_b', 'category_c']:
-        if k not in st.session_state:
-            st.session_state[k] = available_categories[0]
-    
-    def platforms_for_category(cat):
-        return sorted(weights_df.loc[weights_df['Category'] == cat, 'Platform'].dropna().unique().tolist())
-    
-    if 'platform_a' not in st.session_state:
-        ps = platforms_for_category(st.session_state.category_a)
-        st.session_state.platform_a = ps[0] if ps else None
-    if 'platform_b' not in st.session_state:
-        ps = platforms_for_category(st.session_state.category_b)
-        st.session_state.platform_b = ps[0] if ps else None
-    if 'platform_c' not in st.session_state:
-        ps = platforms_for_category(st.session_state.category_c)
-        st.session_state.platform_c = ps[0] if ps else None
-    
-    def get_weights(category, platform, kpi):
-        if platform is None or kpi not in ALLOWED_KPIS:
-            return {}
-        sub = weights_df.loc[
-            (weights_df['Category'] == category) &
-            (weights_df['Platform'] == platform) &
-            (weights_df['KPI'] == kpi),
-            ['Tier', 'Weights']
-        ].copy()
-        if sub.empty:
-            return {}
-        sub['Weights'] = pd.to_numeric(sub['Weights'], errors='coerce')
-        return {row['Tier']: 0.0 if pd.isna(row['Weights']) else float(row['Weights']) for _, row in sub.iterrows()}
-    
+
+    def platforms_for_categories(cat_list):
+        if not cat_list:
+            return []
+        sub = weights_df[weights_df['Category'].isin(cat_list)]
+        return sorted(sub['Platform'].dropna().unique().tolist())
+
+    # default states for multi-select
+    st.session_state.setdefault('opt1_categories', [available_categories[0]])
+    st.session_state.setdefault('opt2_categories', [available_categories[0]])
+
+    st.session_state.setdefault('opt1_platforms', platforms_for_categories(st.session_state['opt1_categories']))
+    st.session_state.setdefault('opt2_platforms', platforms_for_categories(st.session_state['opt2_categories']))
+
+    # KPI objective (global – ใช้ร่วมกันทั้ง 2 option)
+    all_kpis = sorted([k for k in weights_df['KPI'].dropna().unique().tolist() if k in ALLOWED_KPIS])
+    if not all_kpis:
+        st.error("No valid KPI values found in weights_df.")
+        st.stop()
+    st.session_state.setdefault('tsp_kpi_obj', all_kpis[0])
+
     def colored_percentage(p):
         if p >= 40:
             return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
@@ -1192,286 +642,594 @@ if st.session_state.page == "Tier Scenario Planner":
             return f"<span style='color:#009688;'>{p:.1f}%</span>"
         else:
             return "<span style='color:#aaa;'>0.0%</span>"
-    
+
     def safe_div(n, d):
         return (n / d) if d not in (0, None) else 0.0
-    
-    st.subheader("📊 Budget Simulation Comparison")
-    col_input_a, col_input_b, col_input_c = st.columns(3)
-    
-    def inputs_panel(col, sim_key, cat_key, plat_key, inputs_key, bg_color, title_color):
+
+    st.subheader("Budget Scenario Comparison")
+
+    col_opt1, col_opt2 = st.columns(2)
+
+    def panel_option(col, name, cat_key, plat_key, inputs_key, bg_color, title_color):
         with col:
-            st.subheader(f"Simulation {sim_key.upper()}")
-    
-            st.session_state[cat_key] = st.selectbox(
-                f"Simulation {sim_key.upper()} - Category:",
-                available_categories,
-                key=f"cat_{sim_key}",
-                index=available_categories.index(st.session_state[cat_key])
+            st.markdown(f"### {name}")
+
+            # multi-select KOL Category
+            st.session_state[cat_key] = st.multiselect(
+                "KOL Category (multiple selection)",
+                options=available_categories,
+                default=st.session_state[cat_key] if st.session_state[cat_key] else [available_categories[0]],
+                key=f"{name}_cats"
             )
-    
-            plats = platforms_for_category(st.session_state[cat_key])
-            options = plats if plats else ['(None)']
-            current = st.session_state.get(plat_key, options[0])
-            if current not in options:
-                current = options[0]
-            selected = st.selectbox(
-                f"Simulation {sim_key.upper()} - Platform:",
-                options,
-                key=f"plat_{sim_key}",
-                index=options.index(current)
+
+            # multi-select Platform (ขึ้นกับ category ที่เลือก)
+            plats = platforms_for_categories(st.session_state[cat_key])
+            if not plats:
+                plats = []
+            current_plats = [p for p in st.session_state.get(plat_key, []) if p in plats]
+            if not current_plats and plats:
+                current_plats = plats  # default = all available
+            st.session_state[plat_key] = st.multiselect(
+                "Platform (multiple selection)",
+                options=plats,
+                default=current_plats,
+                key=f"{name}_plats"
             )
-            st.session_state[plat_key] = None if selected == '(None)' else selected
-    
+
+            # budgets by tier
             new_inputs = {}
             for t in TIERS:
                 c1, c2 = st.columns([3, 2])
-                val = c1.number_input(f"{t}", min_value=0, value=st.session_state[inputs_key][t], key=f"{sim_key}_{t}")
+                val = c1.number_input(
+                    f"{t}",
+                    min_value=0,
+                    value=st.session_state[inputs_key][t],
+                    key=f"{name}_{t}"
+                )
                 new_inputs[t] = val
                 total_new = sum(new_inputs.values())
-                percent = (val / total_new) * 100 if total_new > 0 else 0
+                percent = (val / total_new * 100.0) if total_new > 0 else 0.0
                 c2.markdown(colored_percentage(percent), unsafe_allow_html=True)
-    
             st.session_state[inputs_key] = new_inputs
-    
+
             total_final = sum(new_inputs.values())
             st.markdown(
                 f"""
-                <div style="background:{bg_color};padding:14px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #00000022;">
-                    <div style="font-size:2.2rem;font-weight:900;color:{title_color};">{total_final:,}</div>
-                    <div style="font-size:1.1rem;">💰 Total Budget {sim_key.upper()}</div>
+                <div style="background:{bg_color};padding:14px 0;border-radius:12px;
+                            text-align:center;box-shadow:0 2px 5px #00000022;">
+                    <div style="font-size:2.0rem;font-weight:900;color:{title_color};">{total_final:,}</div>
+                    <div style="font-size:1.0rem;">💰 Total Budget ({name})</div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-    
-    inputs_panel(col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', '#e0f7fa', '#0277bd')
-    inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
-    inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
-    
-    def calc_metrics(inputs, category, platform):
-        w_imp   = get_weights(category, platform, "Impression")
-        w_view  = get_weights(category, platform, "View")
-        w_eng   = get_weights(category, platform, "Engagement")
-        w_share = get_weights(category, platform, "Share")
-    
-        tot_imp   = sum(inputs.get(k, 0) * w_imp.get(k, 0)   for k in inputs)
-        tot_view  = sum(inputs.get(k, 0) * w_view.get(k, 0)  for k in inputs)
-        tot_eng   = sum(inputs.get(k, 0) * w_eng.get(k, 0)   for k in inputs)
-        tot_share = sum(inputs.get(k, 0) * w_share.get(k, 0) for k in inputs)
-        return tot_imp, tot_view, tot_eng, tot_share
-    
-    imp_a, view_a, eng_a, share_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a, st.session_state.platform_a)
-    imp_b, view_b, eng_b, share_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b, st.session_state.platform_b)
-    imp_c, view_c, eng_c, share_c = calc_metrics(st.session_state.inputs_c, st.session_state.category_c, st.session_state.platform_c)
-    
-    budget_a = sum(st.session_state.inputs_a.values())
-    budget_b = sum(st.session_state.inputs_b.values())
-    budget_c = sum(st.session_state.inputs_c.values())
-    
-    cpe_a, cpe_b, cpe_c               = safe_div(budget_a, eng_a), safe_div(budget_b, eng_b), safe_div(budget_c, eng_c)
-    cpshare_a, cpshare_b, cpshare_c   = safe_div(budget_a, share_a), safe_div(budget_b, share_b), safe_div(budget_c, share_c)
-    
+
+    panel_option(col_opt1, "Option 1", 'opt1_categories', 'opt1_platforms', 'inputs_opt1',
+                 '#e0f7fa', '#0277bd')
+    panel_option(col_opt2, "Option 2", 'opt2_categories', 'opt2_platforms', 'inputs_opt2',
+                 '#f3e5f5', '#8e24aa')
+
+    # ---------- KPI objective (global) ----------
     st.markdown("---")
-    st.subheader("📈 Simulation Results Comparison")
-    
-    colA, colB, colC = "#0277bd", "#8e24aa", "#2e7d32"
-    
-    st.markdown(dedent("""
-    <style>
-    #sim-res { margin-top:4px; }
-    #sim-res table { width:96%; margin:6px auto 14px auto; border-collapse:separate; border-spacing:0 6px; }
-    #sim-res thead th {
-      padding:12px 12px; color:#0f172a; text-align:center; font-weight:900;
-      background: linear-gradient(90deg, #f7faff, #eef2ff);
-      border-top-left-radius:12px; border-top-right-radius:12px;
-      position:relative; overflow:hidden;
-    }
-    #sim-res thead th.simA{ color:#0277bd; }
-    #sim-res thead th.simB{ color:#8e24aa; }
-    #sim-res thead th.simC{ color:#2e7d32; }
-    #sim-res thead th::after{
-      content:""; position:absolute; inset:0;
-      background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 30%, transparent 70%, rgba(255,255,255,.7));
-      background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35; pointer-events:none;
-    }
-    #sim-res tbody td, #sim-res tbody th {
-      background:#ffffff; border:1px solid #eaeef5; padding:8px 10px; color:#334155;
-    }
-    #sim-res tbody th { width:22%; font-weight:800; border-right:none; border-radius:10px 0 0 10px; }
-    #sim-res tbody td { border-left:none; border-radius:0 10px 10px 0; position:relative; }
-    
-    #sim-res .cell { position:relative; padding: 6px 10px; }
-    #sim-res .cell .bar {
-      position:absolute; left:8px; top:50%; height:70%; transform:translateY(-50%);
-      width: calc(var(--w, 0) * 1%); border-radius:10px;
-      background: linear-gradient(90deg, var(--c), rgba(255,255,255,0));
-      opacity:.20; filter:saturate(1.2); overflow:hidden;
-    }
-    #sim-res .cell .bar::after{
-      content:""; position:absolute; inset:0;
-      background: linear-gradient(120deg, rgba(255,255,255,.75), rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,.75));
-      background-size:200% 100%; animation: shine 3.6s linear infinite; opacity:.45;
-    }
-    #sim-res .cell .val { position:relative; z-index:1; font-weight:700; }
-    #sim-res .cell.best .val { color: var(--c); text-shadow: 0 0 10px var(--c); }
-    #sim-res .cell.tie  .val { color:#1e88e5; }
-    #sim-res .cell .led {
-      width:8px; height:8px; border-radius:50%; background:var(--c); box-shadow:0 0 10px var(--c);
-      display:inline-block; margin-right:6px; vertical-align:middle; visibility:hidden;
-    }
-    #sim-res .cell.best .led { visibility:visible; }
-    @keyframes shine { 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
-    </style>
-    """), unsafe_allow_html=True)
-    
-    def cells_with_effect(values, colors, decimals=0, low_better=False):
-        a, b, c = values
-        vmin, vmax = min(values), max(values)
-        if vmax == vmin:
-            pcts = [100 if v > 0 else 0 for v in values]
-        else:
-            if low_better:
-                pcts = [(vmax - v) / (vmax - vmin) * 100 for v in values]
+    st.markdown("#### Select KPI objective for comparison")
+    st.session_state['tsp_kpi_obj'] = st.selectbox(
+        "Select KPIs objective:",
+        options=all_kpis,
+        index=all_kpis.index(st.session_state['tsp_kpi_obj']),
+        key="tsp_kpi_obj_sel"
+    )
+
+    # ---------- ฟังก์ชันคำนวณ weighted weights ----------
+    def get_weights_multi(categories, platforms, kpi):
+        """
+        คืน mapping {Tier: weighted_avg_weight} จากหลาย Category + Platform
+        ใช้คอลัมน์ N เป็นน้ำหนักเฉลี่ยถ่วงน้ำหนัก
+        """
+        if not categories or not platforms or kpi not in ALLOWED_KPIS:
+            return {}
+
+        sub = weights_df[
+            weights_df['Category'].isin(categories) &
+            weights_df['Platform'].isin(platforms) &
+            (weights_df['KPI'] == kpi)
+        ].copy()
+
+        if sub.empty:
+            return {}
+
+        def weighted_avg(g):
+            w = g['N'].to_numpy(dtype=float)
+            v = g['Weights'].to_numpy(dtype=float)
+            sw = w.sum()
+            if sw > 0:
+                return float((v * w).sum() / sw)
             else:
-                pcts = [(v - vmin) / (vmax - vmin) * 100 for v in values]
-        fmt = f"{{:,.{decimals}f}}"
-    
-        if low_better:
-            best_val, cnt = vmin, [a, b, c].count(vmin)
-            def klass(v): return "cell tie" if (v == best_val and cnt >= 2) else ("cell best" if v == best_val else "cell")
+                # fallback: ค่าเฉลี่ยธรรมดา
+                return float(np.nanmean(v)) if len(v) > 0 else 0.0
+
+        grouped = sub.groupby('Tier').apply(weighted_avg).reset_index(name='Weights')
+
+        mp = {t: 0.0 for t in TIERS}
+        for _, row in grouped.iterrows():
+            t = str(row['Tier']).strip()
+            if t in mp:
+                mp[t] = float(row['Weights'])
+        return mp
+
+    def calc_kpi_score(inputs, categories, platforms, kpi):
+        """
+        คืนค่า (budget_total, kpi_value, cost_per_kpi)
+        """
+        budget_total = float(sum(inputs.values()))
+        w_map = get_weights_multi(categories, platforms, kpi)
+        if not w_map:
+            return budget_total, 0.0, 0.0
+
+        kpi_val = sum(float(inputs.get(t, 0)) * w_map.get(t, 0.0) for t in TIERS)
+        cp = safe_div(budget_total, kpi_val)
+        return budget_total, kpi_val, cp
+
+    # ---------- ปุ่ม Calculate ----------
+    st.markdown("")
+    run = st.button("Calculate", type="primary")
+
+    if run:
+        kpi_obj = st.session_state['tsp_kpi_obj']
+
+        cats1 = st.session_state['opt1_categories']
+        plats1 = st.session_state['opt1_platforms']
+        cats2 = st.session_state['opt2_categories']
+        plats2 = st.session_state['opt2_platforms']
+
+        if not cats1 or not plats1 or not cats2 or not plats2:
+            st.warning("Please select at least one KOL Category and one Platform for both options.")
         else:
-            best_val, cnt = vmax, [a, b, c].count(vmax)
-            def klass(v): return "cell tie" if (v == best_val and cnt >= 2) else ("cell best" if v == best_val else "cell")
-    
-        cells = []
-        for v, pct, col in zip([a, b, c], pcts, colors):
-            disp = fmt.format(v)
-            cells.append(
-                f"<div class='{klass(v)}' style='--w:{pct:.1f};--c:{col};'><div class='bar'></div><span class='led'></span><span class='val'>{disp}</span></div>"
+            b1, v1, cp1 = calc_kpi_score(st.session_state.inputs_opt1, cats1, plats1, kpi_obj)
+            b2, v2, cp2 = calc_kpi_score(st.session_state.inputs_opt2, cats2, plats2, kpi_obj)
+
+            st.session_state["tsp_results"] = {
+                "kpi": kpi_obj,
+                "opt1": {"budget": b1, "value": v1, "cp": cp1,
+                         "cats": list(cats1), "plats": list(plats1)},
+                "opt2": {"budget": b2, "value": v2, "cp": cp2,
+                         "cats": list(cats2), "plats": list(plats2)},
+            }
+
+    # ---------- แสดงผลลัพธ์เมื่อคำนวณแล้ว ----------
+    if "tsp_results" in st.session_state:
+        res = st.session_state["tsp_results"]
+        kpi_name = res["kpi"]
+        st.markdown("---")
+        st.subheader(f"Results Comparison (KPI Objective: {kpi_name})")
+
+        opt1 = res["opt1"]
+        opt2 = res["opt2"]
+
+        # ตาราง summary
+        summary_rows = [
+            {"Metric": "Total Budget",
+             "Option 1": opt1["budget"],
+             "Option 2": opt2["budget"]},
+            { "Metric": f"{kpi_name} Score",
+             "Option 1": opt1["value"],
+             "Option 2": opt2["value"]},
+            {"Metric": f"Cost per {kpi_name} (CPK)",
+             "Option 1": opt1["cp"],
+             "Option 2": opt2["cp"]},
+        ]
+        sum_df = pd.DataFrame(summary_rows)
+
+        def fmt(x):
+            return f"{x:,.2f}" if isinstance(x, (int, float, np.floating)) else x
+
+        styled = sum_df.style.format(fmt)
+        st.dataframe(styled, hide_index=True, use_container_width=True)
+
+        # แสดง Category / Platform ที่เลือกแต่ละ Option
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown("**Option 1 – Filters**")
+            st.markdown(f"- KOL Category: {', '.join(opt1['cats'])}")
+            st.markdown(f"- Platform: {', '.join(opt1['plats'])}")
+        with c2:
+            st.markdown("**Option 2 – Filters**")
+            st.markdown(f"- KOL Category: {', '.join(opt2['cats'])}")
+            st.markdown(f"- Platform: {', '.join(opt2['plats'])}")
+
+        # Bar chart เปรียบเทียบค่า KPI
+        st.markdown("#### KPI Score Comparison")
+        kpi_df = pd.DataFrame({
+            "Option": ["Option 1", "Option 2"],
+            kpi_name: [opt1["value"], opt2["value"]]
+        })
+        chart = (
+            alt.Chart(kpi_df, height=280)
+            .mark_bar(cornerRadius=6)
+            .encode(
+                x=alt.X("Option:N", title=None),
+                y=alt.Y(f"{kpi_name}:Q", title=kpi_name),
+                color=alt.Color("Option:N",
+                                scale=alt.Scale(domain=["Option 1","Option 2"],
+                                                range=["#0277bd","#8e24aa"]),
+                                legend=None),
+                tooltip=[alt.Tooltip("Option:N"), alt.Tooltip(f"{kpi_name}:Q", format=",.0f")]
             )
-        return tuple(cells)
-    
-    row_budget   = cells_with_effect((budget_a, budget_b, budget_c), (colA, colB, colC), decimals=0)
-    row_imp      = cells_with_effect((imp_a,    imp_b,    imp_c   ), (colA, colB, colC), decimals=0)
-    row_view     = cells_with_effect((view_a,   view_b,   view_c  ), (colA, colB, colC), decimals=0)
-    row_eng      = cells_with_effect((eng_a,    eng_b,    eng_c   ), (colA, colB, colC), decimals=0)
-    row_share    = cells_with_effect((share_a,  share_b,  share_c ), (colA, colB, colC), decimals=0)
-    row_cpe      = cells_with_effect((cpe_a,    cpe_b,    cpe_c   ), (colA, colB, colC), decimals=2, low_better=True)
-    row_cpshare  = cells_with_effect((cpshare_a,cpshare_b,cpshare_c), (colA, colB, colC), decimals=2, low_better=True)
-    
-    html_table = dedent(f"""
-    <div id="sim-res">
-    <table>
-      <thead>
-        <tr>
-          <th></th>
-          <th class="simA">Simulation A</th>
-          <th class="simB">Simulation B</th>
-          <th class="simC">Simulation C</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <th>Category</th>
-          <td>{st.session_state.category_a}</td>
-          <td>{st.session_state.category_b}</td>
-          <td>{st.session_state.category_c}</td>
-        </tr>
-        <tr>
-          <th>Platform</th>
-          <td>{st.session_state.platform_a if st.session_state.platform_a is not None else '-'}</td>
-          <td>{st.session_state.platform_b if st.session_state.platform_b is not None else '-'}</td>
-          <td>{st.session_state.platform_c if st.session_state.platform_c is not None else '-'}</td>
-        </tr>
-        <tr><th>Budget</th>        <td>{row_budget[0]}</td>   <td>{row_budget[1]}</td>   <td>{row_budget[2]}</td></tr>
-        <tr><th>Impressions</th>   <td>{row_imp[0]}</td>      <td>{row_imp[1]}</td>      <td>{row_imp[2]}</td></tr>
-        <tr><th>Views</th>         <td>{row_view[0]}</td>     <td>{row_view[1]}</td>     <td>{row_view[2]}</td></tr>
-        <tr><th>Engagements</th>   <td>{row_eng[0]}</td>      <td>{row_eng[1]}</td>      <td>{row_eng[2]}</td></tr>
-        <tr><th>Shares</th>        <td>{row_share[0]}</td>    <td>{row_share[1]}</td>    <td>{row_share[2]}</td></tr>
-        <tr><th>CPE</th>           <td>{row_cpe[0]}</td>      <td>{row_cpe[1]}</td>      <td>{row_cpe[2]}</td></tr>
-        <tr><th>CPShare</th>       <td>{row_cpshare[0]}</td>  <td>{row_cpshare[1]}</td>  <td>{row_cpshare[2]}</td></tr>
-      </tbody>
-    </table>
-    </div>
-    """)
-    st.markdown(html_table, unsafe_allow_html=True)
-    
-    st.markdown("#### ✨ Visual Comparison")
-    
-    metric_order = ["Budget", "Impressions", "Views", "Engagements", "Shares"]
-    bar_df = pd.DataFrame([
-        {"Simulation":"A","Metric":"Budget","Value":budget_a},
-        {"Simulation":"B","Metric":"Budget","Value":budget_b},
-        {"Simulation":"C","Metric":"Budget","Value":budget_c},
-        {"Simulation":"A","Metric":"Impressions","Value":imp_a},
-        {"Simulation":"B","Metric":"Impressions","Value":imp_b},
-        {"Simulation":"C","Metric":"Impressions","Value":imp_c},
-        {"Simulation":"A","Metric":"Views","Value":view_a},
-        {"Simulation":"B","Metric":"Views","Value":view_b},
-        {"Simulation":"C","Metric":"Views","Value":view_c},
-        {"Simulation":"A","Metric":"Engagements","Value":eng_a},
-        {"Simulation":"B","Metric":"Engagements","Value":eng_b},
-        {"Simulation":"C","Metric":"Engagements","Value":eng_c},
-        {"Simulation":"A","Metric":"Shares","Value":share_a},
-        {"Simulation":"B","Metric":"Shares","Value":share_b},
-        {"Simulation":"C","Metric":"Shares","Value":share_c},
-    ])
-    colors = {"A":"#0277bd","B":"#8e24aa","C":"#2e7d32"}
-    
-    sel = alt.selection_multi(fields=['Simulation'], bind='legend')
-    bar = (
-        alt.Chart(bar_df, height=330)
-        .mark_bar(cornerRadius=5)
-        .encode(
-            x=alt.X('Metric:N', sort=metric_order, axis=alt.Axis(labelAngle=0)),
-            y=alt.Y('Value:Q', title=''),
-            color=alt.Color('Simulation:N',
-                            scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())),
-                            legend=alt.Legend(title="Sim")),
-            opacity=alt.condition(sel, alt.value(1), alt.value(0.35)),
-            tooltip=[alt.Tooltip('Simulation:N'), alt.Tooltip('Metric:N'), alt.Tooltip('Value:Q', format=',')]
         )
-        .add_selection(sel)
-    )
-    text = bar.mark_text(dy=-6, color='#334155', fontWeight='bold').encode(
-        text=alt.condition(alt.datum.Value > 0, alt.Text('Value:Q', format=',.0f'), alt.value(''))
-    )
-    st.altair_chart(bar + text, use_container_width=True)
-    
-    scatter_df = pd.DataFrame({
-        "Simulation": ["A","B","C"],
-        "CPE": [cpe_a, cpe_b, cpe_c],
-        "CPShare": [cpshare_a, cpshare_b, cpshare_c],
-        "Budget": [budget_a, budget_b, budget_c]
-    })
-    hover = alt.selection_single(on='mouseover', empty='all', fields=['Simulation'])
-    scatter = (
-        alt.Chart(scatter_df, height=330)
-        .mark_circle(opacity=0.9)
-        .encode(
-            x=alt.X('CPE:Q', title='CPE (Budget / Engagements)'),
-            y=alt.Y('CPShare:Q', title='CPShare (Budget / Shares)'),
-            size=alt.Size('Budget:Q', legend=None, scale=alt.Scale(range=[60, 800])),
-            color=alt.Color('Simulation:N',
-                            scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())),
-                            legend=alt.Legend(title="Sim")),
-            opacity=alt.condition(hover, alt.value(1), alt.value(0.6)),
-            tooltip=[
-                alt.Tooltip('Simulation:N'),
-                alt.Tooltip('Budget:Q', format=','),
-                alt.Tooltip('CPE:Q', format=',.2f'),
-                alt.Tooltip('CPShare:Q', format=',.2f'),
-            ]
+        text = chart.mark_text(dy=-8, color="#111827", fontWeight="bold").encode(
+            text=alt.Text(f"{kpi_name}:Q", format=",.0f")
         )
-        .add_selection(hover)
-    )
-    labels = alt.Chart(scatter_df).mark_text(dy=-10, fontWeight='bold').encode(
-        x='CPE:Q', y='CPShare:Q', text='Simulation',
-        color=alt.Color('Simulation:N',
-                        scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())), legend=None)
-    )
-    st.altair_chart(scatter + labels, use_container_width=True)
+        st.altair_chart(chart + text, use_container_width=True)
+
+####################################################################################################################################################
+
+# # ----------------------- PAGE 1: Tier Scenario Planner (เดิม Simulation Budget) -----------------------
+# if st.session_state.page == "Tier Scenario Planner":
+
+#     # ===== เดิม: Simulation Budget ทั้งก้อน (เปลี่ยนชื่อ title แล้วอย่างเดียว) =====
+#     st.title("📊 Tier Scenario Planner")
+    
+#     # LOAD weights_df
+#     if "weights_df" in st.session_state:
+#         weights_df = st.session_state["weights_df"]
+#     elif "weights_df" in globals():
+#         weights_df = globals()["weights_df"]
+#     else:
+#         st.error("weights_df is not defined. Please load it before this page. Required columns: Category, Tier, Platform, KPI, Weights")
+#         st.stop()
+    
+#     ALLOWED_KPIS = {"Impression", "View", "Engagement", "Share"}
+#     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
+    
+#     required_cols = {'Category', 'Tier', 'Platform', 'KPI', 'Weights'}
+#     missing_cols = required_cols - set(weights_df.columns)
+#     if missing_cols:
+#         st.error(f"weights_df missing columns: {missing_cols}")
+#         st.stop()
+    
+#     weights_df = weights_df.copy()
+#     for c in ['Category', 'Tier', 'Platform', 'KPI']:
+#         weights_df[c] = weights_df[c].astype(str).str.strip()
+#     weights_df['Weights'] = pd.to_numeric(weights_df['Weights'], errors='coerce')
+    
+#     unknown_kpis = set(weights_df['KPI'].unique()) - ALLOWED_KPIS
+#     if unknown_kpis:
+#         st.warning(f"Ignored KPIs in weights_df (not used anymore): {sorted(list(unknown_kpis))}")
+    
+#     def zero_inputs():
+#         return {t: 0 for t in TIERS}
+    
+#     if 'inputs_a' not in st.session_state:
+#         st.session_state.inputs_a = zero_inputs()
+#     if 'inputs_b' not in st.session_state:
+#         st.session_state.inputs_b = zero_inputs()
+#     if 'inputs_c' not in st.session_state:
+#         st.session_state.inputs_c = zero_inputs()
+    
+#     available_categories = sorted(weights_df['Category'].dropna().unique().tolist())
+#     if not available_categories:
+#         st.error("No categories found in weights_df.")
+#         st.stop()
+    
+#     for k in ['category_a', 'category_b', 'category_c']:
+#         if k not in st.session_state:
+#             st.session_state[k] = available_categories[0]
+    
+#     def platforms_for_category(cat):
+#         return sorted(weights_df.loc[weights_df['Category'] == cat, 'Platform'].dropna().unique().tolist())
+    
+#     if 'platform_a' not in st.session_state:
+#         ps = platforms_for_category(st.session_state.category_a)
+#         st.session_state.platform_a = ps[0] if ps else None
+#     if 'platform_b' not in st.session_state:
+#         ps = platforms_for_category(st.session_state.category_b)
+#         st.session_state.platform_b = ps[0] if ps else None
+#     if 'platform_c' not in st.session_state:
+#         ps = platforms_for_category(st.session_state.category_c)
+#         st.session_state.platform_c = ps[0] if ps else None
+    
+#     def get_weights(category, platform, kpi):
+#         if platform is None or kpi not in ALLOWED_KPIS:
+#             return {}
+#         sub = weights_df.loc[
+#             (weights_df['Category'] == category) &
+#             (weights_df['Platform'] == platform) &
+#             (weights_df['KPI'] == kpi),
+#             ['Tier', 'Weights']
+#         ].copy()
+#         if sub.empty:
+#             return {}
+#         sub['Weights'] = pd.to_numeric(sub['Weights'], errors='coerce')
+#         return {row['Tier']: 0.0 if pd.isna(row['Weights']) else float(row['Weights']) for _, row in sub.iterrows()}
+    
+#     def colored_percentage(p):
+#         if p >= 40:
+#             return f"<span style='color:#1E90FF;font-weight:bold;'>{p:.1f}%</span>"
+#         elif p >= 20:
+#             return f"<span style='color:#FF9800;font-weight:bold;'>{p:.1f}%</span>"
+#         elif p > 0:
+#             return f"<span style='color:#009688;'>{p:.1f}%</span>"
+#         else:
+#             return "<span style='color:#aaa;'>0.0%</span>"
+    
+#     def safe_div(n, d):
+#         return (n / d) if d not in (0, None) else 0.0
+    
+#     st.subheader("📊 Budget Simulation Comparison")
+#     col_input_a, col_input_b, col_input_c = st.columns(3)
+    
+#     def inputs_panel(col, sim_key, cat_key, plat_key, inputs_key, bg_color, title_color):
+#         with col:
+#             st.subheader(f"Simulation {sim_key.upper()}")
+    
+#             st.session_state[cat_key] = st.selectbox(
+#                 f"Simulation {sim_key.upper()} - Category:",
+#                 available_categories,
+#                 key=f"cat_{sim_key}",
+#                 index=available_categories.index(st.session_state[cat_key])
+#             )
+    
+#             plats = platforms_for_category(st.session_state[cat_key])
+#             options = plats if plats else ['(None)']
+#             current = st.session_state.get(plat_key, options[0])
+#             if current not in options:
+#                 current = options[0]
+#             selected = st.selectbox(
+#                 f"Simulation {sim_key.upper()} - Platform:",
+#                 options,
+#                 key=f"plat_{sim_key}",
+#                 index=options.index(current)
+#             )
+#             st.session_state[plat_key] = None if selected == '(None)' else selected
+    
+#             new_inputs = {}
+#             for t in TIERS:
+#                 c1, c2 = st.columns([3, 2])
+#                 val = c1.number_input(f"{t}", min_value=0, value=st.session_state[inputs_key][t], key=f"{sim_key}_{t}")
+#                 new_inputs[t] = val
+#                 total_new = sum(new_inputs.values())
+#                 percent = (val / total_new) * 100 if total_new > 0 else 0
+#                 c2.markdown(colored_percentage(percent), unsafe_allow_html=True)
+    
+#             st.session_state[inputs_key] = new_inputs
+    
+#             total_final = sum(new_inputs.values())
+#             st.markdown(
+#                 f"""
+#                 <div style="background:{bg_color};padding:14px 0;border-radius:12px;text-align:center;box-shadow:0 2px 5px #00000022;">
+#                     <div style="font-size:2.2rem;font-weight:900;color:{title_color};">{total_final:,}</div>
+#                     <div style="font-size:1.1rem;">💰 Total Budget {sim_key.upper()}</div>
+#                 </div>
+#                 """,
+#                 unsafe_allow_html=True
+#             )
+    
+#     inputs_panel(col_input_a, 'a', 'category_a', 'platform_a', 'inputs_a', '#e0f7fa', '#0277bd')
+#     inputs_panel(col_input_b, 'b', 'category_b', 'platform_b', 'inputs_b', '#f3e5f5', '#8e24aa')
+#     inputs_panel(col_input_c, 'c', 'category_c', 'platform_c', 'inputs_c', '#e8f5e9', '#2e7d32')
+    
+#     def calc_metrics(inputs, category, platform):
+#         w_imp   = get_weights(category, platform, "Impression")
+#         w_view  = get_weights(category, platform, "View")
+#         w_eng   = get_weights(category, platform, "Engagement")
+#         w_share = get_weights(category, platform, "Share")
+    
+#         tot_imp   = sum(inputs.get(k, 0) * w_imp.get(k, 0)   for k in inputs)
+#         tot_view  = sum(inputs.get(k, 0) * w_view.get(k, 0)  for k in inputs)
+#         tot_eng   = sum(inputs.get(k, 0) * w_eng.get(k, 0)   for k in inputs)
+#         tot_share = sum(inputs.get(k, 0) * w_share.get(k, 0) for k in inputs)
+#         return tot_imp, tot_view, tot_eng, tot_share
+    
+#     imp_a, view_a, eng_a, share_a = calc_metrics(st.session_state.inputs_a, st.session_state.category_a, st.session_state.platform_a)
+#     imp_b, view_b, eng_b, share_b = calc_metrics(st.session_state.inputs_b, st.session_state.category_b, st.session_state.platform_b)
+#     imp_c, view_c, eng_c, share_c = calc_metrics(st.session_state.inputs_c, st.session_state.category_c, st.session_state.platform_c)
+    
+#     budget_a = sum(st.session_state.inputs_a.values())
+#     budget_b = sum(st.session_state.inputs_b.values())
+#     budget_c = sum(st.session_state.inputs_c.values())
+    
+#     cpe_a, cpe_b, cpe_c               = safe_div(budget_a, eng_a), safe_div(budget_b, eng_b), safe_div(budget_c, eng_c)
+#     cpshare_a, cpshare_b, cpshare_c   = safe_div(budget_a, share_a), safe_div(budget_b, share_b), safe_div(budget_c, share_c)
+    
+#     st.markdown("---")
+#     st.subheader("📈 Simulation Results Comparison")
+    
+#     colA, colB, colC = "#0277bd", "#8e24aa", "#2e7d32"
+    
+#     st.markdown(dedent("""
+#     <style>
+#     #sim-res { margin-top:4px; }
+#     #sim-res table { width:96%; margin:6px auto 14px auto; border-collapse:separate; border-spacing:0 6px; }
+#     #sim-res thead th {
+#       padding:12px 12px; color:#0f172a; text-align:center; font-weight:900;
+#       background: linear-gradient(90deg, #f7faff, #eef2ff);
+#       border-top-left-radius:12px; border-top-right-radius:12px;
+#       position:relative; overflow:hidden;
+#     }
+#     #sim-res thead th.simA{ color:#0277bd; }
+#     #sim-res thead th.simB{ color:#8e24aa; }
+#     #sim-res thead th.simC{ color:#2e7d32; }
+#     #sim-res thead th::after{
+#       content:""; position:absolute; inset:0;
+#       background: linear-gradient(120deg, rgba(255,255,255,.7), transparent 30%, transparent 70%, rgba(255,255,255,.7));
+#       background-size: 200% 100%; animation: shine 4s linear infinite; opacity:.35; pointer-events:none;
+#     }
+#     #sim-res tbody td, #sim-res tbody th {
+#       background:#ffffff; border:1px solid #eaeef5; padding:8px 10px; color:#334155;
+#     }
+#     #sim-res tbody th { width:22%; font-weight:800; border-right:none; border-radius:10px 0 0 10px; }
+#     #sim-res tbody td { border-left:none; border-radius:0 10px 10px 0; position:relative; }
+    
+#     #sim-res .cell { position:relative; padding: 6px 10px; }
+#     #sim-res .cell .bar {
+#       position:absolute; left:8px; top:50%; height:70%; transform:translateY(-50%);
+#       width: calc(var(--w, 0) * 1%); border-radius:10px;
+#       background: linear-gradient(90deg, var(--c), rgba(255,255,255,0));
+#       opacity:.20; filter:saturate(1.2); overflow:hidden;
+#     }
+#     #sim-res .cell .bar::after{
+#       content:""; position:absolute; inset:0;
+#       background: linear-gradient(120deg, rgba(255,255,255,.75), rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(255,255,255,.75));
+#       background-size:200% 100%; animation: shine 3.6s linear infinite; opacity:.45;
+#     }
+#     #sim-res .cell .val { position:relative; z-index:1; font-weight:700; }
+#     #sim-res .cell.best .val { color: var(--c); text-shadow: 0 0 10px var(--c); }
+#     #sim-res .cell.tie  .val { color:#1e88e5; }
+#     #sim-res .cell .led {
+#       width:8px; height:8px; border-radius:50%; background:var(--c); box-shadow:0 0 10px var(--c);
+#       display:inline-block; margin-right:6px; vertical-align:middle; visibility:hidden;
+#     }
+#     #sim-res .cell.best .led { visibility:visible; }
+#     @keyframes shine { 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
+#     </style>
+#     """), unsafe_allow_html=True)
+    
+#     def cells_with_effect(values, colors, decimals=0, low_better=False):
+#         a, b, c = values
+#         vmin, vmax = min(values), max(values)
+#         if vmax == vmin:
+#             pcts = [100 if v > 0 else 0 for v in values]
+#         else:
+#             if low_better:
+#                 pcts = [(vmax - v) / (vmax - vmin) * 100 for v in values]
+#             else:
+#                 pcts = [(v - vmin) / (vmax - vmin) * 100 for v in values]
+#         fmt = f"{{:,.{decimals}f}}"
+    
+#         if low_better:
+#             best_val, cnt = vmin, [a, b, c].count(vmin)
+#             def klass(v): return "cell tie" if (v == best_val and cnt >= 2) else ("cell best" if v == best_val else "cell")
+#         else:
+#             best_val, cnt = vmax, [a, b, c].count(vmax)
+#             def klass(v): return "cell tie" if (v == best_val and cnt >= 2) else ("cell best" if v == best_val else "cell")
+    
+#         cells = []
+#         for v, pct, col in zip([a, b, c], pcts, colors):
+#             disp = fmt.format(v)
+#             cells.append(
+#                 f"<div class='{klass(v)}' style='--w:{pct:.1f};--c:{col};'><div class='bar'></div><span class='led'></span><span class='val'>{disp}</span></div>"
+#             )
+#         return tuple(cells)
+    
+#     row_budget   = cells_with_effect((budget_a, budget_b, budget_c), (colA, colB, colC), decimals=0)
+#     row_imp      = cells_with_effect((imp_a,    imp_b,    imp_c   ), (colA, colB, colC), decimals=0)
+#     row_view     = cells_with_effect((view_a,   view_b,   view_c  ), (colA, colB, colC), decimals=0)
+#     row_eng      = cells_with_effect((eng_a,    eng_b,    eng_c   ), (colA, colB, colC), decimals=0)
+#     row_share    = cells_with_effect((share_a,  share_b,  share_c ), (colA, colB, colC), decimals=0)
+#     row_cpe      = cells_with_effect((cpe_a,    cpe_b,    cpe_c   ), (colA, colB, colC), decimals=2, low_better=True)
+#     row_cpshare  = cells_with_effect((cpshare_a,cpshare_b,cpshare_c), (colA, colB, colC), decimals=2, low_better=True)
+    
+#     html_table = dedent(f"""
+#     <div id="sim-res">
+#     <table>
+#       <thead>
+#         <tr>
+#           <th></th>
+#           <th class="simA">Simulation A</th>
+#           <th class="simB">Simulation B</th>
+#           <th class="simC">Simulation C</th>
+#         </tr>
+#       </thead>
+#       <tbody>
+#         <tr>
+#           <th>Category</th>
+#           <td>{st.session_state.category_a}</td>
+#           <td>{st.session_state.category_b}</td>
+#           <td>{st.session_state.category_c}</td>
+#         </tr>
+#         <tr>
+#           <th>Platform</th>
+#           <td>{st.session_state.platform_a if st.session_state.platform_a is not None else '-'}</td>
+#           <td>{st.session_state.platform_b if st.session_state.platform_b is not None else '-'}</td>
+#           <td>{st.session_state.platform_c if st.session_state.platform_c is not None else '-'}</td>
+#         </tr>
+#         <tr><th>Budget</th>        <td>{row_budget[0]}</td>   <td>{row_budget[1]}</td>   <td>{row_budget[2]}</td></tr>
+#         <tr><th>Impressions</th>   <td>{row_imp[0]}</td>      <td>{row_imp[1]}</td>      <td>{row_imp[2]}</td></tr>
+#         <tr><th>Views</th>         <td>{row_view[0]}</td>     <td>{row_view[1]}</td>     <td>{row_view[2]}</td></tr>
+#         <tr><th>Engagements</th>   <td>{row_eng[0]}</td>      <td>{row_eng[1]}</td>      <td>{row_eng[2]}</td></tr>
+#         <tr><th>Shares</th>        <td>{row_share[0]}</td>    <td>{row_share[1]}</td>    <td>{row_share[2]}</td></tr>
+#         <tr><th>CPE</th>           <td>{row_cpe[0]}</td>      <td>{row_cpe[1]}</td>      <td>{row_cpe[2]}</td></tr>
+#         <tr><th>CPShare</th>       <td>{row_cpshare[0]}</td>  <td>{row_cpshare[1]}</td>  <td>{row_cpshare[2]}</td></tr>
+#       </tbody>
+#     </table>
+#     </div>
+#     """)
+#     st.markdown(html_table, unsafe_allow_html=True)
+    
+#     st.markdown("#### ✨ Visual Comparison")
+    
+#     metric_order = ["Budget", "Impressions", "Views", "Engagements", "Shares"]
+#     bar_df = pd.DataFrame([
+#         {"Simulation":"A","Metric":"Budget","Value":budget_a},
+#         {"Simulation":"B","Metric":"Budget","Value":budget_b},
+#         {"Simulation":"C","Metric":"Budget","Value":budget_c},
+#         {"Simulation":"A","Metric":"Impressions","Value":imp_a},
+#         {"Simulation":"B","Metric":"Impressions","Value":imp_b},
+#         {"Simulation":"C","Metric":"Impressions","Value":imp_c},
+#         {"Simulation":"A","Metric":"Views","Value":view_a},
+#         {"Simulation":"B","Metric":"Views","Value":view_b},
+#         {"Simulation":"C","Metric":"Views","Value":view_c},
+#         {"Simulation":"A","Metric":"Engagements","Value":eng_a},
+#         {"Simulation":"B","Metric":"Engagements","Value":eng_b},
+#         {"Simulation":"C","Metric":"Engagements","Value":eng_c},
+#         {"Simulation":"A","Metric":"Shares","Value":share_a},
+#         {"Simulation":"B","Metric":"Shares","Value":share_b},
+#         {"Simulation":"C","Metric":"Shares","Value":share_c},
+#     ])
+#     colors = {"A":"#0277bd","B":"#8e24aa","C":"#2e7d32"}
+    
+#     sel = alt.selection_multi(fields=['Simulation'], bind='legend')
+#     bar = (
+#         alt.Chart(bar_df, height=330)
+#         .mark_bar(cornerRadius=5)
+#         .encode(
+#             x=alt.X('Metric:N', sort=metric_order, axis=alt.Axis(labelAngle=0)),
+#             y=alt.Y('Value:Q', title=''),
+#             color=alt.Color('Simulation:N',
+#                             scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())),
+#                             legend=alt.Legend(title="Sim")),
+#             opacity=alt.condition(sel, alt.value(1), alt.value(0.35)),
+#             tooltip=[alt.Tooltip('Simulation:N'), alt.Tooltip('Metric:N'), alt.Tooltip('Value:Q', format=',')]
+#         )
+#         .add_selection(sel)
+#     )
+#     text = bar.mark_text(dy=-6, color='#334155', fontWeight='bold').encode(
+#         text=alt.condition(alt.datum.Value > 0, alt.Text('Value:Q', format=',.0f'), alt.value(''))
+#     )
+#     st.altair_chart(bar + text, use_container_width=True)
+    
+#     scatter_df = pd.DataFrame({
+#         "Simulation": ["A","B","C"],
+#         "CPE": [cpe_a, cpe_b, cpe_c],
+#         "CPShare": [cpshare_a, cpshare_b, cpshare_c],
+#         "Budget": [budget_a, budget_b, budget_c]
+#     })
+#     hover = alt.selection_single(on='mouseover', empty='all', fields=['Simulation'])
+#     scatter = (
+#         alt.Chart(scatter_df, height=330)
+#         .mark_circle(opacity=0.9)
+#         .encode(
+#             x=alt.X('CPE:Q', title='CPE (Budget / Engagements)'),
+#             y=alt.Y('CPShare:Q', title='CPShare (Budget / Shares)'),
+#             size=alt.Size('Budget:Q', legend=None, scale=alt.Scale(range=[60, 800])),
+#             color=alt.Color('Simulation:N',
+#                             scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())),
+#                             legend=alt.Legend(title="Sim")),
+#             opacity=alt.condition(hover, alt.value(1), alt.value(0.6)),
+#             tooltip=[
+#                 alt.Tooltip('Simulation:N'),
+#                 alt.Tooltip('Budget:Q', format=','),
+#                 alt.Tooltip('CPE:Q', format=',.2f'),
+#                 alt.Tooltip('CPShare:Q', format=',.2f'),
+#             ]
+#         )
+#         .add_selection(hover)
+#     )
+#     labels = alt.Chart(scatter_df).mark_text(dy=-10, fontWeight='bold').encode(
+#         x='CPE:Q', y='CPShare:Q', text='Simulation',
+#         color=alt.Color('Simulation:N',
+#                         scale=alt.Scale(domain=list(colors.keys()), range=list(colors.values())), legend=None)
+#     )
+#     st.altair_chart(scatter + labels, use_container_width=True)
 
 # ----------------------- PAGE 2: Influencer Precision Engine (IPE) -----------------------
 if st.session_state.page == "Influencer Precision Engine (IPE)":

@@ -1303,7 +1303,7 @@ if st.session_state.page == "Influencer Precision Engine (IPE)":
                     render_kol_table(sc, kpi_col, title=f"Scenario #{i}", download_label=f"Download CSV (Scenario {i})")
 
 # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) -----------------------
-elif st.session_state.page == "KOL Tier Optimizer (KTO)":
+elif st.session_state.page == "KOL Tier Optimizer (KTO)"):
 
     import numpy as np
     import pandas as pd
@@ -1369,7 +1369,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         padding-bottom: 2px;
     }
 
-    /* ====== CUSTOM TABLE STYLES (ใช้กับ Budgets) ====== */
+    /* ====== CUSTOM TABLE STYLES ====== */
     table.styled-table {
         border-collapse: collapse;
         width: 100%;
@@ -1407,6 +1407,18 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
     table.pct-table td {
         background-color: #f5f3ff;  /* violet-50  */
         color: #111827;
+        font-weight: 600;
+    }
+
+    /* Comparison table: โทนน้ำเงินอ่อน */
+    table.comp-table th {
+        background-color: #e0f2fe;  /* sky-100 */
+        color: #0f172a;
+        font-weight: 700;
+    }
+    table.comp-table td {
+        background-color: #eff6ff;  /* sky-50 */
+        color: #0f172a;
         font-weight: 600;
     }
     </style>
@@ -1849,7 +1861,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .reindex(DISPLAY_ORDER)
                 .reset_index()
             )
-            # ลบชื่อ columns axis ("Scenario") ไม่ให้กลายเป็นคอลัมน์หัวซ้ายสุด
             alloc_tbl = alloc_tbl.rename_axis(None, axis=1)
 
             html_alloc = alloc_tbl.to_html(
@@ -1942,9 +1953,20 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             perf_rows.append(row)
 
         perf_df = pd.DataFrame(perf_rows)
-        fmt = {col: "{:,.2f}" for col in perf_df.columns if col != "Metric"}
-        styled_perf = perf_df.style.format(fmt, subset=[c for c in perf_df.columns if c != "Metric"])
-        st.dataframe(styled_perf, hide_index=True, use_container_width=True)
+
+        # แปลงตัวเลขเป็น string format แล้วทำ HTML table พร้อม CSS
+        disp_df = perf_df.copy()
+        for col in disp_df.columns:
+            if col == "Metric":
+                continue
+            disp_df[col] = disp_df[col].map(lambda x: f"{x:,.2f}")
+
+        disp_df = disp_df.rename_axis(None, axis=1)
+        html_perf = disp_df.to_html(
+            index=False,
+            classes="styled-table comp-table"
+        )
+        st.markdown(html_perf, unsafe_allow_html=True)
 
     # =========================== MAIN FLOW ===========================
     st.title("KOL Tier Optimizer (KTO)")

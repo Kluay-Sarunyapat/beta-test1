@@ -1411,16 +1411,24 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         font-weight: 600;
     }
 
-    /* Comparison table: โทนน้ำเงินอ่อน */
+    /* Comparison table: หัวตาราง/หัวแถวมีสี เซลล์ขาว */
     table.comp-table th {
         background-color: #e0f2fe;  /* sky-100 */
         color: #0f172a;
         font-weight: 700;
     }
     table.comp-table td {
-        background-color: #eff6ff;  /* sky-50 */
+        background-color: #ffffff;  /* white */
         color: #0f172a;
         font-weight: 600;
+    }
+    table.comp-table td.metric-cell {
+        background-color: #eff6ff;  /* sky-50 สำหรับคอลัมน์ Metric */
+        font-weight: 700;
+    }
+    table.comp-table td.max-cell {
+        background-color: #dcfce7;  /* green-100 highlight best */
+        font-weight: 700;
     }
     </style>
     """), unsafe_allow_html=True)
@@ -1972,6 +1980,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         perf_df = pd.DataFrame(perf_rows)
 
+        # เตรียมตัวเลขเป็น string format
         disp_df = perf_df.copy()
         for col in disp_df.columns:
             if col == "Metric":
@@ -1979,11 +1988,44 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             disp_df[col] = disp_df[col].map(lambda x: f"{x:,.2f}")
 
         disp_df = disp_df.rename_axis(None, axis=1)
-        html_perf = disp_df.to_html(
-            index=False,
-            classes="styled-table comp-table"
-        )
-        st.markdown(html_perf, unsafe_allow_html=True)
+
+        # สร้าง HTML table เอง เพื่อใส่ class max-cell ให้ cell ที่ดีที่สุด
+        cols = list(perf_df.columns)
+        cost_metrics = {"CPM", "CPV", "CPE", "CPS"}  # ยิ่งน้อยยิ่งดี
+
+        html = "<table class='styled-table comp-table'><thead><tr>"
+        for c in cols:
+            html += f"<th>{c}</th>"
+        html += "</tr></thead><tbody>"
+
+        for i, row in perf_df.iterrows():
+            metric = row["Metric"]
+            values = [row[c] for c in cols[1:]]
+            # หา index ที่ดีที่สุด
+            best_j = None
+            try:
+                nums = [float(v) for v in values]
+                if all(abs(v) < 1e-12 for v in nums):
+                    best_j = None
+                elif metric in cost_metrics:
+                    best_j = int(np.argmin(nums))
+                else:
+                    best_j = int(np.argmax(nums))
+            except Exception:
+                best_j = None
+
+            html += "<tr>"
+            html += f"<td class='metric-cell'>{metric}</td>"
+            for j, c in enumerate(cols[1:]):
+                val_str = disp_df.loc[i, c]
+                if best_j is not None and j == best_j:
+                    html += f"<td class='max-cell'>{val_str}</td>"
+                else:
+                    html += f"<td>{val_str}</td>"
+            html += "</tr>"
+
+        html += "</tbody></table>"
+        st.markdown(html, unsafe_allow_html=True)
 
     # =========================== MAIN FLOW ===========================
     st.title("KOL Tier Optimizer (KTO)")

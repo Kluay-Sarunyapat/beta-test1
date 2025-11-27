@@ -38,7 +38,7 @@ FG2_TICKER_ITEMS = [
     {"text": "Influencer optimization",   "color": "#2563eb"},
 ]
 
-# ---------- BASE STYLES (LOGIN + INTRO) : โทนสว่างแบบเดิม ----------
+# ---------- BASE STYLES (LOGIN + INTRO) : โทนสว่าง ----------
 st.markdown("""
 <style>
 /* LOGIN / INTRO width 1100px */
@@ -85,16 +85,6 @@ body {
 }
 @keyframes gradMove {0%{background-position:0% 50%} 100%{background-position:200% 50%}}
 .subtitle { color:#526273; text-align:center; margin-bottom:22px; }
-
-/* LOGIN CARD */
-.login-card {
-  margin-top: 8px;
-  padding: 24px 26px 26px;
-  border-radius: 18px;
-  background:#ffffff;
-  border:1px solid #e5e7eb;
-  box-shadow:0 12px 30px rgba(15,23,42,.10);
-}
 
 /* Ticker */
 .top-wrap { margin-top:10px; margin-bottom:22px; }
@@ -183,7 +173,7 @@ def FG2_cleanup_keep_first_ticker():
     </script>
     """, unsafe_allow_html=True)
 
-# Login
+# Login (เอากล่อง login-card ออก เหลือแต่ฟอร์ม)
 def FG2_login_view():
     try:
         st.query_params.update({"intro": "1"})
@@ -201,13 +191,12 @@ def FG2_login_view():
     st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="subtitle">{FG2_TAGLINE_TEXT}</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    # ฟอร์ม login ไม่มี div กล่องขาวครอบอีกแล้ว
     with st.form("FG2_login_form"):
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
         submitted = st.form_submit_button("Sign in")
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)  # ปิด login-hero
 
     if submitted:
         if u in FG2_VALID_USERS and p == FG2_VALID_USERS[u]:
@@ -331,8 +320,6 @@ st.markdown("""
 /* หลังล็อกอิน: ขยายความกว้างเป็น 1280px */
 .appview-container .main, .block-container { max-width: 1280px !important; margin: auto; }
 
-/* Ticker pills (ใช้ต่อจาก login) ไม่ต้องเปลี่ยน */
-
 /* Header หลังล็อกอิน – โทนสว่าง + เอฟเฟกต์สแกน */
 .app-header{
   position: relative; overflow: hidden; padding: 26px 26px 22px; border-radius: 18px;
@@ -343,15 +330,11 @@ st.markdown("""
   box-shadow: 0 14px 35px rgba(15,23,42,.12);
   margin-bottom: 18px;
 }
-
-/* glow ด้านใน */
 .shine{
   position:absolute; inset:1px; border-radius:16px;
   background: radial-gradient(circle at top, rgba(255,255,255,0.7), transparent 60%);
   pointer-events:none;
 }
-
-/* เอฟเฟกต์เส้นสแกน */
 .app-header::after{
   content:""; position:absolute; top:-40%; bottom:-40%; width:160px;
   left:-220px; background: linear-gradient(120deg, rgba(255,255,255,0.8), transparent);
@@ -363,7 +346,6 @@ st.markdown("""
   68%{opacity:.9;}
   100%{opacity:0; transform:translateX(1400px) skewX(-20deg);}
 }
-
 .headline{
   position:relative; z-index:1;
   font-size: clamp(26px, 4.2vw, 40px); font-weight: 900; letter-spacing:.4px;
@@ -371,8 +353,7 @@ st.markdown("""
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .subline{
-  position:relative; z-index:1;
-  margin-top: 6px; color:#4b5563; opacity:.95; font-size: 13px;
+  position:relative; z-index:1; margin-top: 6px; color:#4b5563; opacity:.95; font-size: 13px;
 }
 
 /* Brand hero */
@@ -479,7 +460,7 @@ def render_top_banner_once():
     FG2_render_top_banner()
     st.session_state.ticker_rendered_once = True
 
-# -------------------- NAV (โค้ด Python เดิม) --------------------
+# -------------------- NAV --------------------
 def sync_page_from_query():
     try:
         qp = st.query_params

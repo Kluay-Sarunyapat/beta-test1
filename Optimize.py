@@ -1318,36 +1318,29 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         elif hasattr(st, "experimental_rerun"):
             st.experimental_rerun()
 
-    # ฟังก์ชัน RESET สำหรับหน้านี้เท่านั้น
+    # ฟังก์ชัน RESET สำหรับหน้านี้
     def reset_kto_state():
-        # ลบ key ที่เกี่ยวกับ step / ผลลัพธ์
         for k in ["show_step2_max", "show_step2_min",
                   "mode_prev", "max_results", "min_results"]:
             st.session_state.pop(k, None)
 
-        # ลบค่าที่เกี่ยวกับ min/max ของทุก Tier (ทั้งโหมด max และ target)
         for k in list(st.session_state.keys()):
             if k.startswith(("min_", "max_")) and ("_max_step2" in k or "_tgt_step2" in k):
                 st.session_state.pop(k, None)
 
-        # ลบ input ของโหมด Maximize
         for k in ["priority_max", "total_budget_max",
-                  "run_style_max", "n_best_max", "show_free_along_max"]:
-            st.session_state.pop(k, None)
-
-        # ลบ input ของโหมด Minimize
-        for k in ["kpi_tgt", "target_value_tgt",
+                  "run_style_max", "n_best_max", "show_free_along_max",
+                  "kpi_tgt", "target_value_tgt",
                   "run_style_min", "n_best_min", "show_free_along_min"]:
             st.session_state.pop(k, None)
 
-        # ลบ flag / multiselect ของส่วน Compare
         for k in list(st.session_state.keys()):
             if k.endswith("_show_compare") or k.endswith("_compare_ms"):
                 st.session_state.pop(k, None)
 
         _rerun()
 
-    # ลำดับ Tier ใหม่: VIP อยู่บนสุดทุกที่
+    # ลำดับ Tier
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     BIG_MAX = 1_000_000_000.0
@@ -1374,6 +1367,47 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         min-height: 32px;
         padding-top: 2px;
         padding-bottom: 2px;
+    }
+
+    /* ====== CUSTOM TABLE STYLES (ใช้กับ Budgets) ====== */
+    table.styled-table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.9rem;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    table.styled-table th,
+    table.styled-table td {
+        padding: 6px 10px;
+        border: 1px solid #e5e7eb;
+    }
+    table.styled-table th {
+        text-align: left;
+    }
+
+    /* Baht table: โทนเขียวอ่อน */
+    table.alloc-table th {
+        background-color: #dcfce7;  /* green-100 */
+        color: #111827;
+        font-weight: 700;
+    }
+    table.alloc-table td {
+        background-color: #f0fdf4;  /* green-50  */
+        color: #111827;
+        font-weight: 600;
+    }
+
+    /* Percent table: โทนม่วงอ่อน */
+    table.pct-table th {
+        background-color: #ede9fe;  /* violet-100 */
+        color: #111827;
+        font-weight: 700;
+    }
+    table.pct-table td {
+        background-color: #f5f3ff;  /* violet-50  */
+        color: #111827;
+        font-weight: 600;
     }
     </style>
     """), unsafe_allow_html=True)
@@ -1667,7 +1701,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
         return out[:top_n], list(dict.fromkeys([w for w in warnings if w]))
 
-    # ---------- Dashboard (มีตารางคู่, สีอ่อน, ซ่อน index) ----------
+    # ---------- Dashboard ----------
     def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
                              primary_kpi_name, primary_value, category,
                              show_target_cols, compare_key):
@@ -1731,7 +1765,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         with c1:
             st.markdown("**Budget Allocation by tier**")
 
-            max_charts_per_row = 3   # ปรับได้ 3 หรือ 4
+            max_charts_per_row = 3
             for i in range(0, len(scenario_order), max_charts_per_row):
                 subset = scenario_order[i:i + max_charts_per_row]
                 sub_df = bud_df[bud_df["Scenario"].isin(subset)]
@@ -1816,26 +1850,11 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .reset_index()
             )
 
-            alloc_style = (
-                alloc_tbl.style
-                .format({col: "{:,.0f}" for col in alloc_tbl.columns if col != "Tier"})
-                .set_table_styles([
-                    dict(selector="th", props=[
-                        ("background-color", "#dcfce7"),  # green-100
-                        ("color", "#111827"),
-                        ("font-weight", "700"),
-                        ("border-color", "#bbf7d0")
-                    ]),
-                    dict(selector="td", props=[
-                        ("background-color", "#f0fdf4"),  # green-50
-                        ("color", "#111827"),
-                        ("font-weight", "600"),
-                        ("border-color", "#e5e7eb")
-                    ]),
-                ])
+            html_alloc = alloc_tbl.to_html(
+                index=False,
+                classes="styled-table alloc-table"
             )
-
-            st.dataframe(alloc_style, hide_index=True, use_container_width=True)
+            st.markdown(html_alloc, unsafe_allow_html=True)
 
         # --- ตาราง % ---
         with tcol2:
@@ -1849,26 +1868,11 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .reset_index()
             )
 
-            pct_style = (
-                pct_tbl.style
-                .format({col: "{:,.1f}" for col in pct_tbl.columns if col != "Tier"})
-                .set_table_styles([
-                    dict(selector="th", props=[
-                        ("background-color", "#ede9fe"),  # violet-100
-                        ("color", "#111827"),
-                        ("font-weight", "700"),
-                        ("border-color", "#ddd6fe")
-                    ]),
-                    dict(selector="td", props=[
-                        ("background-color", "#f5f3ff"),  # violet-50
-                        ("color", "#111827"),
-                        ("font-weight", "600"),
-                        ("border-color", "#e5e7eb")
-                    ]),
-                ])
+            html_pct = pct_tbl.to_html(
+                index=False,
+                classes="styled-table pct-table"
             )
-
-            st.dataframe(pct_style, hide_index=True, use_container_width=True)
+            st.markdown(html_pct, unsafe_allow_html=True)
 
         # ---------------- Performance Comparison ----------------
         st.markdown("### Performance Comparison")

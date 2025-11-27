@@ -38,13 +38,13 @@ FG2_TICKER_ITEMS = [
     {"text": "Influencer optimization",   "color": "#2563eb"},
 ]
 
-# ---------- BASE STYLES (LOGIN + INTRO) : โทนสว่าง ----------
+# ---------- BASE STYLES (LOGIN + INTRO) ----------
 st.markdown("""
 <style>
 /* LOGIN / INTRO width 1100px */
 .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
 
-/* พื้นหลังสว่างแบบเดิม */
+/* Background สว่างแบบเดิม */
 body {
   background:
     radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
@@ -65,7 +65,7 @@ body {
 @keyframes glow2{0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)}}
 @keyframes glow3{0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)}}
 
-/* โลโก้บน login */
+/* LOGO บน login */
 .logo-wrap { position:relative; width:130px; height:130px; margin:0 auto 10px; }
 .logo-wrap::before{
   content:""; position:absolute; inset:-10px; border-radius:50%;
@@ -142,7 +142,6 @@ def FG2_render_top_banner():
     """
     st.components.v1.html(html, height=110, scrolling=False)
 
-# Cleanup duplicate tickers (keep first)
 def FG2_cleanup_keep_first_ticker():
     st.markdown("""
     <script>
@@ -173,7 +172,7 @@ def FG2_cleanup_keep_first_ticker():
     </script>
     """, unsafe_allow_html=True)
 
-# Login (เอากล่อง login-card ออก เหลือแต่ฟอร์ม)
+# Login (เอากล่องขาวออก เหลือแค่ฟอร์ม)
 def FG2_login_view():
     try:
         st.query_params.update({"intro": "1"})
@@ -191,7 +190,6 @@ def FG2_login_view():
     st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="subtitle">{FG2_TAGLINE_TEXT}</div>', unsafe_allow_html=True)
 
-    # ฟอร์ม login ไม่มี div กล่องขาวครอบอีกแล้ว
     with st.form("FG2_login_form"):
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
@@ -267,7 +265,7 @@ def FG2_render_intro():
                 st.experimental_set_query_params(intro="0", page="KOL Tier Optimizer (KTO)")
             st.rerun()
 
-# ROUTING
+# ROUTING FRONTGATE
 if not st.session_state.authenticated:
     FG2_login_view()
     st.stop()
@@ -346,12 +344,25 @@ st.markdown("""
   68%{opacity:.9;}
   100%{opacity:0; transform:translateX(1400px) skewX(-20deg);}
 }
+
+/* headline เป็นตัวอักษรไล่เฉดวิ่ง */
 .headline{
   position:relative; z-index:1;
-  font-size: clamp(26px, 4.2vw, 40px); font-weight: 900; letter-spacing:.4px;
-  background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+  font-size: clamp(26px, 4.2vw, 40px);
+  font-weight: 900;
+  letter-spacing:.4px;
+  background: linear-gradient(90deg, #0f172a, #2563eb, #22c55e, #0f172a);
+  background-size: 220% auto;
+  animation: headlineGradMove 12s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
+@keyframes headlineGradMove{
+  0%   { background-position: 0%   50%; }
+  100% { background-position: 200% 50%; }
+}
+
 .subline{
   position:relative; z-index:1; margin-top: 6px; color:#4b5563; opacity:.95; font-size: 13px;
 }

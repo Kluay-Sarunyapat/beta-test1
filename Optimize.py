@@ -33,60 +33,137 @@ FG2_VALID_USERS = {"mbcs": "1234", "mbcs1": "5678", "admin": "adminpass"}
 FG2_LOGO_URL = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 FG2_TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
 FG2_TICKER_ITEMS = [
-    {"text": "MBCS AI Optimization Tool", "color": "#000000"},
-    {"text": "Smart budget simulation",   "color": "#16a34a"},
-    {"text": "Influencer optimization",   "color": "#2563eb"},
+    {"text": "MBCS AI Optimization Tool", "color": "#ffffff"},
+    {"text": "Smart budget simulation",   "color": "#4ade80"},
+    {"text": "Influencer optimization",   "color": "#38bdf8"},
 ]
 
-# Base styles (เหมือนเดิมทั้งหมด)
+# ---------- BASE STYLES (LOGIN + INTRO) ----------
+# เน้นธีม space / AI, background มืดขึ้นเล็กน้อย
 st.markdown("""
 <style>
-.appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
+/* ---------- GLOBAL CONTAINER (ทุกหน้า) ---------- */
+.appview-container .main, .block-container {
+  max-width: 1100px !important;   /* login ใช้ 1100px */
+  margin: auto;
+}
+
+/* ---------- LOGIN / INTRO BACKGROUND ---------- */
 body {
   background:
-    radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
-    radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
-    linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
+    radial-gradient(900px 600px at 50% 0%, rgba(56,189,248,0.28), transparent 55%),
+    radial-gradient(1200px 700px at 10% 20%, rgba(129,140,248,0.30), transparent 55%),
+    radial-gradient(900px 600px at 90% 30%, rgba(59,130,246,0.25), transparent 55%),
+    linear-gradient(180deg, #020617 0%, #020617 45%, #020617 100%) !important;
+  color: #e5e7eb;
 }
-.login-hero { position:relative; padding-top: 4px; }
+
+/* เพิ่ม layer ตามแบบ galaxy เบา ๆ */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(148,163,184,0.6), transparent),
+    radial-gradient(1px 1px at 80% 30%, rgba(148,163,184,0.7), transparent),
+    radial-gradient(1px 1px at 30% 80%, rgba(148,163,184,0.5), transparent);
+  opacity:0.7;
+}
+
+/* LOGIN HERO */
+.login-hero { position:relative; padding-top: 12px; }
 .ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
 .ambient::before, .ambient::after, .ambient i {
-  content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
+  content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(26px);
 }
-.ambient::before { top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: glow1 7s ease-in-out infinite; }
-.ambient::after  { top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: glow2 10s ease-in-out infinite .8s; }
-.ambient i       { top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: glow3 12s ease-in-out infinite .4s; }
-@keyframes glow1{0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)}}
-@keyframes glow2{0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)}}
-@keyframes glow3{0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)}}
+.ambient::before { top:-40px; width:580px; height:580px; background: radial-gradient(closest-side, rgba(56,189,248,.55), rgba(56,189,248,0) 70%); opacity:.55; animation: glow1 7s ease-in-out infinite; }
+.ambient::after  { top:40px; width:760px; height:760px; background: radial-gradient(closest-side, rgba(129,140,248,.45), rgba(129,140,248,0) 72%); opacity:.40; animation: glow2 10s ease-in-out infinite .8s; }
+.ambient i       { top:240px; width:480px; height:480px; background: radial-gradient(closest-side, rgba(34,197,94,.40), rgba(34,197,94,0) 70%); opacity:.32; animation: glow3 12s ease-in-out infinite .4s; }
 
+@keyframes glow1{0%,100%{opacity:.30; transform:translateX(-50%) scale(.96)} 50%{opacity:.75; transform:translateX(-50%) scale(1.08)}}
+@keyframes glow2{0%,100%{opacity:.25; transform:translateX(-50%) scale(.98)} 50%{opacity:.60; transform:translateX(-50%) scale(1.05)}}
+@keyframes glow3{0%,100%{opacity:.22; transform:translateX(-50%) scale(.97)} 50%{opacity:.55; transform:translateX(-50%) scale(1.04)}}
+
+/* LOGO GLOW */
+.logo-wrap { position:relative; width:140px; height:140px; margin:0 auto 18px; }
+.logo-wrap::before{
+  content:""; position:absolute; inset:-14px; border-radius:50%;
+  background: conic-gradient(from 0deg, #22d3ee, #a855f7, #22c55e, #22d3ee);
+  animation: spin 10s linear infinite; filter: blur(16px); opacity:.85;
+}
+.logo-wrap img{
+  position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
+  box-shadow:0 14px 40px rgba(15,23,42,.85);
+  border: 2px solid rgba(148,163,184,0.5);
+}
+
+/* LOGIN TITLE */
 .gradient-title {
   font-weight:800; line-height:1.1; margin:0.1rem 0 0.6rem 0; text-align:center; font-size:44px;
-  background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
+  text-transform:uppercase;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, #38bdf8, #22c55e, #a855f7, #38bdf8);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  background-size:200% auto; animation: gradMove 10s linear infinite;
-  text-shadow: 0 1px 0 rgba(255,255,255,.4);
+  background-size:220% auto; animation: gradMove 12s linear infinite;
+  text-shadow: 0 2px 15px rgba(15,23,42,.9);
 }
-@keyframes gradMove {0%{background-position:0% 50%} 100%{background-position:200% 50%}}
-.subtitle { color:#526273; text-align:center; margin-bottom:22px; }
-.logo-wrap { position:relative; width:130px; height:130px; margin:0 auto 10px; }
-.logo-wrap::before{
-  content:""; position:absolute; inset:-10px; border-radius:50%;
-  background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-  animation: spin 10s linear infinite; filter: blur(10px); opacity:.7;
-}
-@keyframes spin {to{transform:rotate(360deg)}}
-.logo-wrap img{ position:relative; z-index:1; width:100%; height:100%; border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,.25); }
+@keyframes gradMove {0%{background-position:0% 50%} 100%{background-position:220% 50%}}
 
-.top-wrap { margin-top:10px; margin-bottom:22px; }
-.pill { width:min(720px, 90vw); margin:0 auto 12px; border-radius:9999px; position:relative; overflow:hidden; background:linear-gradient(180deg,#fff,#f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
-.pill .sheen { position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
+.subtitle {
+  color:#9ca3af; text-align:center; margin-bottom:26px;
+  font-size:14px; letter-spacing:.3px;
+}
+
+/* LOGIN CARD */
+.login-card {
+  margin-top: 8px;
+  padding: 24px 26px 26px;
+  border-radius: 20px;
+  background: radial-gradient(circle at top, rgba(15,23,42,0.96), #020617 60%);
+  border: 1px solid rgba(148,163,184,0.55);
+  box-shadow:0 18px 45px rgba(15,23,42,.90);
+}
+
+/* ปุ่ม login เท่านั้น */
+.stButton > button{
+  width:100%;
+  border-radius:9999px;
+  height:44px;
+  background: linear-gradient(90deg, #22c55e, #22d3ee);
+  border:none;
+  color:#0f172a;
+  font-weight:700;
+  letter-spacing:.4px;
+  box-shadow:0 12px 35px rgba(34,211,238,.55);
+}
+.stButton > button:hover{ filter:brightness(1.06); transform: translateY(-1px); }
+
+/* Ticker ในหน้า login */
+.top-wrap { margin-top: 6px; margin-bottom: 18px; }
+.pill {
+  width:min(820px, 95vw); margin:0 auto 10px; border-radius:9999px;
+  position:relative; overflow:hidden;
+  background:linear-gradient(90deg,#020617,#020617);
+  border:1px solid rgba(148,163,184,.5);
+  box-shadow:0 12px 30px rgba(15,23,42,.9);
+}
+.glass{
+  height:22px; margin-top:4px;
+  background:linear-gradient(90deg,rgba(15,23,42,.95), rgba(30,64,175,.85));
+  border:1px solid rgba(30,64,175,.9);
+  border-radius:9999px;
+  backdrop-filter: blur(8px);
+  box-shadow:0 8px 24px rgba(15,23,42,.9);
+}
+.pill .sheen{
+  content:""; position:absolute; inset:0;
+  background: linear-gradient(120deg, transparent, rgba(148,163,184,.45), transparent);
+  width:80px; transform: translateX(-150%) skewX(-18deg);
+  animation: sheenMove 8s linear infinite; pointer-events:none;
+}
 @keyframes sheenMove {0%{ transform:translateX(-150%) skewX(-18deg)} 100%{ transform:translateX(250%) skewX(-18deg)}}
-.glass{ height:22px; background:linear-gradient(180deg,rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
 
-/* ปุ่ม login เท่านั้น (เดิม) */
-.stButton > button{ width:100%; border-radius:10px; height:44px; background: linear-gradient(90deg, #22c55e, #06b6d4); border:none; color:#fff; font-weight:700; letter-spacing:.2px; box-shadow:0 8px 22px rgba(3,105,161,.28); }
-.stButton > button:hover{ filter:brightness(1.04); transform: translateY(-1px); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -105,11 +182,11 @@ def FG2_render_top_banner():
     </div>
     <style>
       @keyframes marq {{0%{{transform:translateX(0)}}100%{{transform:translateX(-50%)}}}}
-      .t-item {{display:inline-flex; align-items:center; font-weight:600;}}
-      .t-sep {{color:#94a3b8; margin:0 12px;}}
+      .t-item {{display:inline-flex; align-items:center; font-weight:600; font-size:13px;}}
+      .t-sep {{color:#6b7280; margin:0 12px;}}
       #track::after {{
         content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
-        background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
+        background: linear-gradient(120deg, transparent, rgba(148,163,184,.55), transparent);
         transform: skewX(-18deg); animation: sweepT 7s.linear infinite;
       }}
       @keyframes sweepT {{0%{{left:-120px}} 100%{{left:120%}}}}
@@ -178,7 +255,7 @@ def FG2_login_view():
     with mid:
         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo" /></div>', unsafe_allow_html=True)
 
-    st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
+    st.markdown('<div style="display:flex;justify-content:center;font-size:24px;margin-bottom:6px;color:#9ca3af;">🔒 SECURE ACCESS</div>', unsafe_allow_html=True)
     st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="subtitle">{FG2_TAGLINE_TEXT}</div>', unsafe_allow_html=True)
 
@@ -214,17 +291,17 @@ def FG2_render_intro():
     with mid:
         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
 
-    st.markdown("<h3>Introducing NEST OPTIMIZER</h3>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#e5e7eb;'>Introducing NEST OPTIMIZER</h3>", unsafe_allow_html=True)
     st.markdown("""
-    <div style="font-size:16px; line-height:1.7; color:#111827;">
-      <p>In a world with countless influencers across countless platforms, knowing where to begin is the biggest challenge.
+    <div style="font-size:15px; line-height:1.7; color:#d1d5db;">
+      <p>In a universe of countless creators across countless platforms, knowing where to begin is the biggest challenge.
       "<strong>NEST OPTIMIZER</strong>" is our proprietary KOL engine, designed to bring precision to influencer marketing and solve the two
       biggest challenges in the industry:</p>
 
       <div style="display:flex; align-items:flex-start; gap:10px; margin:10px 0;">
-        <div style="font-size:24px;">🔺</div>
+        <div style="font-size:22px;">🔺</div>
         <div>
-          <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:#ecfdf5;">
+          <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:rgba(22,163,74,0.15); color:#bbf7d0;">
             KOL TIER OPTIMIZATION
           </span>
           <span>: Strategically allocates your budget across influencer tiers to ensure maximum impact and cost efficiency.</span>
@@ -232,9 +309,9 @@ def FG2_render_intro():
       </div>
 
       <div style="display:flex; align-items:flex-start; gap:10px; margin:6px 0 14px;">
-        <div style="font-size:24px;">🧩</div>
+        <div style="font-size:22px;">🧩</div>
         <div>
-          <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:#ecfdf5;">
+          <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:rgba(22,163,74,0.15); color:#bbf7d0;">
             KOL LIST OPTIMIZATION
           </span>
           <span>: Selects the most effective creators within each tier, based on their performance and relevance.</span>
@@ -242,12 +319,12 @@ def FG2_render_intro():
       </div>
 
       <p>This is where we bring science to the art of influencer marketing. Our platform allows us to combine human expertise
-      with data-driven insights. It provides a scientifically-backed KOL strategy that ensures every dollar spent delivers
-      maximum effectiveness and cost efficiency, giving us a unique competitive advantage in the market.</p>
+      with data-driven insights, providing a scientifically-backed KOL strategy that ensures every dollar spent delivers
+      maximum effectiveness and cost efficiency.</p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<hr/>", unsafe_allow_html=True)
+    st.markdown("<hr style='border-color:rgba(148,163,184,0.4);'/>", unsafe_allow_html=True)
     btn_col = st.columns([3,1])[1]
     with btn_col:
         if st.button("Next →", key="FG2_next", use_container_width=True):
@@ -301,61 +378,82 @@ if "inputs" not in st.session_state:
 logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
 SHOW_TICKER_APP = True
 TICKER_ITEMS = [
-    {"text": "MBCS AI Optimization Tool", "color": "#000000"},
-    {"text": "Smart budget simulation",   "color": "#16a34a"},
-    {"text": "Influencer optimization",   "color": "#2563eb"},
+    {"text": "MBCS AI Optimization Tool", "color": "#ffffff"},
+    {"text": "Smart budget simulation",   "color": "#4ade80"},
+    {"text": "Influencer optimization",   "color": "#38bdf8"},
 ]
 
-# -------------------- GLOBAL STYLES (header + hero) --------------------
+# -------------------- GLOBAL STYLES (header + hero หลังล็อกอิน) --------------------
+# หลังล็อกอิน: ขยายความกว้าง container เป็น ~1280px
 st.markdown("""
 <style>
-.appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
-
-/* Ticker pills */
-.top-wrap { margin-top: 10px; margin-bottom: 22px; }
-.pill { width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px; position:relative; overflow:hidden;
-  background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
-.pill .sheen{ content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
-@keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg)} 100%{ transform: translateX(250%) skewX(-18deg)} }
-.glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
-
-/* Header หลังล็อกอิน */
-.app-header{
-  position: relative; overflow: hidden; padding: 26px 26px 20px; border-radius: 18px;
-  background: rgba(255,255,255,.78); backdrop-filter: blur(8px);
-  border: 1px solid rgba(17,24,39,.08); box-shadow: 0 12px 35px rgba(17,24,39,.10); margin-bottom: 18px;
+.appview-container .main, .block-container {
+  max-width: 1280px !important;
+  margin: auto;
 }
-.app-header:before{ content:""; position:absolute; inset:-2px;
-  background: conic-gradient(from 0deg, #6366f1, #22d3ee, #a78bfa, #6366f1);
-  filter: blur(28px); opacity:.25; animation: spin 10s linear infinite; }
-.shine{ position:absolute; inset:1px; border-radius:16px;
-  background: linear-gradient(120deg, rgba(255,255,255,.18), transparent 35%, transparent 65%, rgba(255,255,255,.18));
-  background-size:220% 100%; animation: gradientMove 6s linear infinite; pointer-events:none; }
-.headline{ font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.subline{ margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px); }
+
+/* Header หลังล็อกอิน – แผง AI / space */
+.app-header{
+  position: relative; overflow: hidden;
+  padding: 26px 26px 22px; border-radius: 20px;
+  background: radial-gradient(circle at top left, rgba(56,189,248,0.25), transparent 55%),
+              radial-gradient(circle at bottom right, rgba(129,140,248,0.35), transparent 55%),
+              linear-gradient(120deg, #020617, #020617);
+  border: 1px solid rgba(148,163,184,.65);
+  box-shadow: 0 18px 45px rgba(15,23,42,.95);
+  margin-bottom: 18px;
+}
+.app-header:before{
+  content:""; position:absolute; inset:-40%; opacity:.55;
+  background: conic-gradient(from 0deg, rgba(59,130,246,0.4), rgba(34,197,94,0.3), rgba(56,189,248,0.45), rgba(129,140,248,0.4), rgba(59,130,246,0.4));
+  filter: blur(26px); animation: spin 18s linear infinite;
+}
+.shine{
+  position:absolute; inset:1px; border-radius:18px;
+  background: radial-gradient(circle at top, rgba(15,23,42,0.7), transparent 60%);
+  pointer-events:none;
+}
+.headline{
+  position:relative; z-index:1;
+  font-size: clamp(26px, 4.2vw, 40px);
+  font-weight: 900;
+  letter-spacing:.6px;
+  background: linear-gradient(90deg, #e5e7eb, #f9fafb);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.subline{
+  position:relative; z-index:1;
+  margin-top: 8px;
+  color:#9ca3af;
+  opacity:.95;
+  font-size: 13px;
+  letter-spacing:.4px;
+}
 
 /* Brand hero */
-.brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
+.brand-hero{ position:relative; margin: 4px auto 10px auto; display:flex; justify-content:center; }
 .brand-hero .brand-stage{ position:relative; z-index:1; }
 .brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
 .brand-ambient .g1, .brand-ambient .g2, .brand-ambient .g3{
-  position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
+  position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(24px);
 }
-.brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
-.brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
-.brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
-@keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
-@keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
-@keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
+.brand-ambient .g1{ top:-40px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(56,189,248,.38), rgba(56,189,248,0) 70%); opacity:.45; animation: bh_glow1 7s ease-in-out infinite; }
+.brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(129,140,248,.33), rgba(129,140,248,0) 72%); opacity:.35; animation: bh_glow2 10s.ease-in-out infinite .8s; }
+.brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(34,197,94,.30), rgba(34,197,94,0) 70%); opacity:.33; animation: bh_glow3 12s.ease-in-out infinite .4s; }
+@keyframes bh_glow1{ 0%,100%{opacity:.30; transform:translateX(-50%) scale(.96)} 50%{opacity:.70; transform:translateX(-50%) scale(1.06)} }
+@keyframes bh_glow2{ 0%,100%{opacity:.26; transform:translateX(-50%) scale(.98)} 50%{opacity:.55; transform:translateX(-50%) scale(1.05)} }
+@keyframes bh_glow3{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.97)} 50%{opacity:.50; transform:translateX(-50%) scale(1.04)} }
+
 .brand-logo{ position:relative; width:120px; height:120px; }
 .brand-logo::before{
-  content:""; position:absolute; inset:-10px; border-radius:50%;
-  background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
-  animation: bh_spin 10s linear infinite; filter: blur(10px); opacity:.7;
+  content:""; position:absolute; inset:-12px; border-radius:50%;
+  background: conic-gradient(from 0deg, #22d3ee, #a855f7, #22c55e, #22d3ee);
+  animation: bh_spin 10s linear infinite; filter: blur(14px); opacity:.8;
 }
 .brand-logo img{
   position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
-  box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s.ease-in-out infinite;
+  box-shadow: 0 14px 40px rgba(15,23,42,.95);
+  border: 2px solid rgba(148,163,184,0.55);
 }
 @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
 @keyframes spin{ to{ transform: rotate(360deg);} }
@@ -407,10 +505,11 @@ def inject_cleanup_js():
     """, unsafe_allow_html=True)
 
 def render_header():
+    # ตัดไอคอนโฟลเดอร์ออก เหลือข้อความอย่างเดียว
     st.markdown("""
     <div class="app-header">
       <div class="shine"></div>
-      <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
+      <div class="headline">Welcome To MBCS Optimize Tool</div>
       <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
     </div>
     """, unsafe_allow_html=True)
@@ -433,7 +532,7 @@ def render_top_banner_once():
     FG2_render_top_banner()
     st.session_state.ticker_rendered_once = True
 
-# -------------------- NAV (ตรงนี้คือส่วนที่แก้จริง ๆ) --------------------
+# -------------------- NAV (เฉพาะโค้ด Python, CSS เดิมใช้ได้) --------------------
 def sync_page_from_query():
     try:
         qp = st.query_params
@@ -452,9 +551,6 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    # ส่วน CSS ด้านบนของคุณเหมือนเดิม ไม่ต้องแก้
-    # (วางโค้ด CSS ของเดิมไว้ตรงนี้ ถ้ามี)
-
     sync_page_from_query()
     curr = st.session_state.page
 
@@ -473,56 +569,36 @@ def render_nav_pills():
         page_name = "KOL Tier Optimizer (KTO)"
         cls = "nav-btn p1 active" if curr == page_name else "nav-btn p1 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-        st.button(
-            label_kto,
-            use_container_width=True,
-            key="nav_kto",
-            on_click=set_page,
-            args=(page_name,),
-        )
+        st.button(label_kto, use_container_width=True, key="nav_kto",
+                  on_click=set_page, args=(page_name,))
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c2:
         page_name = "Tier Scenario Planner"
-        cls = "nav-btn p2.active" if curr == page_name else "nav-btn p2 inactive"
+        cls = "nav-btn p2 active" if curr == page_name else "nav-btn p2 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-        st.button(
-            label_tsp,
-            use_container_width=True,
-            key="nav_tsp",
-            on_click=set_page,
-            args=(page_name,),
-        )
+        st.button(label_tsp, use_container_width=True, key="nav_tsp",
+                  on_click=set_page, args=(page_name,))
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c3:
         page_name = "Influencer Precision Engine (IPE)"
         cls = "nav-btn p3 active" if curr == page_name else "nav-btn p3 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-        st.button(
-            label_ipe,
-            use_container_width=True,
-            key="nav_ipe",
-            on_click=set_page,
-            args=(page_name,),
-        )
+        st.button(label_ipe, use_container_width=True, key="nav_ipe",
+                  on_click=set_page, args=(page_name,))
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c4:
         page_name = "Upload Data"
         cls = "nav-btn p4 active" if curr == page_name else "nav-btn p4 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
-        st.button(
-            label_up,
-            use_container_width=True,
-            key="nav_upload",
-            on_click=set_page,
-            args=(page_name,),
-        )
+        st.button(label_up, use_container_width=True, key="nav_upload",
+                  on_click=set_page, args=(page_name,))
         st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('</div></div>', unsafe_allow_html=True)
-    
+
 # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
 if not st.session_state.authenticated:
     st.info("Please sign in on your existing login view.")
@@ -543,6 +619,553 @@ def load_weights(csv_url):
 # Load weights from the published Google Sheet
 csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
 weights_df = load_weights(csv_url)
+
+#############################################################################################################################################
+# import streamlit as st
+# import pandas as pd
+# import numpy as np
+# import plotly.express as px
+# import plotly.graph_objects as go
+# import base64
+# import requests
+# import io
+# import time
+# from scipy.optimize import linprog
+# from pulp import LpProblem, LpVariable, lpSum, LpMaximize, LpBinary
+# import altair as alt
+# from textwrap import dedent
+# import urllib.parse as _url
+
+# # ===================== FRONTGATE V2 (LOGIN + INTRO PAGE) =====================
+
+# # Page config (ignore error if already set later)
+# try:
+#     st.set_page_config(page_title="NEST Optimized Tool", page_icon="🔒", layout="wide")
+# except Exception:
+#     pass
+
+# # Session keys
+# st.session_state.setdefault("authenticated", False)
+# st.session_state.setdefault("FG2_invalid_login", False)
+# st.session_state.setdefault("FG2_onboard_done", False)  # False = still show Intro
+
+# # Credentials
+# FG2_VALID_USERS = {"mbcs": "1234", "mbcs1": "5678", "admin": "adminpass"}
+
+# # Assets / Options
+# FG2_LOGO_URL = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+# FG2_TAGLINE_TEXT = "Secure access • Smart budget simulation • Influencer optimization"
+# FG2_TICKER_ITEMS = [
+#     {"text": "MBCS AI Optimization Tool", "color": "#000000"},
+#     {"text": "Smart budget simulation",   "color": "#16a34a"},
+#     {"text": "Influencer optimization",   "color": "#2563eb"},
+# ]
+
+# # Base styles (เหมือนเดิมทั้งหมด)
+# st.markdown("""
+# <style>
+# .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
+# body {
+#   background:
+#     radial-gradient(1200px 600px at 50% -10%, rgba(59,130,246,.15), transparent 60%),
+#     radial-gradient(900px 500px at -20% 20%, rgba(16,185,129,.12), transparent 60%),
+#     linear-gradient(180deg, #f7fbff 0%, #eef5ff 60%, #eaf2ff 100%) !important;
+# }
+# .login-hero { position:relative; padding-top: 4px; }
+# .ambient { position:absolute; inset:-40px -10px -10px -10px; z-index:0; pointer-events:none; }
+# .ambient::before, .ambient::after, .ambient i {
+#   content:""; position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
+# }
+# .ambient::before { top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: glow1 7s ease-in-out infinite; }
+# .ambient::after  { top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: glow2 10s ease-in-out infinite .8s; }
+# .ambient i       { top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: glow3 12s ease-in-out infinite .4s; }
+# @keyframes glow1{0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)}}
+# @keyframes glow2{0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)}}
+# @keyframes glow3{0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)}}
+
+# .gradient-title {
+#   font-weight:800; line-height:1.1; margin:0.1rem 0 0.6rem 0; text-align:center; font-size:44px;
+#   background: linear-gradient(90deg, #10b981, #22d3ee, #3b82f6, #10b981);
+#   -webkit-background-clip: text; background-clip: text; color: transparent;
+#   background-size:200% auto; animation: gradMove 10s linear infinite;
+#   text-shadow: 0 1px 0 rgba(255,255,255,.4);
+# }
+# @keyframes gradMove {0%{background-position:0% 50%} 100%{background-position:200% 50%}}
+# .subtitle { color:#526273; text-align:center; margin-bottom:22px; }
+# .logo-wrap { position:relative; width:130px; height:130px; margin:0 auto 10px; }
+# .logo-wrap::before{
+#   content:""; position:absolute; inset:-10px; border-radius:50%;
+#   background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
+#   animation: spin 10s linear infinite; filter: blur(10px); opacity:.7;
+# }
+# @keyframes spin {to{transform:rotate(360deg)}}
+# .logo-wrap img{ position:relative; z-index:1; width:100%; height:100%; border-radius:50%; box-shadow:0 8px 24px rgba(2,6,23,.25); }
+
+# .top-wrap { margin-top:10px; margin-bottom:22px; }
+# .pill { width:min(720px, 90vw); margin:0 auto 12px; border-radius:9999px; position:relative; overflow:hidden; background:linear-gradient(180deg,#fff,#f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
+# .pill .sheen { position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
+# @keyframes sheenMove {0%{ transform:translateX(-150%) skewX(-18deg)} 100%{ transform:translateX(250%) skewX(-18deg)}}
+# .glass{ height:22px; background:linear-gradient(180deg,rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
+
+# /* ปุ่ม login เท่านั้น (เดิม) */
+# .stButton > button{ width:100%; border-radius:10px; height:44px; background: linear-gradient(90deg, #22c55e, #06b6d4); border:none; color:#fff; font-weight:700; letter-spacing:.2px; box-shadow:0 8px 22px rgba(3,105,161,.28); }
+# .stButton > button:hover{ filter:brightness(1.04); transform: translateY(-1px); }
+# </style>
+# """, unsafe_allow_html=True)
+
+# # Ticker
+# def FG2_render_top_banner():
+#     import json as _json
+#     items_json = _json.dumps(FG2_TICKER_ITEMS)
+#     html = f"""
+#     <div class="top-wrap">
+#       <div class="pill"><div class="sheen"></div>
+#         <div id="ticker" style="white-space:nowrap; position:relative; height:32px;">
+#           <div id="track" style="display:flex; width:max-content; padding:6px 14px; gap:12px; animation:marq 22s linear infinite; position:relative;"></div>
+#         </div>
+#       </div>
+#       <div class="glass pill"></div>
+#     </div>
+#     <style>
+#       @keyframes marq {{0%{{transform:translateX(0)}}100%{{transform:translateX(-50%)}}}}
+#       .t-item {{display:inline-flex; align-items:center; font-weight:600;}}
+#       .t-sep {{color:#94a3b8; margin:0 12px;}}
+#       #track::after {{
+#         content:""; position:absolute; top:0; bottom:0; width:60px; left:-120px; pointer-events:none;
+#         background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
+#         transform: skewX(-18deg); animation: sweepT 7s.linear infinite;
+#       }}
+#       @keyframes sweepT {{0%{{left:-120px}} 100%{{left:120%}}}}
+#     </style>
+#     <script>
+#       const ITEMS = {items_json};
+#       const SEPARATOR = "•"; const END_SPACE_PX = 40;
+#       const track = document.getElementById("track");
+#       if(track && ITEMS.length){{
+#         const make = () => {{
+#           const frag = document.createDocumentFragment();
+#           ITEMS.forEach((it,i)=>{{ const s=document.createElement("span"); s.className="t-item"; s.style.color=it.color; s.textContent=it.text; frag.appendChild(s);
+#             if(i<ITEMS.length-1){{ const sep=document.createElement("span"); sep.className="t-sep"; sep.textContent=SEPARATOR; frag.appendChild(sep); }} }});
+#           const spacer=document.createElement("span"); spacer.style.display="inline-block"; spacer.style.width=END_SPACE_PX+"px"; frag.appendChild(spacer); return frag; }};
+#         const c1=document.createElement("div"); c1.appendChild(make());
+#         const c2=document.createElement("div"); c2.setAttribute("aria-hidden","true"); c2.appendChild(make());
+#         track.appendChild(c1); track.appendChild(c2);
+#         requestAnimationFrame(()=>{{ const w=c1.getBoundingClientRect().width; const dur=Math.max(16, w/90); track.style.animationDuration = dur+"s"; }});
+#       }}
+#     </script>
+#     """
+#     st.components.v1.html(html, height=110, scrolling=False)
+
+# # Cleanup duplicate tickers (keep first)
+# def FG2_cleanup_keep_first_ticker():
+#     st.markdown("""
+#     <script>
+#     (function(){
+#       function hideDuplicateTickers(){
+#         const ifrms = Array.from(document.querySelectorAll('iframe'));
+#         const bands = [];
+#         for(const f of ifrms){
+#           try{
+#             const doc = f.contentDocument || f.contentWindow?.document;
+#             const t = (doc?.body?.innerText || "").replace(/\\s+/g,' ');
+#             if(t.includes('MBCS AI Optimization Tool') &&
+#                t.includes('Smart budget simulation') &&
+#                t.includes('Influencer optimization')){
+#               bands.push(f);
+#             }
+#           }catch(e){}
+#         }
+#         if(bands.length > 1){
+#           for(let i=1;i<bands.length;i++){ bands[i].style.display='none'; }
+#         }
+#       }
+#       hideDuplicateTickers();
+#       setTimeout(hideDuplicateTickers, 250);
+#       setTimeout(hideDuplicateTickers, 800);
+#       setTimeout(hideDuplicateTickers, 2000);
+#     })();
+#     </script>
+#     """, unsafe_allow_html=True)
+
+# # Login
+# def FG2_login_view():
+#     try:
+#         st.query_params.update({"intro": "1"})
+#     except Exception:
+#         st.experimental_set_query_params(intro="1")
+
+#     st.markdown('<div class="login-hero"><div class="ambient"></div><i class="ambient"></i>', unsafe_allow_html=True)
+#     FG2_render_top_banner()
+
+#     mid = st.columns([1,1,1])[1]
+#     with mid:
+#         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo" /></div>', unsafe_allow_html=True)
+
+#     st.markdown('<div style="display:flex;justify-content:center;font-size:28px;margin-bottom:4px;">🔒</div>', unsafe_allow_html=True)
+#     st.markdown('<div class="gradient-title">WELCOME TO NEST<br/>OPTIMIZED TOOL</div>', unsafe_allow_html=True)
+#     st.markdown(f'<div class="subtitle">{FG2_TAGLINE_TEXT}</div>', unsafe_allow_html=True)
+
+#     st.markdown('<div class="login-card">', unsafe_allow_html=True)
+#     with st.form("FG2_login_form"):
+#         u = st.text_input("Username")
+#         p = st.text_input("Password", type="password")
+#         submitted = st.form_submit_button("Sign in")
+#     st.markdown('</div>', unsafe_allow_html=True)
+#     st.markdown('</div>', unsafe_allow_html=True)
+
+#     if submitted:
+#         if u in FG2_VALID_USERS and p == FG2_VALID_USERS[u]:
+#             st.session_state.authenticated = True
+#             st.session_state.FG2_invalid_login = False
+#             st.session_state.FG2_onboard_done = False
+#             try:
+#                 st.query_params.update({"intro": "1"})
+#             except Exception:
+#                 st.experimental_set_query_params(intro="1")
+#             st.rerun()
+#         else:
+#             st.session_state.FG2_invalid_login = True
+
+#     if st.session_state.FG2_invalid_login:
+#         st.error("Invalid username or password.")
+
+# # Introduction
+# def FG2_render_intro():
+#     FG2_render_top_banner()
+
+#     mid = st.columns([1,1,1])[1]
+#     with mid:
+#         st.markdown(f'<div class="logo-wrap"><img src="{FG2_LOGO_URL}" alt="logo"/></div>', unsafe_allow_html=True)
+
+#     st.markdown("<h3>Introducing NEST OPTIMIZER</h3>", unsafe_allow_html=True)
+#     st.markdown("""
+#     <div style="font-size:16px; line-height:1.7; color:#111827;">
+#       <p>In a world with countless influencers across countless platforms, knowing where to begin is the biggest challenge.
+#       "<strong>NEST OPTIMIZER</strong>" is our proprietary KOL engine, designed to bring precision to influencer marketing and solve the two
+#       biggest challenges in the industry:</p>
+
+#       <div style="display:flex; align-items:flex-start; gap:10px; margin:10px 0;">
+#         <div style="font-size:24px;">🔺</div>
+#         <div>
+#           <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:#ecfdf5;">
+#             KOL TIER OPTIMIZATION
+#           </span>
+#           <span>: Strategically allocates your budget across influencer tiers to ensure maximum impact and cost efficiency.</span>
+#         </div>
+#       </div>
+
+#       <div style="display:flex; align-items:flex-start; gap:10px; margin:6px 0 14px;">
+#         <div style="font-size:24px;">🧩</div>
+#         <div>
+#           <span style="display:inline-block; padding:6px 10px; border:2px solid #22c55e; border-radius:8px; font-weight:800; background:#ecfdf5;">
+#             KOL LIST OPTIMIZATION
+#           </span>
+#           <span>: Selects the most effective creators within each tier, based on their performance and relevance.</span>
+#         </div>
+#       </div>
+
+#       <p>This is where we bring science to the art of influencer marketing. Our platform allows us to combine human expertise
+#       with data-driven insights. It provides a scientifically-backed KOL strategy that ensures every dollar spent delivers
+#       maximum effectiveness and cost efficiency, giving us a unique competitive advantage in the market.</p>
+#     </div>
+#     """, unsafe_allow_html=True)
+
+#     st.markdown("<hr/>", unsafe_allow_html=True)
+#     btn_col = st.columns([3,1])[1]
+#     with btn_col:
+#         if st.button("Next →", key="FG2_next", use_container_width=True):
+#             st.session_state.FG2_onboard_done = True
+#             st.session_state.page = "KOL Tier Optimizer (KTO)"
+#             try:
+#                 st.query_params.update({"intro": "0", "page": "KOL Tier Optimizer (KTO)"})
+#             except Exception:
+#                 st.experimental_set_query_params(intro="0", page="KOL Tier Optimizer (KTO)")
+#             st.rerun()
+
+# # ROUTING
+# if not st.session_state.authenticated:
+#     FG2_login_view()
+#     st.stop()
+
+# try:
+#     qp = st.query_params
+#     if qp.get("intro") == "0":
+#         st.session_state.FG2_onboard_done = True
+#     elif qp.get("intro") == "1":
+#         st.session_state.FG2_onboard_done = False
+# except Exception:
+#     qp = st.experimental_get_query_params()
+#     if qp.get("intro", ["1"])[0] == "0":
+#         st.session_state.FG2_onboard_done = True
+#     else:
+#         st.session_state.FG2_onboard_done = False
+
+# if not st.session_state.FG2_onboard_done:
+#     FG2_render_intro()
+#     st.stop()
+# else:
+#     FG2_cleanup_keep_first_ticker()
+
+# # ===================== END FRONTGATE V2 =====================
+
+# # -------------------- PAGE CONFIG --------------------
+# st.set_page_config(page_title="MBCS Optimize Tool", page_icon="🔒", layout="wide")
+
+# # -------------------- SESSION STATE --------------------
+# st.session_state.setdefault("authenticated", False)
+# st.session_state.setdefault("page", "KOL Tier Optimizer (KTO)")
+# st.session_state.setdefault("prev_page", None)
+# st.session_state.setdefault("ticker_rendered_once", False)
+
+# if "inputs" not in st.session_state:
+#     st.session_state.inputs = {"VIP": 0, "Mega": 0, "Macro": 0, "Mid": 0, "Micro": 0, "Nano": 0}
+
+# # -------------------- OPTIONS --------------------
+# logo_url = "https://i.postimg.cc/85nTdNSr/Nest-Logo2.jpg"
+# SHOW_TICKER_APP = True
+# TICKER_ITEMS = [
+#     {"text": "MBCS AI Optimization Tool", "color": "#000000"},
+#     {"text": "Smart budget simulation",   "color": "#16a34a"},
+#     {"text": "Influencer optimization",   "color": "#2563eb"},
+# ]
+
+# # -------------------- GLOBAL STYLES (header + hero) --------------------
+# st.markdown("""
+# <style>
+# .appview-container .main, .block-container { max-width: 1100px !important; margin: auto; }
+
+# /* Ticker pills */
+# .top-wrap { margin-top: 10px; margin-bottom: 22px; }
+# .pill { width: min(720px, 90vw); margin: 0 auto 12px auto; border-radius: 9999px; position:relative; overflow:hidden;
+#   background: linear-gradient(180deg, #ffffff, #f5f9ff); border:1px solid #e6eefb; box-shadow:0 10px 24px rgba(15,40,80,.12); }
+# .pill .sheen{ content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, rgba(255,255,255,.55), transparent); width:80px; transform: translateX(-150%) skewX(-18deg); animation: sheenMove 8s linear infinite; pointer-events:none; }
+# @keyframes sheenMove { 0%{ transform: translateX(-150%) skewX(-18deg)} 100%{ transform: translateX(250%) skewX(-18deg)} }
+# .glass{ height:22px; background: linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.7)); border:1px solid #e6eefb; border-radius:9999px; backdrop-filter: blur(6px); box-shadow:0 10px 24px rgba(15,40,80,.12); }
+
+# /* Header หลังล็อกอิน */
+# .app-header{
+#   position: relative; overflow: hidden; padding: 26px 26px 20px; border-radius: 18px;
+#   background: rgba(255,255,255,.78); backdrop-filter: blur(8px);
+#   border: 1px solid rgba(17,24,39,.08); box-shadow: 0 12px 35px rgba(17,24,39,.10); margin-bottom: 18px;
+# }
+# .app-header:before{ content:""; position:absolute; inset:-2px;
+#   background: conic-gradient(from 0deg, #6366f1, #22d3ee, #a78bfa, #6366f1);
+#   filter: blur(28px); opacity:.25; animation: spin 10s linear infinite; }
+# .shine{ position:absolute; inset:1px; border-radius:16px;
+#   background: linear-gradient(120deg, rgba(255,255,255,.18), transparent 35%, transparent 65%, rgba(255,255,255,.18));
+#   background-size:220% 100%; animation: gradientMove 6s linear infinite; pointer-events:none; }
+# .headline{ font-size: clamp(26px, 4.2vw, 42px); font-weight: 900; letter-spacing:.4px; background: linear-gradient(90deg, #0f172a, #1e293b, #0f172a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+# .subline{ margin-top: 6px; color:#4b5563; opacity:.95; font-size: clamp(12px, 1.6vw, 14px); }
+
+# /* Brand hero */
+# .brand-hero{ position:relative; margin: 4px auto 8px auto; display:flex; justify-content:center; }
+# .brand-hero .brand-stage{ position:relative; z-index:1; }
+# .brand-ambient{ position:absolute; inset:-40px 0 -10px 0; z-index:0; pointer-events:none; }
+# .brand-ambient .g1, .brand-ambient .g2, .brand-ambient .g3{
+#   position:absolute; left:50%; transform:translateX(-50%); border-radius:50%; filter: blur(20px);
+# }
+# .brand-ambient .g1{ top:-30px; width:520px; height:520px; background: radial-gradient(closest-side, rgba(59,130,246,.40), rgba(59,130,246,0) 70%); opacity:.38; animation: bh_glow1 7s ease-in-out infinite; }
+# .brand-ambient .g2{ top:40px; width:720px; height:720px; background: radial-gradient(closest-side, rgba(167,139,250,.33), rgba(167,139,250,0) 72%); opacity:.28; animation: bh_glow2 10s ease-in-out infinite .8s; }
+# .brand-ambient .g3{ top:220px; width:420px; height:420px; background: radial-gradient(closest-side, rgba(16,185,129,.28), rgba(16,185,129,0) 70%); opacity:.22; animation: bh_glow3 12s ease-in-out infinite .4s; }
+# @keyframes bh_glow1{ 0%,100%{opacity:.22; transform:translateX(-50%) scale(.96)} 50%{opacity:.55; transform:translateX(-50%) scale(1.06)} }
+# @keyframes bh_glow2{ 0%,100%{opacity:.18; transform:translateX(-50%) scale(.98)} 50%{opacity:.40; transform:translateX(-50%) scale(1.05)} }
+# @keyframes bh_glow3{ 0%,100%{opacity:.14; transform:translateX(-50%) scale(.97)} 50%{opacity:.32; transform:translateX(-50%) scale(1.04)} }
+# .brand-logo{ position:relative; width:120px; height:120px; }
+# .brand-logo::before{
+#   content:""; position:absolute; inset:-10px; border-radius:50%;
+#   background: conic-gradient(from 0deg, #22d3ee, #a78bfa, #22c55e, #22d3ee);
+#   animation: bh_spin 10s linear infinite; filter: blur(10px); opacity:.7;
+# }
+# .brand-logo img{
+#   position:relative; z-index:1; width:100%; height:100%; border-radius:50%;
+#   box-shadow: 0 8px 24px rgba(2,6,23,.25); animation: bh_pulse 4.5s.ease-in-out infinite;
+# }
+# @keyframes gradientMove { 0%{background-position:0% 50%} 100%{background-position:200% 50%} }
+# @keyframes spin{ to{ transform: rotate(360deg);} }
+# </style>
+# """, unsafe_allow_html=True)
+
+# def inject_cleanup_js():
+#     st.markdown("""
+#     <script>
+#     (function(){
+#       function hideDuplicateTickers(){
+#         const iframes = Array.from(document.querySelectorAll('iframe'));
+#         const tickers = [];
+#         for (const f of iframes){
+#           try{
+#             const doc = f.contentDocument || f.contentWindow?.document;
+#             if(!doc) continue;
+#             const txt = (doc.body?.innerText || "").replace(/\\s+/g,' ').trim();
+#             if (txt.includes('MBCS AI Optimization Tool') &&
+#                 txt.includes('Smart budget simulation') &&
+#                 txt.includes('Influencer optimization')){
+#               tickers.push(f);
+#             }
+#           }catch(e){}
+#         }
+#         if (tickers.length > 1){
+#           for(let i=0;i<tickers.length-1;i++){
+#             tickers[i].style.display = 'none';
+#           }
+#         }
+#       }
+
+#       function hideLoggedInBanner(){
+#         const alerts = Array.from(document.querySelectorAll('[role="alert"]'));
+#         alerts.forEach(a=>{
+#           const t = (a.innerText||"").trim();
+#           if (t.startsWith('You are logged in. Build your app content here.')){
+#             a.style.display = 'none';
+#           }
+#         });
+#       }
+
+#       hideDuplicateTickers(); hideLoggedInBanner();
+#       setTimeout(hideDuplicateTickers, 250);  setTimeout(hideLoggedInBanner, 250);
+#       setTimeout(hideDuplicateTickers, 800);  setTimeout(hideLoggedInBanner, 800);
+#       setTimeout(hideDuplicateTickers, 2000); setTimeout(hideLoggedInBanner, 2000);
+#     })();
+#     </script>
+#     """, unsafe_allow_html=True)
+
+# def render_header():
+#     st.markdown("""
+#     <div class="app-header">
+#       <div class="shine"></div>
+#       <div class="headline">📁 Welcome To MBCS Optimize Tool</div>
+#       <div class="subline">Smart budget simulation • Influencer performance • Optimization</div>
+#     </div>
+#     """, unsafe_allow_html=True)
+
+# def render_brand_hero():
+#     st.markdown(f"""
+#     <div class="brand-hero">
+#       <div class="brand-ambient">
+#         <span class="g1"></span><span class="g2"></span><span class="g3"></span>
+#       </div>
+#       <div class="brand-stage">
+#         <div class="brand-logo"><img src="{logo_url}" alt="logo"/></div>
+#       </div>
+#     </div>
+#     """, unsafe_allow_html=True)
+
+# def render_top_banner_once():
+#     if st.session_state.ticker_rendered_once or not SHOW_TICKER_APP:
+#         return
+#     FG2_render_top_banner()
+#     st.session_state.ticker_rendered_once = True
+
+# # -------------------- NAV (ตรงนี้คือส่วนที่แก้จริง ๆ) --------------------
+# def sync_page_from_query():
+#     try:
+#         qp = st.query_params
+#         if "page" in qp:
+#             st.session_state.page = qp["page"]
+#     except Exception:
+#         qp = st.experimental_get_query_params()
+#         if "page" in qp:
+#             st.session_state.page = qp["page"][0]
+
+# def set_page(name: str):
+#     st.session_state.page = name
+#     try:
+#         st.query_params.update({"page": name})
+#     except Exception:
+#         st.experimental_set_query_params(page=name)
+
+# def render_nav_pills():
+#     # ส่วน CSS ด้านบนของคุณเหมือนเดิม ไม่ต้องแก้
+#     # (วางโค้ด CSS ของเดิมไว้ตรงนี้ ถ้ามี)
+
+#     sync_page_from_query()
+#     curr = st.session_state.page
+
+#     def make_label(base: str, page_name: str) -> str:
+#         return f"{'🔴' if curr == page_name else '⚪'} {base}"
+
+#     label_kto = make_label("KOL Tier Optimizer (KTO)", "KOL Tier Optimizer (KTO)")
+#     label_tsp = make_label("Tier Scenario Planner", "Tier Scenario Planner")
+#     label_ipe = make_label("Influencer Precision Engine (IPE)", "Influencer Precision Engine (IPE)")
+#     label_up  = make_label("Upload Data", "Upload Data")
+
+#     st.markdown('<div class="nav-scope"><div class="nav-row">', unsafe_allow_html=True)
+#     c1, c2, c3, c4 = st.columns(4)
+
+#     with c1:
+#         page_name = "KOL Tier Optimizer (KTO)"
+#         cls = "nav-btn p1 active" if curr == page_name else "nav-btn p1 inactive"
+#         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+#         st.button(
+#             label_kto,
+#             use_container_width=True,
+#             key="nav_kto",
+#             on_click=set_page,
+#             args=(page_name,),
+#         )
+#         st.markdown('</div>', unsafe_allow_html=True)
+
+#     with c2:
+#         page_name = "Tier Scenario Planner"
+#         cls = "nav-btn p2.active" if curr == page_name else "nav-btn p2 inactive"
+#         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+#         st.button(
+#             label_tsp,
+#             use_container_width=True,
+#             key="nav_tsp",
+#             on_click=set_page,
+#             args=(page_name,),
+#         )
+#         st.markdown('</div>', unsafe_allow_html=True)
+
+#     with c3:
+#         page_name = "Influencer Precision Engine (IPE)"
+#         cls = "nav-btn p3 active" if curr == page_name else "nav-btn p3 inactive"
+#         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+#         st.button(
+#             label_ipe,
+#             use_container_width=True,
+#             key="nav_ipe",
+#             on_click=set_page,
+#             args=(page_name,),
+#         )
+#         st.markdown('</div>', unsafe_allow_html=True)
+
+#     with c4:
+#         page_name = "Upload Data"
+#         cls = "nav-btn p4 active" if curr == page_name else "nav-btn p4 inactive"
+#         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
+#         st.button(
+#             label_up,
+#             use_container_width=True,
+#             key="nav_upload",
+#             on_click=set_page,
+#             args=(page_name,),
+#         )
+#         st.markdown('</div>', unsafe_allow_html=True)
+
+#     st.markdown('</div></div>', unsafe_allow_html=True)
+    
+# # ==================== MAIN (หลังล็อกอินเท่านั้น) ====================
+# if not st.session_state.authenticated:
+#     st.info("Please sign in on your existing login view.")
+#     st.stop()
+
+# inject_cleanup_js()
+# render_top_banner_once()
+# render_brand_hero()
+# render_header()
+# render_nav_pills()
+
+# # ---------- FUNCTION: Load Weights from Google Sheet CSV ----------
+# @st.cache_data
+# def load_weights(csv_url):
+#     df = pd.read_csv(csv_url)
+#     return df
+
+# # Load weights from the published Google Sheet
+# csv_url = "https://docs.google.com/spreadsheets/d/1CG19lrXCDYLeyPihaq4xwuPSw86oQUNB/export?format=csv"
+# weights_df = load_weights(csv_url)
 
 # ----------------------- PAGE 1: Tier Scenario Planner (เดิม Simulation Budget) -----------------------
 if st.session_state.page == "Tier Scenario Planner":

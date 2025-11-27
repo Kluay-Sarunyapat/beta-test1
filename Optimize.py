@@ -452,14 +452,12 @@ def set_page(name: str):
         st.experimental_set_query_params(page=name)
 
 def render_nav_pills():
-    ...  # ส่วน CSS ด้านบนของคุณเหมือนเดิม ไม่ต้องแก้
+    # ส่วน CSS ด้านบนของคุณเหมือนเดิม ไม่ต้องแก้
+    # (วางโค้ด CSS ของเดิมไว้ตรงนี้ ถ้ามี)
 
     sync_page_from_query()
     curr = st.session_state.page
 
-    # ฟังก์ชันสร้าง label:
-    #  - หน้า active  : 🔴 + ชื่อเมนู
-    #  - หน้าอื่น    : ⚪ + ชื่อเมนู
     def make_label(base: str, page_name: str) -> str:
         return f"{'🔴' if curr == page_name else '⚪'} {base}"
 
@@ -486,7 +484,7 @@ def render_nav_pills():
 
     with c2:
         page_name = "Tier Scenario Planner"
-        cls = "nav-btn p2 active" if curr == page_name else "nav-btn p2 inactive"
+        cls = "nav-btn p2.active" if curr == page_name else "nav-btn p2 inactive"
         st.markdown(f'<div class="{cls}">', unsafe_allow_html=True)
         st.button(
             label_tsp,

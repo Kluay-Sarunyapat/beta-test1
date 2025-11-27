@@ -1376,6 +1376,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         font-size: 0.9rem;
         border-radius: 10px;
         overflow: hidden;
+        margin-bottom: 6px;
     }
     table.styled-table th,
     table.styled-table td {
@@ -1850,6 +1851,21 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         tcol1, tcol2 = st.columns(2)
 
+        # helper สำหรับจัด format ค่า
+        def _fmt_alloc(x):
+            if isinstance(x, (int, float, np.floating)):
+                if abs(x) < 1e-6:
+                    x = 0.0
+                return f"{x:,.0f}"
+            return x
+
+        def _fmt_pct(x):
+            if isinstance(x, (int, float, np.floating)):
+                if abs(x) < 1e-6:
+                    x = 0.0
+                return f"{x:,.2f}"   # ทศนิยม 2 ตำแหน่ง
+            return x
+
         # --- ตาราง Baht ---
         with tcol1:
             st.markdown("**Tier Allocation (Baht)**")
@@ -1862,8 +1878,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .reset_index()
             )
             alloc_tbl = alloc_tbl.rename_axis(None, axis=1)
+            alloc_disp = alloc_tbl.applymap(_fmt_alloc)
 
-            html_alloc = alloc_tbl.to_html(
+            html_alloc = alloc_disp.to_html(
                 index=False,
                 classes="styled-table alloc-table"
             )
@@ -1881,8 +1898,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                 .reset_index()
             )
             pct_tbl = pct_tbl.rename_axis(None, axis=1)
+            pct_disp = pct_tbl.applymap(_fmt_pct)
 
-            html_pct = pct_tbl.to_html(
+            html_pct = pct_disp.to_html(
                 index=False,
                 classes="styled-table pct-table"
             )
@@ -1954,7 +1972,6 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         perf_df = pd.DataFrame(perf_rows)
 
-        # แปลงตัวเลขเป็น string format แล้วทำ HTML table พร้อม CSS
         disp_df = perf_df.copy()
         for col in disp_df.columns:
             if col == "Metric":
@@ -2321,6 +2338,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                     show_target_cols=True,
                     compare_key="min"
                 )
+
 
 # # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) (เดิม Optimized Budget) -----------------------
 # elif st.session_state.page == "KOL Tier Optimizer (KTO)":

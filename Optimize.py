@@ -1318,6 +1318,35 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         elif hasattr(st, "experimental_rerun"):
             st.experimental_rerun()
 
+    # ฟังก์ชัน RESET สำหรับหน้านี้เท่านั้น
+    def reset_kto_state():
+        # ลบ key ที่เกี่ยวกับ step / ผลลัพธ์
+        for k in ["show_step2_max", "show_step2_min",
+                  "mode_prev", "max_results", "min_results"]:
+            st.session_state.pop(k, None)
+
+        # ลบค่าที่เกี่ยวกับ min/max ของทุก Tier (ทั้งโหมด max และ target)
+        for k in list(st.session_state.keys()):
+            if k.startswith(("min_", "max_")) and ("_max_step2" in k or "_tgt_step2" in k):
+                st.session_state.pop(k, None)
+
+        # ลบ input ของโหมด Maximize
+        for k in ["priority_max", "total_budget_max",
+                  "run_style_max", "n_best_max", "show_free_along_max"]:
+            st.session_state.pop(k, None)
+
+        # ลบ input ของโหมด Minimize
+        for k in ["kpi_tgt", "target_value_tgt",
+                  "run_style_min", "n_best_min", "show_free_along_min"]:
+            st.session_state.pop(k, None)
+
+        # ลบ flag / multiselect ของส่วน Compare
+        for k in list(st.session_state.keys()):
+            if k.endswith("_show_compare") or k.endswith("_compare_ms"):
+                st.session_state.pop(k, None)
+
+        _rerun()
+
     # ลำดับ Tier ใหม่: VIP อยู่บนสุดทุกที่
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     DISPLAY_ORDER = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
@@ -1912,6 +1941,10 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     # =========================== MAIN FLOW ===========================
     st.title("KOL Tier Optimizer (KTO)")
+
+    # ปุ่ม RESET ใต้ title
+    if st.button("🔄 Reset / Start over"):
+        reset_kto_state()
 
     if "weights_df" in st.session_state:
         weights_df = st.session_state["weights_df"]

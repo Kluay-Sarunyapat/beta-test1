@@ -1318,8 +1318,9 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         elif hasattr(st, "experimental_rerun"):
             st.experimental_rerun()
 
+    # ลำดับ Tier ใหม่: VIP อยู่บนสุดทุกที่
     TIERS = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
-    DISPLAY_ORDER = ['Nano', 'Micro', 'Mid', 'Macro', 'Mega', 'VIP']
+    DISPLAY_ORDER = ['VIP', 'Mega', 'Macro', 'Mid', 'Micro', 'Nano']
     BIG_MAX = 1_000_000_000.0
     KPI_CANON = ['Impression', 'View', 'Engagement', 'Share']
 
@@ -1637,7 +1638,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
         out.sort(key=lambda s: (s.get('required_budget', 0.0), -s['scores'].get(kpi_key, 0.0)))
         return out[:top_n], list(dict.fromkeys([w for w in warnings if w]))
 
-    # ---------- Dashboard (เวอร์ชันใหม่ แสดงทุก scenario) ----------
+    # ---------- Dashboard (เวอร์ชันใหม่) ----------
     def render_kto_dashboard(free_scenarios, cons_scenarios, mode,
                              primary_kpi_name, primary_value, category,
                              show_target_cols, compare_key):
@@ -1673,7 +1674,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
         st.markdown(f"### {title}")
 
-        # Budget allocation & %
+        # ---------------- Budget allocation & % ----------------
         rows = []
         for sname in scenario_order:
             sc = scen_map[sname]
@@ -1686,16 +1687,24 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
                              "Allocation": val, "Pct": pct})
         bud_df = pd.DataFrame(rows)
 
-        tier_colors = ["#60a5fa", "#34d399", "#f59e0b",
-                       "#8b5cf6", "#ef4444", "#06b6d4"]
+        # ทำ Tier เป็น Categorical เพื่อควบคุมลำดับตลอด
+        bud_df["Tier"] = pd.Categorical(
+            bud_df["Tier"],
+            categories=DISPLAY_ORDER,
+            ordered=True
+        )
+
+        # สีตามลำดับ VIP->Nano (ปรับได้ตามต้องการ)
+        tier_colors = ["#06b6d4", "#ef4444", "#8b5cf6",
+                       "#f59e0b", "#34d399", "#60a5fa"]
 
         c1, c2 = st.columns(2)
 
-        # ====== FIX: Budget Allocation by tier – แสดงทุก scenario โดยแบ่งเป็นหลายแถว ======
+        # ====== Budget Allocation by tier (facet หลายแถว) ======
         with c1:
             st.markdown("**Budget Allocation by tier**")
 
-            max_charts_per_row = 3   # ปรับได้เป็น 3 หรือ 4 ตามที่ต้องการ
+            max_charts_per_row = 3   # ปรับได้ 3 หรือ 4
             for i in range(0, len(scenario_order), max_charts_per_row):
                 subset = scenario_order[i:i + max_charts_per_row]
                 sub_df = bud_df[bud_df["Scenario"].isin(subset)]
@@ -1737,7 +1746,7 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
                 st.altair_chart(chart_budget_row, use_container_width=True)
 
-        # ---- % Percentage chart ----
+        # ====== % Percentage chart ======
         with c2:
             st.markdown("**% Percentage**")
             chart_pct = (
@@ -1763,13 +1772,34 @@ elif st.session_state.page == "KOL Tier Optimizer (KTO)":
             )
             st.altair_chart(chart_pct, use_container_width=True)
 
-        # Budget allocation table
-        st.markdown("#### Budget allocation table (Baht & %)")
-        tbl = bud_df.pivot_table(index="Tier", columns="Scenario",
-                                 values=["Allocation", "Pct"], aggfunc="first")
-        tbl.columns = [f"{lvl1}_{lvl2}" for lvl1, lvl2 in tbl.columns.to_flat_index()]
-        tbl = tbl.reset_index()
-        st.dataframe(tbl, use_container_width=True)
+        # ================== SPLIT TABLES ==================
+        st.markdown("#### Budget allocation table – Baht")
+
+        alloc_tbl = (
+            bud_df
+            .pivot_table(index="Tier", columns="Scenario",
+                         values="Allocation", aggfunc="first")
+            .reindex(DISPLAY_ORDER)
+            .reset_index()
+        )
+        alloc_style = alloc_tbl.style.format(
+            {col: "{:,.0f}" for col in alloc_tbl.columns if col != "Tier"}
+        )
+        st.dataframe(alloc_style, use_container_width=True)
+
+        st.markdown("#### Budget allocation table – %")
+
+        pct_tbl = (
+            bud_df
+            .pivot_table(index="Tier", columns="Scenario",
+                         values="Pct", aggfunc="first")
+            .reindex(DISPLAY_ORDER)
+            .reset_index()
+        )
+        pct_style = pct_tbl.style.format(
+            {col: "{:,.1f}" for col in pct_tbl.columns if col != "Tier"}
+        )
+        st.dataframe(pct_style, use_container_width=True)
 
         # ---------------- Performance Comparison ----------------
         st.markdown("### Performance Comparison")

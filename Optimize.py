@@ -1303,7 +1303,7 @@ if st.session_state.page == "Influencer Precision Engine (IPE)":
                     render_kol_table(sc, kpi_col, title=f"Scenario #{i}", download_label=f"Download CSV (Scenario {i})")
 
 # ----------------------- PAGE 3: KOL Tier Optimizer (KTO) -----------------------
-elif st.session_state.page == "KOL Tier Optimizer (KTO)"):
+elif st.session_state.page == "KOL Tier Optimizer (KTO)":
 
     import numpy as np
     import pandas as pd

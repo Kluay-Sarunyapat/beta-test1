@@ -646,9 +646,10 @@ if st.session_state.page == "Tier Scenario Planner":
 
     st.subheader("Budget Scenario Comparison")
 
-    col_opt1, col_opt2 = st.columns(2)
+    # ---------- 1) FILTER PANELS (Category + Platform) ----------
+    fcol1, fcol2 = st.columns(2)
 
-    def panel_option(col, name, cat_key, plat_key, inputs_key, bg_color, title_color):
+    def panel_filters(col, name, cat_key, plat_key):
         with col:
             st.markdown(f"### {name}")
 
@@ -674,7 +675,24 @@ if st.session_state.page == "Tier Scenario Planner":
                 key=f"{name}_plats"
             )
 
-            # budgets by tier
+    panel_filters(fcol1, "Option 1", 'opt1_categories', 'opt1_platforms')
+    panel_filters(fcol2, "Option 2", 'opt2_categories', 'opt2_platforms')
+
+    # ---------- 2) KPI OBJECTIVE (อยู่ใต้ platform ทั้งคู่) ----------
+    st.markdown("#### Select KPI objective for comparison")
+    st.session_state['tsp_kpi_obj'] = st.selectbox(
+        "Select KPIs objective:",
+        options=all_kpis,
+        index=all_kpis.index(st.session_state['tsp_kpi_obj']),
+        key="tsp_kpi_obj_sel"
+    )
+
+    # ---------- 3) BUDGET BY TIER + TOTAL BUDGET ----------
+    bcol1, bcol2 = st.columns(2)
+
+    def panel_budgets(col, name, inputs_key, bg_color, title_color):
+        with col:
+            st.markdown("##### Budget by Tier")
             new_inputs = {}
             for t in TIERS:
                 c1, c2 = st.columns([3, 2])
@@ -694,7 +712,7 @@ if st.session_state.page == "Tier Scenario Planner":
             st.markdown(
                 f"""
                 <div style="background:{bg_color};padding:14px 0;border-radius:12px;
-                            text-align:center;box-shadow:0 2px 5px #00000022;">
+                            text-align:center;box-shadow:0 2px 5px #00000022;margin-top:4px;">
                     <div style="font-size:2.0rem;font-weight:900;color:{title_color};">{total_final:,}</div>
                     <div style="font-size:1.0rem;">💰 Total Budget ({name})</div>
                 </div>
@@ -702,20 +720,8 @@ if st.session_state.page == "Tier Scenario Planner":
                 unsafe_allow_html=True
             )
 
-    # Panels สำหรับ 2 options
-    panel_option(col_opt1, "Option 1", 'opt1_categories', 'opt1_platforms', 'inputs_opt1',
-                 '#e0f7fa', '#0277bd')
-    panel_option(col_opt2, "Option 2", 'opt2_categories', 'opt2_platforms', 'inputs_opt2',
-                 '#f3e5f5', '#8e24aa')
-
-    # ---------- KPI objective (ย้ายมาอยู่ใต้ Platform / budgets ตามคำขอ) ----------
-    st.markdown("#### Select KPI objective for comparison")
-    st.session_state['tsp_kpi_obj'] = st.selectbox(
-        "Select KPIs objective:",
-        options=all_kpis,
-        index=all_kpis.index(st.session_state['tsp_kpi_obj']),
-        key="tsp_kpi_obj_sel"
-    )
+    panel_budgets(bcol1, "Option 1", 'inputs_opt1', '#e0f7fa', '#0277bd')
+    panel_budgets(bcol2, "Option 2", 'inputs_opt2', '#f3e5f5', '#8e24aa')
 
     # ---------- ฟังก์ชันคำนวณ weighted weights ----------
     def get_weights_multi(categories, platforms, kpi):
@@ -857,11 +863,10 @@ if st.session_state.page == "Tier Scenario Planner":
         </style>
         """, unsafe_allow_html=True)
 
-        # ฟังก์ชันตัดสิน best ต่อแถว
         def best_class(metric, v1, v2):
-            # นิยามว่าอะไรดีกว่าอะไร
+            # กำหนดว่า metric ไหนน้อยดีกว่า / มากดีกว่า
             if "Cost per" in metric or "CPK" in metric or "CP" in metric:
-                # ต่ำกว่าดี
+                # น้อยดีกว่า
                 if v1 == v2:
                     return ("best", "best")
                 elif v1 < v2:
@@ -869,7 +874,7 @@ if st.session_state.page == "Tier Scenario Planner":
                 else:
                     return ("", "best")
             elif "Total Budget" in metric:
-                # ต่ำกว่าดีกว่า (ใช้เงินน้อยกว่า)
+                # น้อยดีกว่า (ใช้งบน้อยกว่า)
                 if v1 == v2:
                     return ("best", "best")
                 elif v1 < v2:
@@ -877,7 +882,7 @@ if st.session_state.page == "Tier Scenario Planner":
                 else:
                     return ("", "best")
             else:
-                # ค่า KPI สูงกว่าดี
+                # KPI Score: มากดีกว่า
                 if v1 == v2:
                     return ("best", "best")
                 elif v1 > v2:
@@ -885,7 +890,7 @@ if st.session_state.page == "Tier Scenario Planner":
                 else:
                     return ("", "best")
 
-        # สร้าง HTML ตาราง
+        # สร้าง HTML table
         html = "<table class='tsp-table'><thead><tr><th>Metric</th><th>Option 1</th><th>Option 2</th></tr></thead><tbody>"
         for row in summary_rows:
             m = row["Metric"]
